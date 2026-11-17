@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@layer base {
+  :root,
+  html.dark {
+    color-scheme: dark;
+  }
+
+  /* Paleta completa para Modo Claro (Light Theme Institucional) */
+  html.light {
+    color-scheme: light;
+
+    /* Superficies y Fondos */
+    --color-slate-950: #f1f5f9;
+    --color-slate-900: #ffffff;
+    --color-slate-800: #e2e8f0;
+    --color-slate-700: #cbd5e1;
+    --color-slate-600: #94a3b8;
+    --color-slate-500: #64748b;
+
+    /* Tipografía de alto contraste sobre fondos claros */
+    --color-slate-400: #475569;
+    --color-slate-300: #334155;
+    --color-slate-200: #1e293b;
+    --color-slate-100: #0f172a;
+    --color-white: #0f172a;
+
+    /* Acentos semánticos optimizados para legibilidad en fondo blanco */
+    --color-emerald-200: #065f46;
+    --color-emerald-300: #047857;
+    --color-emerald-400: #059669;
+    --color-emerald-950: #d1fae5;
+
+    --color-sky-300: #0369a1;
+    --color-sky-400: #0284c7;
+
+    --color-amber-300: #b45309;
+    --color-amber-400: #d97706;
+
+    --color-rose-300: #be123c;
+    --color-rose-400: #e11d48;
+    --color-rose-950: #ffe4e6;
+  }
+
+  body {
+    font-family:
+      'Inter',
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+}
+
+/* Animación de entrada para notificaciones Toast */
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.toast-enter {
+  animation: toast-slide-in 0.2s ease-out;
+}
+
+/* Scrollbar adaptable a tema oscuro y claro */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-slate-950);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate-700);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-500);
+}
