@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Cpu,
   CreditCard,
+  Globe,
   KeyRound,
   LogIn,
   LogOut,
@@ -45,7 +46,7 @@ interface NavGroupConfig {
 export const PlatformShellLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user, logout, switchRolePreview } = useAuthStore();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -94,6 +95,16 @@ export const PlatformShellLayout: React.FC = () => {
   ).length;
 
   const navGroups: NavGroupConfig[] = [
+    {
+      groupTitle: lang === 'es' ? 'Portal Público' : 'Public Portal',
+      items: [
+        {
+          to: '/',
+          label: lang === 'es' ? 'Ver Landing Page' : 'View Landing Page',
+          icon: <Globe className="h-4 w-4 shrink-0 text-amber-400" />,
+        },
+      ],
+    },
     {
       groupTitle: t.nav.groupAdmin,
       items: [
@@ -202,9 +213,9 @@ export const PlatformShellLayout: React.FC = () => {
       <div>
         <div className="flex items-center justify-between border-b border-slate-800/80 px-4 py-4">
           <Link
-            to="/catalog"
+            to="/"
             className="flex items-center gap-3 overflow-hidden group cursor-pointer hover:opacity-90 transition-opacity"
-            title="Ir al inicio / Catálogo de Bots"
+            title={lang === 'es' ? 'Ir al Portal Público / Landing Page' : 'Go to Public Portal / Landing Page'}
           >
             <img
               src="/tla-logo.jpg"

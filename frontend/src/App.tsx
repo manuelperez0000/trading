@@ -26,6 +26,7 @@ import {
   MyLicensesPage,
   UserProfilePage,
 } from '@features/account/presentation/pages/AccountPages';
+import { LandingPage } from '@features/landing/presentation/pages/LandingPage';
 import { NotFoundPage } from '@shared/ui/NotFoundPage';
 
 const queryClient = new QueryClient({
@@ -50,6 +51,11 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
+      {/* Portal Público de Entrada / Landing Page de Alta Conversión */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/landing" element={<LandingPage />} />
+      <Route path="/home" element={<LandingPage />} />
+
       {/* Vistas Públicas de Autenticación (Sin Menú Lateral) */}
       <Route path="/auth/login" element={<LoginPage />} />
       <Route path="/auth/register" element={<RegisterPage />} />
@@ -64,16 +70,12 @@ const AppRoutes: React.FC = () => {
       <Route path="/recover" element={<Navigate to="/auth/recover-password" replace />} />
       <Route path="/recover-password" element={<Navigate to="/auth/recover-password" replace />} />
       <Route path="/admin" element={<Navigate to="/admin/subscriptions" replace />} />
+      <Route path="/dashboard" element={<Navigate to="/admin/subscriptions" replace />} />
       <Route path="/bots" element={<Navigate to="/catalog" replace />} />
       <Route path="/licenses" element={<Navigate to="/my-subscriptions" replace />} />
 
       {/* Plantilla Administrativa y Portal Trader con Menú Lateral Colapsable */}
       <Route element={<PlatformShellLayout />}>
-        <Route
-          index
-          element={<Navigate to="/admin/subscriptions" replace />}
-        />
-
         {/* Módulos Fase 2: Panel Admin + Laboratorio Apagado Remoto + Red Social */}
         <Route
           path="/admin/subscriptions"
