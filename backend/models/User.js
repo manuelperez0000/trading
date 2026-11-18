@@ -42,7 +42,18 @@ export async function initializeUserTable() {
   `);
 }
 
-export async function createUser({ perfilCliente, expedienteDigital, passwordHash }) {
+export async function createUser({
+  nombreCompleto,
+  direccion,
+  telefono,
+  whatsapp,
+  correoElectronico,
+  urlDocumentoIdentidad,
+  urlReciboServicio,
+  urlContratoDisclaimer,
+  urlComprobanteAceptacion,
+  passwordHash,
+}) {
   const { rows } = await pool.query(
     `INSERT INTO users (
        name, email, password_hash, direccion, telefono, whatsapp,
@@ -52,16 +63,16 @@ export async function createUser({ perfilCliente, expedienteDigital, passwordHas
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING ${publicUserColumns}`,
     [
-      perfilCliente.nombreCompleto,
-      perfilCliente.correoElectronico,
+      nombreCompleto,
+      correoElectronico,
       passwordHash,
-      perfilCliente.direccion,
-      perfilCliente.telefono,
-      perfilCliente.whatsapp,
-      expedienteDigital.urlDocumentoIdentidad,
-      expedienteDigital.urlReciboServicio,
-      expedienteDigital.urlContratoDisclaimer,
-      expedienteDigital.urlComprobanteAceptacion,
+      direccion,
+      telefono,
+      whatsapp,
+      urlDocumentoIdentidad,
+      urlReciboServicio,
+      urlContratoDisclaimer,
+      urlComprobanteAceptacion,
     ],
   );
   return rows[0];
@@ -99,24 +110,18 @@ export async function listUsers() {
 export function toPublicUser(user) {
   return {
     id: String(user.id),
-    perfilCliente: {
-      nombreCompleto: user.name,
-      direccion: user.direccion,
-      telefono: user.telefono,
-      whatsapp: user.whatsapp,
-      correoElectronico: user.email,
-    },
-    expedienteDigital: {
-      urlDocumentoIdentidad: user.url_documento_identidad,
-      urlReciboServicio: user.url_recibo_servicio,
-      urlContratoDisclaimer: user.url_contrato_disclaimer,
-      urlComprobanteAceptacion: user.url_comprobante_aceptacion,
-    },
-    metadatos: {
-      fechaCreacion: user.created_at,
-      fechaActualizacion: user.updated_at,
-      estado: user.estado,
-    },
+    nombreCompleto: user.name,
+    direccion: user.direccion,
+    telefono: user.telefono,
+    whatsapp: user.whatsapp,
+    correoElectronico: user.email,
+    urlDocumentoIdentidad: user.url_documento_identidad,
+    urlReciboServicio: user.url_recibo_servicio,
+    urlContratoDisclaimer: user.url_contrato_disclaimer,
+    urlComprobanteAceptacion: user.url_comprobante_aceptacion,
+    fechaCreacion: user.created_at,
+    fechaActualizacion: user.updated_at,
+    estado: user.estado,
   };
 }
 

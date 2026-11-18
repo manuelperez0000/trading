@@ -9,41 +9,34 @@ http://localhost:3000/api/v1
 Las solicitudes con cuerpo deben usar `Content-Type: application/json`. Los
 endpoints protegidos requieren `Authorization: Bearer <token>`.
 
-## Estructura del usuario
+## Estructura plana del usuario
 
-Las respuestas de usuario usan `id` como texto, los campos de perfil y
-expediente como texto, y las fechas como timestamps ISO 8601. `estado` también
-es texto.
+Las respuestas de usuario contienen en una sola capa los datos del cliente,
+las URLs del expediente y los metadatos. `id` y `estado` son texto; las fechas
+son timestamps ISO 8601 serializados como texto.
 
 ```json
 {
   "id": "12",
-  "perfilCliente": {
-    "nombreCompleto": "Ana Pérez",
-    "direccion": "Calle 123",
-    "telefono": "+1 555 0100",
-    "whatsapp": "+1 555 0100",
-    "correoElectronico": "ana@example.com"
-  },
-  "expedienteDigital": {
-    "urlDocumentoIdentidad": "https://example.com/identidad.pdf",
-    "urlReciboServicio": "https://example.com/recibo.pdf",
-    "urlContratoDisclaimer": "https://example.com/contrato.pdf",
-    "urlComprobanteAceptacion": "https://example.com/aceptacion.pdf"
-  },
-  "metadatos": {
-    "fechaCreacion": "2026-11-18T20:00:00.000Z",
-    "fechaActualizacion": "2026-11-18T20:00:00.000Z",
-    "estado": "activo"
-  }
+  "nombreCompleto": "Ana Pérez",
+  "direccion": "Calle 123",
+  "telefono": "+1 555 0100",
+  "whatsapp": "+1 555 0100",
+  "correoElectronico": "ana@example.com",
+  "urlDocumentoIdentidad": "https://example.com/identidad.pdf",
+  "urlReciboServicio": "https://example.com/recibo.pdf",
+  "urlContratoDisclaimer": "https://example.com/contrato.pdf",
+  "urlComprobanteAceptacion": "https://example.com/aceptacion.pdf",
+  "fechaCreacion": "2026-11-18T20:00:00.000Z",
+  "fechaActualizacion": "2026-11-18T20:00:00.000Z",
+  "estado": "activo"
 }
 ```
 
-El servidor genera `id`, `metadatos.fechaCreacion`,
-`metadatos.fechaActualizacion` y `metadatos.estado`. Las propiedades de perfil
-y expediente deben ser texto; en el registro solo son obligatorios el nombre
-completo, el correo y la contraseña. Los demás campos se guardan como cadenas
-vacías si no se envían.
+El servidor genera `id`, `fechaCreacion`, `fechaActualizacion` y `estado`.
+Todos los demás campos de usuario son texto. En el registro solo son
+obligatorios `nombreCompleto`, `correoElectronico` y `password`; los demás
+campos se guardan como cadenas vacías si no se envían.
 
 ## Usuarios y autenticación
 
@@ -53,19 +46,15 @@ vacías si no se envían.
 
 ```json
 {
-  "perfilCliente": {
-    "nombreCompleto": "Ana Pérez",
-    "direccion": "Calle 123",
-    "telefono": "+1 555 0100",
-    "whatsapp": "+1 555 0100",
-    "correoElectronico": "ana@example.com"
-  },
-  "expedienteDigital": {
-    "urlDocumentoIdentidad": "https://example.com/identidad.pdf",
-    "urlReciboServicio": "https://example.com/recibo.pdf",
-    "urlContratoDisclaimer": "https://example.com/contrato.pdf",
-    "urlComprobanteAceptacion": "https://example.com/aceptacion.pdf"
-  },
+  "nombreCompleto": "Ana Pérez",
+  "direccion": "Calle 123",
+  "telefono": "+1 555 0100",
+  "whatsapp": "+1 555 0100",
+  "correoElectronico": "ana@example.com",
+  "urlDocumentoIdentidad": "https://example.com/identidad.pdf",
+  "urlReciboServicio": "https://example.com/recibo.pdf",
+  "urlContratoDisclaimer": "https://example.com/contrato.pdf",
+  "urlComprobanteAceptacion": "https://example.com/aceptacion.pdf",
   "password": "mi-clave-segura"
 }
 ```
@@ -76,14 +65,12 @@ responde `409 Conflict`.
 
 ### Iniciar sesión
 
-`POST /users/login` — público. Se acepta el correo en la estructura anidada o
-como `email` (también se acepta `correoElectronico` en el nivel superior).
+`POST /users/login` — público. El cuerpo es plano; se acepta el correo como
+`correoElectronico` o, por compatibilidad, como `email`.
 
 ```json
 {
-  "perfilCliente": {
-    "correoElectronico": "ana@example.com"
-  },
+  "correoElectronico": "ana@example.com",
   "password": "mi-clave-segura"
 }
 ```
@@ -117,15 +104,11 @@ sin permiso de administrador, `403 Forbidden`.
 
 ### Solicitar recuperación de contraseña
 
-`POST /users/recover-password` — público. Se acepta el correo en
-`perfilCliente.correoElectronico` o, por compatibilidad, en `email`.
+`POST /users/recover-password` — público. Se acepta `correoElectronico` o,
+por compatibilidad, `email`.
 
 ```json
-{
-  "perfilCliente": {
-    "correoElectronico": "ana@example.com"
-  }
-}
+{ "correoElectronico": "ana@example.com" }
 ```
 
 Responde `202 Accepted` con un mensaje genérico, exista o no la cuenta, para no
@@ -182,6 +165,6 @@ demasiado grande) y `500` (error interno).
   `/ninja` no corresponde a rutas implementadas actualmente.
 - El expediente acepta URLs como cadenas; el backend no sube ni almacena el
   contenido de los archivos.
-- Para iniciar sesión, registrar y consultar perfil, usar el mismo objeto
-  anidado de usuario mostrado arriba; no incluir la contraseña dentro de
-  `perfilCliente`.
+- Los datos del cliente, las URLs y la metadata se envían y reciben como
+  propiedades de primer nivel. La contraseña solo se envía en el registro y
+  login; nunca forma parte de la respuesta del usuario.

@@ -29,6 +29,11 @@ function readOptionalString(object, key) {
   return typeof object[key] === "string" ? object[key].trim() : null;
 }
 
+function readFirstString(object, keys) {
+  const key = keys.find((candidate) => object[candidate] !== undefined);
+  return key === undefined ? "" : readOptionalString(object, key);
+}
+
 router.get("/", authenticate, requireAdmin, async (req, res, next) => {
   try {
     const users = await listUsers();
@@ -40,75 +45,26 @@ router.get("/", authenticate, requireAdmin, async (req, res, next) => {
 
 router.post("/register", async (req, res, next) => {
   const body = req.body ?? {};
-  const profileInput = body.perfilCliente;
-  const documentsInput = body.expedienteDigital;
-  const hasProfileObject =
-    profileInput !== undefined &&
-    profileInput !== null &&
-    typeof profileInput === "object" &&
-    !Array.isArray(profileInput);
-  const hasDocumentsObject =
-    documentsInput === undefined ||
-    (documentsInput !== null &&
-      typeof documentsInput === "object" &&
-      !Array.isArray(documentsInput));
-  const perfilCliente = hasProfileObject
-    ? {
-        nombreCompleto: readOptionalString(profileInput, "nombreCompleto"),
-        direccion: readOptionalString(profileInput, "direccion"),
-        telefono: readOptionalString(profileInput, "telefono"),
-        whatsapp: readOptionalString(profileInput, "whatsapp"),
-        correoElectronico: readOptionalString(profileInput, "correoElectronico"),
-      }
-    : {
-        nombreCompleto:
-          typeof body.name === "string"
-            ? body.name.trim()
-            : typeof body.full_name === "string"
-              ? body.full_name.trim()
-              : "",
-        direccion: "",
-        telefono: "",
-        whatsapp: "",
-        correoElectronico:
-          typeof body.email === "string"
-            ? body.email.trim()
-            : typeof body.correoElectronico === "string"
-              ? body.correoElectronico.trim()
-              : "",
-      };
-  const expedienteDigital = hasDocumentsObject
-    ? {
-        urlDocumentoIdentidad: readOptionalString(
-          documentsInput ?? {},
-          "urlDocumentoIdentidad",
-        ),
-        urlReciboServicio: readOptionalString(
-          documentsInput ?? {},
-          "urlReciboServicio",
-        ),
-        urlContratoDisclaimer: readOptionalString(
-          documentsInput ?? {},
-          "urlContratoDisclaimer",
-        ),
-        urlComprobanteAceptacion: readOptionalString(
-          documentsInput ?? {},
-          "urlComprobanteAceptacion",
-        ),
-      }
-    : null;
-  const email = perfilCliente.correoElectronico;
+  const userData = {
+    nombreCompleto: readFirstString(body, ["nombreCompleto", "name", "full_name"]),
+    direccion: readOptionalString(body, "direccion"),
+    telefono: readOptionalString(body, "telefono"),
+    whatsapp: readOptionalString(body, "whatsapp"),
+    correoElectronico: readFirstString(body, ["correoElectronico", "email"]),
+    urlDocumentoIdentidad: readOptionalString(body, "urlDocumentoIdentidad"),
+    urlReciboServicio: readOptionalString(body, "urlReciboServicio"),
+    urlContratoDisclaimer: readOptionalString(body, "urlContratoDisclaimer"),
+    urlComprobanteAceptacion: readOptionalString(body, "urlComprobanteAceptacion"),
+  };
+  const email = userData.correoElectronico;
   const password = body.password;
 
   if (
-    (!hasProfileObject && profileInput !== undefined) ||
-    !hasDocumentsObject ||
-    Object.values(perfilCliente).some((value) => value === null) ||
-    Object.values(expedienteDigital ?? {}).some((value) => value === null) ||
-    perfilCliente.nombreCompleto.length === 0 ||
-    perfilCliente.nombreCompleto.length > 120 ||
-    perfilCliente.telefono.length > 40 ||
-    perfilCliente.whatsapp.length > 40 ||
+    Object.values(userData).some((value) => value === null) ||
+    userData.nombreCompleto.length === 0 ||
+    userData.nombreCompleto.length > 120 ||
+    userData.telefono.length > 40 ||
+    userData.whatsapp.length > 40 ||
     email.length > 320 ||
     !EMAIL_PATTERN.test(email) ||
     !isValidPassword(password)
@@ -121,11 +77,8 @@ router.post("/register", async (req, res, next) => {
 
   try {
     const user = await createUser({
-      perfilCliente: {
-        ...perfilCliente,
-        correoElectronico: email.toLowerCase(),
-      },
-      expedienteDigital,
+      ...userData,
+      correoElectronico: email.toLowerCase(),
       passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS),
     });
     return res.status(201).json({ user: toPublicUser(user) });
@@ -136,17 +89,11 @@ router.post("/register", async (req, res, next) => {
 
 router.post("/login", async (req, res, next) => {
   const body = req.body ?? {};
-  const email =
-    typeof body.perfilCliente?.correoElectronico === "string"
-      ? body.perfilCliente.correoElectronico
-      : typeof body.email === "string"
-        ? body.email
-        : typeof body.correoElectronico === "string"
-          ? body.correoElectronico
-          : "";
+  const email = readFirstString(body, ["correoElectronico", "email"]);
   const { password } = body;
 
   if (
+    typeof email !== "string" ||
     !EMAIL_PATTERN.test(email.trim()) ||
     email.length > 320 ||
     typeof password !== "string" ||
@@ -198,12 +145,9 @@ router.get("/me", authenticate, async (req, res, next) => {
 });
 
 router.post("/recover-password", async (req, res, next) => {
-  const emailInput =
-    typeof req.body?.perfilCliente?.correoElectronico === "string"
-      ? req.body.perfilCliente.correoElectronico
-      : req.body?.email;
-  const email =
-    typeof emailInput === "string" ? emailInput.trim().toLowerCase() : "";
+  const body = req.body ?? {};
+  const emailInput = readFirstString(body, ["correoElectronico", "email"]);
+  const email = typeof emailInput === "string" ? emailInput.toLowerCase() : "";
 
   if (!EMAIL_PATTERN.test(email)) {
     return res.status(400).json({ message: "Introduce un correo válido." });
