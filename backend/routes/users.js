@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -7,9 +7,11 @@ import {
   clearPasswordResetToken,
   createUser,
   findUserByEmail,
+  findUserById,
   listUsers,
   resetPassword,
   savePasswordResetToken,
+  toPublicUser,
 } from "../models/User.js";
 import authenticate from "../middleware/authenticate.js";
 import requireAdmin from "../middleware/requireAdmin.js";
@@ -20,6 +22,13 @@ const BCRYPT_ROUNDS = 12;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
+function readOptionalString(object, key) {
+  if (object[key] === undefined) {
+    return "";
+  }
+  return typeof object[key] === "string" ? object[key].trim() : null;
+}
+
 router.get("/", authenticate, requireAdmin, async (req, res, next) => {
   try {
     const users = await listUsers();
@@ -29,43 +38,117 @@ router.get("/", authenticate, requireAdmin, async (req, res, next) => {
   }
 });
 
-
-
 router.post("/register", async (req, res, next) => {
-  const { name, email, password } = req.body ?? {};
+  const body = req.body ?? {};
+  const profileInput = body.perfilCliente;
+  const documentsInput = body.expedienteDigital;
+  const hasProfileObject =
+    profileInput !== undefined &&
+    profileInput !== null &&
+    typeof profileInput === "object" &&
+    !Array.isArray(profileInput);
+  const hasDocumentsObject =
+    documentsInput === undefined ||
+    (documentsInput !== null &&
+      typeof documentsInput === "object" &&
+      !Array.isArray(documentsInput));
+  const perfilCliente = hasProfileObject
+    ? {
+        nombreCompleto: readOptionalString(profileInput, "nombreCompleto"),
+        direccion: readOptionalString(profileInput, "direccion"),
+        telefono: readOptionalString(profileInput, "telefono"),
+        whatsapp: readOptionalString(profileInput, "whatsapp"),
+        correoElectronico: readOptionalString(profileInput, "correoElectronico"),
+      }
+    : {
+        nombreCompleto:
+          typeof body.name === "string"
+            ? body.name.trim()
+            : typeof body.full_name === "string"
+              ? body.full_name.trim()
+              : "",
+        direccion: "",
+        telefono: "",
+        whatsapp: "",
+        correoElectronico:
+          typeof body.email === "string"
+            ? body.email.trim()
+            : typeof body.correoElectronico === "string"
+              ? body.correoElectronico.trim()
+              : "",
+      };
+  const expedienteDigital = hasDocumentsObject
+    ? {
+        urlDocumentoIdentidad: readOptionalString(
+          documentsInput ?? {},
+          "urlDocumentoIdentidad",
+        ),
+        urlReciboServicio: readOptionalString(
+          documentsInput ?? {},
+          "urlReciboServicio",
+        ),
+        urlContratoDisclaimer: readOptionalString(
+          documentsInput ?? {},
+          "urlContratoDisclaimer",
+        ),
+        urlComprobanteAceptacion: readOptionalString(
+          documentsInput ?? {},
+          "urlComprobanteAceptacion",
+        ),
+      }
+    : null;
+  const email = perfilCliente.correoElectronico;
+  const password = body.password;
 
   if (
-    typeof name !== "string" ||
-    name.trim().length === 0 ||
-    name.trim().length > 120 ||
-    typeof email !== "string" ||
+    (!hasProfileObject && profileInput !== undefined) ||
+    !hasDocumentsObject ||
+    Object.values(perfilCliente).some((value) => value === null) ||
+    Object.values(expedienteDigital ?? {}).some((value) => value === null) ||
+    perfilCliente.nombreCompleto.length === 0 ||
+    perfilCliente.nombreCompleto.length > 120 ||
+    perfilCliente.telefono.length > 40 ||
+    perfilCliente.whatsapp.length > 40 ||
     email.length > 320 ||
     !EMAIL_PATTERN.test(email) ||
     !isValidPassword(password)
   ) {
     return res.status(400).json({
       message:
-        "Nombre y correo válidos son obligatorios; la contraseña debe tener entre 8 y 72 bytes.",
+        "Se requiere un perfil con nombre y correo válidos; la contraseña debe tener entre 8 y 72 bytes. Los demás campos deben ser texto.",
     });
   }
 
   try {
     const user = await createUser({
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
+      perfilCliente: {
+        ...perfilCliente,
+        correoElectronico: email.toLowerCase(),
+      },
+      expedienteDigital,
       passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS),
     });
-    return res.status(201).json({ user });
+    return res.status(201).json({ user: toPublicUser(user) });
   } catch (error) {
     return next(error);
   }
 });
 
 router.post("/login", async (req, res, next) => {
-  const { email, password } = req.body ?? {};
+  const body = req.body ?? {};
+  const email =
+    typeof body.perfilCliente?.correoElectronico === "string"
+      ? body.perfilCliente.correoElectronico
+      : typeof body.email === "string"
+        ? body.email
+        : typeof body.correoElectronico === "string"
+          ? body.correoElectronico
+          : "";
+  const { password } = body;
 
   if (
-    typeof email !== "string" ||
+    !EMAIL_PATTERN.test(email.trim()) ||
+    email.length > 320 ||
     typeof password !== "string" ||
     Buffer.byteLength(password, "utf8") > 72
   ) {
@@ -95,18 +178,32 @@ router.post("/login", async (req, res, next) => {
 
     return res.json({
       token,
-      user: { id: user.id, name: user.name, email: user.email },
+      user: toPublicUser(user),
     });
   } catch (error) {
     return next(error);
   }
 });
 
+router.get("/me", authenticate, async (req, res, next) => {
+  try {
+    const user = await findUserById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "No se encontró el usuario." });
+    }
+    return res.json({ user: toPublicUser(user) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.post("/recover-password", async (req, res, next) => {
+  const emailInput =
+    typeof req.body?.perfilCliente?.correoElectronico === "string"
+      ? req.body.perfilCliente.correoElectronico
+      : req.body?.email;
   const email =
-    typeof req.body?.email === "string"
-      ? req.body.email.trim().toLowerCase()
-      : "";
+    typeof emailInput === "string" ? emailInput.trim().toLowerCase() : "";
 
   if (!EMAIL_PATTERN.test(email)) {
     return res.status(400).json({ message: "Introduce un correo válido." });

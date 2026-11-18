@@ -1,5 +1,12 @@
 import pool from "../config/database.js";
 
+const publicUserColumns = `
+  id, name, email, direccion, telefono, whatsapp,
+  url_documento_identidad, url_recibo_servicio,
+  url_contrato_disclaimer, url_comprobante_aceptacion,
+  created_at, updated_at, estado
+`;
+
 export async function initializeUserTable() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -7,26 +14,62 @@ export async function initializeUserTable() {
       name VARCHAR(120) NOT NULL,
       email VARCHAR(320) NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
+      direccion TEXT NOT NULL DEFAULT '',
+      telefono VARCHAR(40) NOT NULL DEFAULT '',
+      whatsapp VARCHAR(40) NOT NULL DEFAULT '',
+      url_documento_identidad TEXT NOT NULL DEFAULT '',
+      url_recibo_servicio TEXT NOT NULL DEFAULT '',
+      url_contrato_disclaimer TEXT NOT NULL DEFAULT '',
+      url_comprobante_aceptacion TEXT NOT NULL DEFAULT '',
       reset_token_hash TEXT,
       reset_token_expires_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      estado VARCHAR(40) NOT NULL DEFAULT 'activo'
     )
+  `);
+  await pool.query(`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS direccion TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS telefono VARCHAR(40) NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(40) NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS url_documento_identidad TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS url_recibo_servicio TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS url_contrato_disclaimer TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS url_comprobante_aceptacion TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      ADD COLUMN IF NOT EXISTS estado VARCHAR(40) NOT NULL DEFAULT 'activo'
   `);
 }
 
-export async function createUser({ name, email, passwordHash }) {
+export async function createUser({ perfilCliente, expedienteDigital, passwordHash }) {
   const { rows } = await pool.query(
-    `INSERT INTO users (name, email, password_hash)
-     VALUES ($1, $2, $3)
-     RETURNING id, name, email, created_at`,
-    [name, email, passwordHash],
+    `INSERT INTO users (
+       name, email, password_hash, direccion, telefono, whatsapp,
+       url_documento_identidad, url_recibo_servicio,
+       url_contrato_disclaimer, url_comprobante_aceptacion
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     RETURNING ${publicUserColumns}`,
+    [
+      perfilCliente.nombreCompleto,
+      perfilCliente.correoElectronico,
+      passwordHash,
+      perfilCliente.direccion,
+      perfilCliente.telefono,
+      perfilCliente.whatsapp,
+      expedienteDigital.urlDocumentoIdentidad,
+      expedienteDigital.urlReciboServicio,
+      expedienteDigital.urlContratoDisclaimer,
+      expedienteDigital.urlComprobanteAceptacion,
+    ],
   );
   return rows[0];
 }
 
 export async function findUserByEmail(email) {
   const { rows } = await pool.query(
-    `SELECT id, name, email, password_hash
+    `SELECT *
      FROM users
      WHERE email = $1`,
     [email],
@@ -34,13 +77,47 @@ export async function findUserByEmail(email) {
   return rows[0] ?? null;
 }
 
+export async function findUserById(id) {
+  const { rows } = await pool.query(
+    `SELECT ${publicUserColumns}
+     FROM users
+     WHERE id = $1`,
+    [id],
+  );
+  return rows[0] ?? null;
+}
+
 export async function listUsers() {
   const { rows } = await pool.query(
-    `SELECT id, name, email, created_at
+    `SELECT ${publicUserColumns}
      FROM users
      ORDER BY id ASC`,
   );
-  return rows;
+  return rows.map(toPublicUser);
+}
+
+export function toPublicUser(user) {
+  return {
+    id: String(user.id),
+    perfilCliente: {
+      nombreCompleto: user.name,
+      direccion: user.direccion,
+      telefono: user.telefono,
+      whatsapp: user.whatsapp,
+      correoElectronico: user.email,
+    },
+    expedienteDigital: {
+      urlDocumentoIdentidad: user.url_documento_identidad,
+      urlReciboServicio: user.url_recibo_servicio,
+      urlContratoDisclaimer: user.url_contrato_disclaimer,
+      urlComprobanteAceptacion: user.url_comprobante_aceptacion,
+    },
+    metadatos: {
+      fechaCreacion: user.created_at,
+      fechaActualizacion: user.updated_at,
+      estado: user.estado,
+    },
+  };
 }
 
 export async function savePasswordResetToken(email, tokenHash, expiresAt) {
@@ -66,7 +143,8 @@ export async function resetPassword(tokenHash, passwordHash) {
     `UPDATE users
      SET password_hash = $2,
          reset_token_hash = NULL,
-         reset_token_expires_at = NULL
+         reset_token_expires_at = NULL,
+         updated_at = NOW()
      WHERE reset_token_hash = $1
        AND reset_token_expires_at > NOW()
      RETURNING id`,
