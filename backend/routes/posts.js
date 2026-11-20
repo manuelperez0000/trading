@@ -1,23 +1,73 @@
 import { Router } from "express";
 import authenticate from "../middleware/authenticate.js";
-import { createPost } from "../models/Post.js";
+import responser from "../utils/responser.js";
+import {
+  createPost,
+  deletePost,
+  findPostById,
+  listPosts,
+} from "../models/Post.js";
+import { isPostId, isHttpUrl } from "../utils/utils.js";
 
 const router = Router();
 
-function isHttpUrl(value) {
-  if (typeof value !== "string" || value.length > 2048) {
-    return false;
+router.get("/", async (req, res, next) => {
+  const statusQuery = req.query.status;
+  if (
+    statusQuery !== undefined &&
+    statusQuery !== "true" &&
+    statusQuery !== "false"
+  ) {
+    return responser.error({
+      res,
+      message: "El estatus debe ser true o false.",
+      status: 400,
+    });
   }
 
   try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
+    const posts = await listPosts(
+      statusQuery === undefined ? null : statusQuery === "true",
+    );
+    return responser.success({
+      res,
+      message: "Publicaciones listadas correctamente.",
+      body: { posts },
+    });
+  } catch (error) {
+    return next(error);
   }
-}
+});
 
-router.post("/", authenticate, async (req, res, next) => {
+router.get("/:id", async (req, res, next) => {
+  if (!isPostId(req.params.id)) {
+    return responser.error({
+      res,
+      message: "El ID de la publicación no es válido.",
+      status: 400,
+    });
+  }
+
+  try {
+    const post = await findPostById(req.params.id);
+    if (!post) {
+      return responser.error({
+        res,
+        message: "No se encontró la publicación.",
+        status: 404,
+      });
+    }
+    return responser.success({
+      res,
+      message: "Publicación encontrada.",
+      body: { post },
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post("/", async (req, res, next) => {
   const { title, text, image } = req.body ?? {};
 
   if (
@@ -28,19 +78,58 @@ router.post("/", authenticate, async (req, res, next) => {
     text.trim().length === 0 ||
     !isHttpUrl(image)
   ) {
-    return res.status(400).json({
+    return responser.error({
+      res,
       message: "Se requieren un título (máximo 200 caracteres), texto e imagen con URL HTTP o HTTPS.",
+      status: 400,
     });
   }
 
   try {
     const post = await createPost({
-      userId: req.user.id,
+      userId: 123,
+      /* userId: req.user.id, */
       title: title.trim(),
       text,
       image: image.trim(),
     });
-    return res.status(201).json({ post });
+    return responser.success({
+      res,
+      message: "Publicación creada correctamente.",
+      body: { post },
+      status: 201,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.delete("/:id", authenticate, async (req, res, next) => {
+  if (!isPostId(req.params.id)) {
+    return responser.error({
+      res,
+      message: "El ID de la publicación no es válido.",
+      status: 400,
+    });
+  }
+
+  try {
+    const post = await deletePost({
+      id: req.params.id,
+      userId: req.user.id,
+    });
+    if (!post) {
+      return responser.error({
+        res,
+        message: "No se encontró la publicación o no tienes permiso para eliminarla.",
+        status: 404,
+      });
+    }
+    return responser.success({
+      res,
+      message: "Publicación eliminada correctamente.",
+      body: { post },
+    });
   } catch (error) {
     return next(error);
   }

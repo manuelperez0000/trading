@@ -1,11 +1,16 @@
 import jwt from "jsonwebtoken";
+import responser from "../utils/responser.js";
 
 export default function authenticate(req, res, next) {
   const authorization = req.get("authorization");
   const match = authorization?.match(/^Bearer\s+(.+)$/i);
 
   if (!match) {
-    return res.status(401).json({ message: "Se requiere un token Bearer." });
+    return responser.error({
+      res,
+      message: "Se requiere un token Bearer.",
+      status: 401,
+    });
   }
 
   const secret = process.env.JWT_SECRET;
@@ -16,7 +21,11 @@ export default function authenticate(req, res, next) {
   try {
     const claims = jwt.verify(match[1], secret);
     if (typeof claims === "string" || typeof claims.sub !== "string") {
-      return res.status(401).json({ message: "El token no es válido." });
+      return responser.error({
+        res,
+        message: "El token no es válido.",
+        status: 401,
+      });
     }
 
     req.user = { id: claims.sub };
@@ -27,7 +36,11 @@ export default function authenticate(req, res, next) {
       error.name === "TokenExpiredError" ||
       error.name === "NotBeforeError"
     ) {
-      return res.status(401).json({ message: "El token no es válido o ha expirado." });
+      return responser.error({
+        res,
+        message: "El token no es válido o ha expirado.",
+        status: 401,
+      });
     }
 
     return next(error);

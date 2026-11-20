@@ -1,3 +1,5 @@
+import responser from "../utils/responser.js";
+
 export default function requireAdmin(req, res, next) {
   const adminUserIds = (process.env.ADMIN_USER_IDS ?? "")
     .split(",")
@@ -14,7 +16,11 @@ export default function requireAdmin(req, res, next) {
   }
 
   if (!adminUserIds.includes(req.user.id)) {
-    return res.status(403).json({ message: "No tienes permiso para listar usuarios." });
+    return responser.error({
+      res,
+      message: "No tienes permiso para listar usuarios.",
+      status: 403,
+    });
   }
 
   return next();

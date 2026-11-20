@@ -1,5 +1,8 @@
 import pool from "../config/database.js";
 
+const postFields =
+  "id, user_id, title, post_text AS text, image_url AS image, status, created_at";
+
 export async function initializePostTable() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS posts (
@@ -8,8 +11,13 @@ export async function initializePostTable() {
       title VARCHAR(200) NOT NULL,
       post_text TEXT NOT NULL,
       image_url TEXT NOT NULL,
+      status BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+  await pool.query(`
+    ALTER TABLE posts
+    ADD COLUMN IF NOT EXISTS status BOOLEAN NOT NULL DEFAULT FALSE
   `);
 }
 
@@ -17,8 +25,39 @@ export async function createPost({ userId, title, text, image }) {
   const { rows } = await pool.query(
     `INSERT INTO posts (user_id, title, post_text, image_url)
      VALUES ($1, $2, $3, $4)
-     RETURNING id, user_id, title, post_text AS text, image_url AS image, created_at`,
+     RETURNING ${postFields}`,
     [userId, title, text, image],
   );
   return rows[0];
+}
+
+export async function listPosts(status = null) {
+  const { rows } = await pool.query(
+    `SELECT ${postFields}
+     FROM posts
+     WHERE $1::boolean IS NULL OR status = $1
+     ORDER BY created_at DESC, id DESC`,
+    [status],
+  );
+  return rows;
+}
+
+export async function findPostById(id) {
+  const { rows } = await pool.query(
+    `SELECT ${postFields}
+     FROM posts
+     WHERE id = $1`,
+    [id],
+  );
+  return rows[0] ?? null;
+}
+
+export async function deletePost({ id, userId }) {
+  const { rows } = await pool.query(
+    `DELETE FROM posts
+     WHERE id = $1 AND user_id = $2
+     RETURNING ${postFields}`,
+    [id, userId],
+  );
+  return rows[0] ?? null;
 }
