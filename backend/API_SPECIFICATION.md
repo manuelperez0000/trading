@@ -223,75 +223,33 @@ Este endpoint es consumido directamente por el Add-On en C# de NinjaTrader 8 cad
 
 ---
 
-## 5. Catálogo de Bots (`/bots`)
+## 5. Herramientas para bots (`/bots`)
 
-### `GET /api/v1/bots`
-- **Response `200 OK`:**
-  ```json
-  [
-    {
-      "id": "bot-quantum-orderflow-v4",
-      "name": "Quantum OrderFlow Scalper V4",
-      "code_name": "QuantumOrderFlowScalperV4",
-      "version": "v4.2.1 (NT8 64-bit)",
-      "category": "ORDER_FLOW_SCALPING",
-      "primary_instrument": "NQ 12-26",
-      "supported_instruments": ["NQ", "MNQ", "ES"],
-      "monthly_price_usd": 199,
-      "win_rate_percent": 74.8,
-      "profit_factor": 2.64,
-      "max_drawdown_usd": 1150,
-      "avg_daily_trades": "4 - 7 trades / sesión NY",
-      "prop_firm_ready": true,
-      "short_description": "...",
-      "full_description": "...",
-      "recommended_account_size_usd": 50000,
-      "ninja_parameters": [
-        {
-          "name": "ImbalanceRatio",
-          "default_value": "3.5x",
-          "description": "Mínimo desequilibrio Bid/Ask"
-        }
-      ]
-    }
-  ]
-  ```
-### `GET /api/v1/bots/:id`
-- **Response `200 OK`:** Objeto individual de `TradingBotDto`.
+`GET /api/v1/bots` y `GET /api/v1/bots/:id` son públicos. Las operaciones
+`POST /api/v1/bots`, `PUT /api/v1/bots/:id` y `DELETE /api/v1/bots/:id`
+requieren token Bearer y que el usuario esté incluido en `ADMIN_USER_IDS`.
+`PUT` reemplaza todos los campos del bot.
 
-### `POST /api/v1/bots` (Crear o Publicar Nuevo Bot)
-- **Role Requerido:** `ADMIN`
-- **Request Body (`CreateTradingBotDto`):**
-  ```json
-  {
-    "name": "Alpha Volume Profile Scalper",
-    "code_name": "AlphaVolumeProfileScalper",
-    "version": "v1.0.0 (NT8 64-bit)",
-    "category": "ORDER_FLOW_SCALPING",
-    "primary_instrument": "NQ 12-26",
-    "supported_instruments": ["NQ", "MNQ", "ES"],
-    "monthly_price_usd": 149,
-    "win_rate_percent": 72.5,
-    "profit_factor": 2.45,
-    "max_drawdown_usd": 950,
-    "avg_daily_trades": "3 - 5 trades / sesión",
-    "prop_firm_ready": true,
-    "short_description": "Entradas institucionales basadas en el desarrollo del POC y Value Area.",
-    "full_description": "Estrategia algorítmica para NinjaTrader 8 con validación remota y protección de drawdown.",
-    "recommended_account_size_usd": 50000,
-    "ninja_parameters": [
-      {
-        "name": "StopLossTicks",
-        "default_value": "40",
-        "description": "Stop Loss fijo en ticks"
-      }
-    ]
-  }
-  ```
-- **Response `201 Created`:** Objeto `TradingBotDto` creado con `id` asignado.
+El cuerpo de `POST` y `PUT` contiene:
 
-### `POST /api/v1/bots/:id/link-license`
-- **Request Body:** `{ "license_key": "NT8-QTM-9921-ALPHA" }`
+```json
+{
+  "nombre": "Bot de ejemplo",
+  "profit_factor": 2.5,
+  "win_rate": 72.5,
+  "profit_1_year": 4200,
+  "drawdown": 800,
+  "precio_mensual": 199,
+  "imagen": "https://example.com/bot.jpg",
+  "moneda": "USD",
+  "descripcion": "Descripción del bot."
+}
+```
+
+`win_rate` debe estar entre 0 y 100. `profit_factor`, `drawdown` y
+`precio_mensual` no pueden ser negativos; `profit_1_year` sí puede ser
+negativo. Las respuestas usan el sobre común `{ "body": ..., "message": "...",
+"status": <código HTTP> }`.
 
 ---
 

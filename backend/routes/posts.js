@@ -7,7 +7,7 @@ import {
   findPostById,
   listPosts,
 } from "../models/Post.js";
-import { isPostId, isHttpUrl } from "../utils/utils.js";
+import { isDatabaseId, isHttpUrl } from "../utils/utils.js";
 
 const router = Router();
 
@@ -40,7 +40,7 @@ router.get("/", async (req, res, next) => {
 });
 
 router.get("/:id", async (req, res, next) => {
-  if (!isPostId(req.params.id)) {
+  if (!isDatabaseId(req.params.id)) {
     return responser.error({
       res,
       message: "El ID de la publicación no es válido.",
@@ -105,7 +105,7 @@ router.post("/", async (req, res, next) => {
 });
 
 router.delete("/:id", authenticate, async (req, res, next) => {
-  if (!isPostId(req.params.id)) {
+  if (!isDatabaseId(req.params.id)) {
     return responser.error({
       res,
       message: "El ID de la publicación no es válido.",

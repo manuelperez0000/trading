@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_DATABASE_ID = 9223372036854775807n;
 
 export function isValidPassword(password) {
   return (
@@ -222,6 +223,92 @@ export function validateRegistrationData(body) {
   };
 }
 
+export function validateBotData(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return {
+      errors: [
+        {
+          field: "body",
+          message: "El cuerpo de la solicitud debe ser un objeto JSON.",
+        },
+      ],
+    };
+  }
+
+  const errors = [];
+  const botData = {};
+  const stringFields = [
+    ["nombre", "El nombre", 200],
+    ["imagen", "La imagen", 2048],
+    ["moneda", "La moneda", null],
+    ["descripcion", "La descripción", null],
+  ];
+
+  for (const [field, label, maxLength] of stringFields) {
+    const value = body[field];
+    if (typeof value !== "string") {
+      errors.push({
+        field,
+        message: `${label} debe ser texto.`,
+      });
+      continue;
+    }
+
+    const normalizedValue = value.trim();
+    if (!normalizedValue) {
+      errors.push({
+        field,
+        message: `${label} es obligatorio.`,
+      });
+    } else if (maxLength !== null && normalizedValue.length > maxLength) {
+      errors.push({
+        field,
+        message: `${label} no puede superar ${maxLength} caracteres.`,
+      });
+    } else {
+      botData[field] = normalizedValue;
+    }
+  }
+
+  const numberFields = [
+    ["profit_factor", "Profit Factor", 0, null],
+    ["win_rate", "Win rate", 0, 100],
+    ["profit_1_year", "Profit de 1 año", null, null],
+    ["drawdown", "Drawdown", 0, null],
+    ["precio_mensual", "El precio mensual", 0, null],
+  ];
+
+  for (const [field, label, minimum, maximum] of numberFields) {
+    const value = body[field];
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      errors.push({
+        field,
+        message: `${label} debe ser un número válido.`,
+      });
+    } else if (minimum !== null && value < minimum) {
+      errors.push({
+        field,
+        message: `${label} no puede ser menor que ${minimum}.`,
+      });
+    } else if (maximum !== null && value > maximum) {
+      errors.push({
+        field,
+        message: `${label} no puede superar ${maximum}.`,
+      });
+    } else {
+      botData[field] = value;
+    }
+  }
+
+  return errors.length > 0 ? { errors } : { errors, botData };
+}
+
+export function validationMessage(errors) {
+  return `${errors
+    .map(({ message }) => message.replace(/[.,;:!?]+$/, ""))
+    .join(", ")}.`;
+}
+
 export function hashResetToken(token) {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -244,8 +331,12 @@ export function isPostId(value) {
   return (
     typeof value === "string" &&
     /^[1-9]\d{0,18}$/.test(value) &&
-    BigInt(value) <= MAX_POST_ID
+    BigInt(value) <= MAX_DATABASE_ID
   );
+}
+
+export function isDatabaseId(value) {
+  return isPostId(value);
 }
 
 export function isHttpUrl(value) {
@@ -271,10 +362,4 @@ export function readOptionalString(object, key) {
 export function readFirstString(object, keys) {
   const key = keys.find((candidate) => object[candidate] !== undefined);
   return key === undefined ? "" : readOptionalString(object, key);
-}
-
-export function registrationValidationMessage(errors) {
-  return `${errors
-      .map(({ message }) => message.replace(/[.,;:!?]+$/, ""))
-      .join(", ")}.`;
 }

@@ -21,7 +21,7 @@ import {
   isValidPassword,
   passwordResetUrl,
   readFirstString,
-  registrationValidationMessage,
+  validationMessage,
   validateRegistrationData,
 } from "../utils/utils.js";
 import responser from "../utils/responser.js";
@@ -48,7 +48,7 @@ router.post("/register", async (req, res, next) => {
   if (errors.length > 0) {
     return responser.error({
       res,
-      message: registrationValidationMessage(errors),
+      message: validationMessage(errors),
       status: 400,
     });
   }

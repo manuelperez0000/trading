@@ -18,7 +18,7 @@ export default function requireAdmin(req, res, next) {
   if (!adminUserIds.includes(req.user.id)) {
     return responser.error({
       res,
-      message: "No tienes permiso para listar usuarios.",
+      message: "No tienes permiso de administrador para realizar esta acción.",
       status: 403,
     });
   }
