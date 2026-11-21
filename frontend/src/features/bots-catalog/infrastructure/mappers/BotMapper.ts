@@ -3,14 +3,67 @@ import type {
   TradingBot,
 } from '@features/bots-catalog/domain/entities/TradingBot';
 import {
+  BackendBotDtoSchema,
+  CreateBackendBotDtoSchema,
   CreateTradingBotDtoSchema,
   TradingBotDtoSchema,
+  type CreateBackendBotDto,
   type CreateTradingBotDto,
   type TradingBotDto,
 } from '@features/bots-catalog/infrastructure/dto/BotDto';
 
 export class BotMapper {
   public static toDomain(raw: unknown): TradingBot {
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Formato inválido de bot');
+    }
+    const r = raw as Record<string, any>;
+
+    // Soporte para el modelo implementado por Manuel en PostgreSQL (campos en español)
+    if ('nombre' in r) {
+      const dto = BackendBotDtoSchema.parse(r);
+      return {
+        id: dto.id,
+        name: dto.nombre,
+        codeName: dto.nombre.replace(/[^a-zA-Z0-9]/g, '') || 'TradingBot',
+        version: r.version || 'v1.0.0 (NT8 64-bit)',
+        category:
+          r.category &&
+          ['ORDER_FLOW_SCALPING', 'MOMENTUM_BREAKOUT', 'MEAN_REVERSION'].includes(r.category)
+            ? r.category
+            : 'ORDER_FLOW_SCALPING',
+        primaryInstrument: r.primary_instrument || 'NQ 12-26',
+        supportedInstruments: Array.isArray(r.supported_instruments)
+          ? r.supported_instruments
+          : ['NQ', 'MNQ', 'ES'],
+        monthlyPriceUsd: dto.precio_mensual,
+        winRatePercent: dto.win_rate,
+        profitFactor: dto.profit_factor,
+        maxDrawdownUsd: dto.drawdown,
+        avgDailyTrades: r.avg_daily_trades || '4 - 7 trades / sesión NY',
+        propFirmReady: r.prop_firm_ready ?? true,
+        shortDescription: dto.descripcion,
+        fullDescription: r.full_description || dto.descripcion,
+        recommendedAccountSizeUsd:
+          r.recommended_account_size_usd ?? (dto.drawdown * 25 > 25000 ? 50000 : 25000),
+        ninjaParameters: Array.isArray(r.ninja_parameters)
+          ? r.ninja_parameters
+          : [
+              {
+                name: 'ImbalanceRatio',
+                defaultValue: '3.5x',
+                description: 'Mínimo desequilibrio Bid/Ask en Footprint',
+              },
+              {
+                name: 'HardDailyDrawdownLimit',
+                defaultValue: `$${dto.drawdown}`,
+                description: 'Hard-stop de pérdida diaria inviolable',
+              },
+            ],
+      };
+    }
+
+    // Formato estándar DTO (mock / arquitectura previa)
     const dto = TradingBotDtoSchema.parse(raw);
     return {
       id: dto.id,
@@ -87,5 +140,23 @@ export class BotMapper {
       })),
     };
     return CreateTradingBotDtoSchema.parse(raw);
+  }
+
+  public static toCreateBackendPayload(input: CreateTradingBotInput): CreateBackendBotDto {
+    const raw: CreateBackendBotDto = {
+      nombre: input.name,
+      profit_factor: Number(input.profitFactor ?? 2.0),
+      win_rate: Number(input.winRatePercent ?? 72.5),
+      profit_1_year: Math.round((input.monthlyPriceUsd ?? 149) * 25),
+      drawdown: Number(input.maxDrawdownUsd ?? 1000),
+      precio_mensual: Number(input.monthlyPriceUsd ?? 149),
+      imagen: 'https://tradinglifeacademy.com/assets/bot-default.jpg',
+      moneda: 'USD',
+      descripcion:
+        input.shortDescription ||
+        input.fullDescription ||
+        'Estrategia algorítmica oficial para NinjaTrader 8.',
+    };
+    return CreateBackendBotDtoSchema.parse(raw);
   }
 }

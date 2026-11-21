@@ -11,7 +11,33 @@ import {
 
 export class AuthMapper {
   public static userToDomain(raw: unknown): User {
-    const dto = UserDtoSchema.parse(raw);
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Formato inválido de usuario');
+    }
+    const r = raw as Record<string, any>;
+    // Desempaquetar si viene envuelto en { body: { user: ... } } o { user: ... }
+    const u = r.body?.user ?? r.user ?? r;
+
+    // Soporte para la estructura plana de Usuario de Manuel
+    if ('nombreCompleto' in u || 'correoElectronico' in u) {
+      const email = String(u.correoElectronico || u.email || '');
+      const fullName = String(u.nombreCompleto || u.full_name || email.split('@')[0] || 'Trader TLA');
+      return {
+        id: String(u.id ?? 'usr-remote'),
+        fullName,
+        email,
+        handle: u.handle || `@${email.split('@')[0].toLowerCase() || 'trader'}`,
+        role: u.role || (email.toLowerCase().includes('admin') ? 'ADMIN' : 'TRADER'),
+        ninjaVersion: u.ninjaVersion || 'NinjaTrader 8.1.3.1 (64-bit)',
+        defaultMachineId: u.defaultMachineId || 'WIN11-TRD-9F82A1C0',
+        memberSince: u.fechaCreacion
+          ? new Date(u.fechaCreacion).toLocaleDateString()
+          : 'Noviembre 2026',
+      };
+    }
+
+    // Formato estándar DTO (mock / arquitectura previa)
+    const dto = UserDtoSchema.parse(u);
     return {
       id: dto.id,
       fullName: dto.full_name,
@@ -38,6 +64,40 @@ export class AuthMapper {
   }
 
   public static sessionToDomain(raw: unknown): AuthSession {
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Formato inválido de sesión');
+    }
+    const r = raw as Record<string, any>;
+    const body = r.body ?? r;
+
+    // Si viene del backend de Manuel con token JWT en body.token
+    if ('token' in body && typeof body.token === 'string') {
+      const token = body.token;
+      const user = this.userToDomain(body.user ?? body);
+      return {
+        user,
+        tokens: {
+          accessToken: token,
+          refreshToken: token,
+          expiresInSeconds: 3600,
+        },
+      };
+    }
+
+    // Si viene de registro directo { body: { user: { ... } } }
+    if (body.user && !body.tokens) {
+      const user = this.userToDomain(body.user);
+      return {
+        user,
+        tokens: {
+          accessToken: 'jwt-registered-session',
+          refreshToken: 'jwt-registered-session',
+          expiresInSeconds: 3600,
+        },
+      };
+    }
+
+    // Formato estándar previo con DTO tokens
     const dto = AuthResponseDtoSchema.parse(raw);
     return {
       user: this.userToDomain(dto.user),

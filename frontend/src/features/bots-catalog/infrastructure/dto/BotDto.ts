@@ -48,3 +48,37 @@ export const CreateTradingBotDtoSchema = z.object({
 });
 
 export type CreateTradingBotDto = z.infer<typeof CreateTradingBotDtoSchema>;
+
+/**
+ * Esquema del Bot implementado en PostgreSQL por el backend de Express.
+ */
+export const BackendBotDtoSchema = z.object({
+  id: z.union([z.string(), z.number()]).transform(String),
+  nombre: z.string(),
+  profit_factor: z.coerce.number(),
+  win_rate: z.coerce.number(),
+  profit_1_year: z.coerce.number(),
+  drawdown: z.coerce.number(),
+  precio_mensual: z.coerce.number(),
+  imagen: z.string().optional().default('https://tradinglifeacademy.com/assets/bot-default.jpg'),
+  moneda: z.string().optional().default('USD'),
+  descripcion: z.string(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+export type BackendBotDto = z.infer<typeof BackendBotDtoSchema>;
+
+export const CreateBackendBotDtoSchema = z.object({
+  nombre: z.string().min(1).max(200),
+  profit_factor: z.number().min(0),
+  win_rate: z.number().min(0).max(100),
+  profit_1_year: z.number(),
+  drawdown: z.number().min(0),
+  precio_mensual: z.number().min(0),
+  imagen: z.string(),
+  moneda: z.string().default('USD'),
+  descripcion: z.string().min(1),
+});
+
+export type CreateBackendBotDto = z.infer<typeof CreateBackendBotDtoSchema>;
