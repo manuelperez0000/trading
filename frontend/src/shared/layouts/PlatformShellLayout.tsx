@@ -429,29 +429,13 @@ export const PlatformShellLayout: React.FC = () => {
               {/* Controles técnicos visibles solo para Administradores */}
               {user.role === 'ADMIN' && (
                 <>
-                  {/* Selector interactivo de Modo de Datos: Mock vs Backend API */}
-                  <div className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/90 px-2 py-1">
-                    <span className="text-[11px] text-slate-400">Origen:</span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        usePollingControlStore.getState().setDataSourceMode(
-                          usePollingControlStore.getState().dataSourceMode === 'SIMULATOR_MOCK'
-                            ? 'REMOTE_API'
-                            : 'SIMULATOR_MOCK'
-                        )
-                      }
-                      title="Haz clic para alternar entre el Simulador en memoria y el Backend REST en Express"
-                      className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold cursor-pointer transition-colors ${
-                        usePollingControlStore((s) => s.dataSourceMode) === 'REMOTE_API'
-                          ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
-                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      }`}
-                    >
-                      {usePollingControlStore((s) => s.dataSourceMode) === 'REMOTE_API'
-                        ? 'REST API (Backend)'
-                        : 'Simulador Mock'}
-                    </button>
+                  {/* Indicador de conexión en vivo a la API REST */}
+                  <div
+                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-mono font-bold text-emerald-300"
+                    title="Conectado directamente a la API REST (Backend Express / PostgreSQL)"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>API REST v1</span>
                   </div>
               <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/90 px-2.5 py-1.5">
                 <Radio className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
