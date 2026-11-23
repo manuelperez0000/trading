@@ -552,7 +552,7 @@ export const UserProfilePage: React.FC = () => {
       const msg =
         err instanceof Error
           ? err.message
-          : 'Sin permisos de administrador (verifica ADMIN_USER_IDS).';
+          : 'Sin permisos de administrador (verifica ADMINS).';
       setAdminUsersError(msg);
       toast.danger('Error en GET /api/v1/users', msg);
     } finally {
@@ -780,7 +780,7 @@ export const UserProfilePage: React.FC = () => {
               <Badge variant="amber">GET /api/v1/users</Badge>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Requiere token Bearer y que el ID del usuario autenticado esté incluido en la variable <code className="text-amber-300">ADMIN_USER_IDS</code> del backend.
+              Requiere token Bearer y que el ID del usuario autenticado esté incluido en la variable <code className="text-amber-300">ADMINS</code> del backend.
             </p>
           </div>
 

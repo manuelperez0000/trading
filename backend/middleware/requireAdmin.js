@@ -1,7 +1,7 @@
 import responser from "../utils/responser.js";
 
 export default function requireAdmin(req, res, next) {
-  const adminUserIds = (process.env.ADMIN_USER_IDS ?? "")
+  const adminUserIds = (process.env.ADMINS ?? "")
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean);
@@ -11,7 +11,7 @@ export default function requireAdmin(req, res, next) {
     adminUserIds.some((id) => !/^\d+$/.test(id))
   ) {
     return next(
-      new Error("ADMIN_USER_IDS must be a comma-separated list of user IDs"),
+      new Error("ADMINS must be a comma-separated list of user IDs"),
     );
   }
 

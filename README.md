@@ -6,6 +6,10 @@ Guía de integración para el frontend. El servidor Express publica las rutas ba
 http://localhost:3000/api/v1
 ```
 
+La documentación interactiva Swagger está disponible en
+`http://localhost:3000/api-docs`; el documento OpenAPI en JSON está en
+`http://localhost:3000/api-docs.json`.
+
 Las solicitudes con cuerpo deben usar `Content-Type: application/json`. Los
 endpoints protegidos requieren `Authorization: Bearer <token>`.
 
@@ -129,6 +133,37 @@ entorno `ADMINS` (IDs separados por comas); en caso contrario es `"client"`.
 El token es JWT con vigencia de 10 días. Credenciales incorrectas responden
 `401 Unauthorized`.
 
+## Cargar imágenes
+
+`POST /images` — público. Envía una solicitud `multipart/form-data` con el
+archivo bajo el campo `image`. Se aceptan imágenes PNG, JPEG, GIF o WEBP de
+hasta 5 MB.
+
+Responde `201 Created` cuando la imagen se guarda dentro de `backend/images`.
+El ID y el nombre del archivo se generan con el hash SHA-256 del contenido; si
+se vuelve a subir la misma imagen, se conserva un solo archivo.
+
+```json
+{
+  "body": {
+    "id": "<sha256>",
+    "name": "<sha256>.png"
+  },
+  "message": "Imagen guardada correctamente.",
+  "status": 201
+}
+```
+
+`PUT /images/:id` reemplaza la imagen indicada por el ID. Envía la nueva imagen
+en el campo `image` con el mismo formato multipart. La imagen anterior se
+elimina y la respuesta incluye el ID y nombre generados para la nueva imagen.
+Si el ID no existe, responde `404 Not Found`.
+
+`DELETE /images/:id` elimina la imagen indicada por el ID y responde con el ID
+y nombre del archivo eliminado. Si el ID no existe, responde `404 Not Found`.
+Ambas rutas responden `400 Bad Request` si el ID no tiene formato SHA-256
+válido.
+
 ### Consultar el usuario autenticado
 
 `GET /users/me` — requiere token Bearer.
@@ -139,7 +174,7 @@ Si el usuario asociado al token ya no existe, responde `404 Not Found`.
 ### Listar usuarios
 
 `GET /users` — requiere token Bearer y que el ID esté en la variable de entorno
-`ADMIN_USER_IDS` (lista de IDs separada por comas).
+`ADMINS` (lista de IDs separada por comas).
 
 Responde `200 OK` con `{ "body": { "users": [<usuario>, ...] }, "message": "...", "status": 200 }`.
 Sin token responde `401`; sin permiso de administrador, `403 Forbidden`.
@@ -178,7 +213,7 @@ vencido responde `400 Bad Request` con el mismo formato.
 
 ### Crear publicación
 
-`POST /posts` — requiere token Bearer.
+`POST /posts` — público.
 
 ```json
 {
@@ -215,7 +250,7 @@ formato común.
 
 Las rutas `GET /bots` y `GET /bots/:id` son públicas. `POST /bots`,
 `PUT /bots/:id` y `DELETE /bots/:id` requieren token Bearer y que el usuario
-esté listado en `ADMIN_USER_IDS`. `PUT` reemplaza todos los datos del bot.
+esté listado en `ADMINS`. `PUT` reemplaza todos los datos del bot.
 
 El cuerpo de `POST` y `PUT` debe incluir:
 
@@ -252,9 +287,10 @@ demasiado grande) y `500` (error interno).
 
 - Las rutas disponibles en este backend son `/users`, `/posts` y `/bots`; la
   especificación anterior `/auth`, `/account`, `/subscriptions` y `/ninja` no
-  corresponde a rutas implementadas actualmente.
-- El expediente acepta URLs como cadenas; el backend no sube ni almacena el
-  contenido de los archivos.
+  corresponde a rutas implementadas actualmente. `/images` permite cargar
+  imágenes como se describe arriba.
+- El expediente acepta URLs como cadenas; las imágenes se cargan por separado
+  mediante `/images`.
 - Los campos del registro se envían en el nivel principal del JSON de entrada;
   las respuestas exitosas devuelven sus datos dentro de `body`. La contraseña
   solo se envía en el registro y login; nunca forma parte de la respuesta del

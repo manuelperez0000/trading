@@ -227,7 +227,7 @@ Este endpoint es consumido directamente por el Add-On en C# de NinjaTrader 8 cad
 
 `GET /api/v1/bots` y `GET /api/v1/bots/:id` son públicos. Las operaciones
 `POST /api/v1/bots`, `PUT /api/v1/bots/:id` y `DELETE /api/v1/bots/:id`
-requieren token Bearer y que el usuario esté incluido en `ADMIN_USER_IDS`.
+requieren token Bearer y que el usuario esté incluido en `ADMINS`.
 `PUT` reemplaza todos los campos del bot.
 
 El cuerpo de `POST` y `PUT` contiene:
