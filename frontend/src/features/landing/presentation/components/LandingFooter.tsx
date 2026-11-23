@@ -274,7 +274,7 @@ export const LandingFooter: React.FC = () => {
             Trading Life Academy comercializa exclusivamente suscripciones de software de automatización técnica (bots) y educación para traders. <strong>No somos un broker, asesor de inversiones ni captamos capital de terceros (Software 100% Non-Custodial).</strong> El trading de futuros y derivados en cuentas reales o de evaluación conlleva un riesgo sustancial de pérdida. Las métricas de backtesting mostradas reflejan pruebas históricas del algoritmo y no garantizan resultados futuros.
           </p>
           <p className="text-[10px] text-slate-500">
-            <strong>DECLARACIÓN DE USO NOMINATIVO E INDEPENDENCIA:</strong> Las menciones a Pulsar, Proton y Nova tienen carácter exclusivamente descriptivo sobre la compatibilidad técnica de las plantillas de gestión de riesgo del software. Trading Life Academy es una entidad independiente sin afiliación comercial ni patrocinio de dichas firmas, y jamás solicita contraseñas de cuentas externas.
+            <strong>DECLARACIÓN DE USO NOMINATIVO E INDEPENDENCIA:</strong> Las menciones a Lucid Trading, My Funded Futures (MFFU) y Tradeify tienen carácter exclusivamente descriptivo sobre la compatibilidad técnica de las plantillas de gestión de riesgo del software. Trading Life Academy es una entidad independiente sin afiliación comercial ni patrocinio de dichas firmas, y jamás solicita contraseñas de cuentas externas.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 text-slate-500 text-xs">
             <div>

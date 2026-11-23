@@ -22,12 +22,12 @@ export const LandingFaq: React.FC = () => {
     {
       q:
         lang === 'es'
-          ? '¿Los bots están configurados para las empresas de fondeo Pulsar, Proton y Nova, además de cuentas reales?'
-          : 'Are the bots configured for Pulsar, Proton, and Nova funding evaluations as well as live accounts?',
+          ? '¿Los bots están configurados para las empresas de fondeo Lucid Trading, My Funded Futures (MFFU) y Tradeify, además de cuentas reales?'
+          : 'Are the bots configured for Lucid Trading, My Funded Futures (MFFU), and Tradeify funding evaluations as well as live accounts?',
       a:
         lang === 'es'
-          ? 'Sí. Nuestros bots incluyen plantillas de gestión de riesgo preconfiguradas para adaptarse a los parámetros técnicos exigidos en evaluaciones y cuentas fondeadas de Pulsar, Proton y Nova (límite de pérdida diaria, trailing drawdown y cierre antes de fin de sesión), además de poder utilizarse en cualquier cuenta real de capital propio.'
-          : 'Yes. Our bots include pre-configured risk management templates tailored to the technical parameters required in Pulsar, Proton, and Nova evaluations and funded accounts (daily loss limit, trailing drawdown, and end-of-session close), and can also run on any personal live account.',
+          ? 'Sí. Nuestros bots incluyen plantillas de gestión de riesgo preconfiguradas para adaptarse a los parámetros técnicos exigidos en evaluaciones y cuentas fondeadas de Lucid Trading, My Funded Futures (MFFU) y Tradeify (límite de pérdida diaria, trailing drawdown y cierre antes de fin de sesión), además de poder utilizarse en cualquier cuenta real de capital propio.'
+          : 'Yes. Our bots include pre-configured risk management templates tailored to the technical parameters required in Lucid Trading, My Funded Futures (MFFU), and Tradeify evaluations and funded accounts (daily loss limit, trailing drawdown, and end-of-session close), and can also run on any personal live account.',
     },
     {
       q:

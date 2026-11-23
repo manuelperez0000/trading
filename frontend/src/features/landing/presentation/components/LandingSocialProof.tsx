@@ -19,36 +19,36 @@ export const LandingSocialProof: React.FC = () => {
   const useCases = [
     {
       title: lang === 'es' ? '1. Superar Pruebas de Fondeo' : '1. Passing Funded Evaluations',
-      profile: lang === 'es' ? 'Traders de Evaluaciones ($25k a $250k)' : 'Evaluation Traders ($25k to $250k)',
+      profile: lang === 'es' ? 'Lucid Trading • My Funded Futures (MFFU) • Tradeify' : 'Lucid Trading • My Funded Futures (MFFU) • Tradeify',
       benefit: lang === 'es' ? 'Cero Violaciones por Emoción' : 'Zero Emotional Rule Breaches',
-      botRecommended: 'QuantumOrderFlow Scalper V4',
+      botRecommended: 'Bot Pulsar (El Más Eficiente)',
       icon: <Award className="h-5 w-5 text-amber-400" />,
       text:
         lang === 'es'
-          ? 'Ideal para quienes buscan superar pruebas de fondeo sin quemar la cuenta por sobreoperar. El bot ejecuta entradas precisas y se detiene automáticamente al alcanzar la meta o el límite diario permitido.'
-          : 'Ideal for traders aiming to pass funding evaluations without blowing accounts from over-trading. The bot executes precise entries and automatically stops when hitting daily targets or risk limits.',
+          ? 'Ideal para quienes buscan superar pruebas de fondeo sin quemar la cuenta por sobreoperar. El bot Pulsar ejecuta entradas de máxima eficiencia y se detiene automáticamente al alcanzar la meta o el límite diario permitido.'
+          : 'Ideal for traders aiming to pass funding evaluations without blowing accounts from over-trading. The Pulsar bot executes top-efficiency entries and automatically stops when hitting daily targets or risk limits.',
     },
     {
       title: lang === 'es' ? '2. Operar Cuentas Reales y Fondeadas' : '2. Trading Live & Funded Accounts',
       profile: lang === 'es' ? 'Traders con Capital Propio o Cuenta Activa' : 'Live Capital & Funded Traders',
       benefit: lang === 'es' ? 'Ejecución Consistente 100% Automática' : '100% Automated Consistent Execution',
-      botRecommended: 'DeltaMomentum Breakout',
+      botRecommended: 'Bot Nova (Alta Eficiencia)',
       icon: <TrendingUp className="h-5 w-5 text-emerald-400" />,
       text:
         lang === 'es'
-          ? 'Para traders que ya cuentan con una cuenta fondeada o capital real propio y desean delegar la ejecución al algoritmo para mantener una gestión de riesgo estricta todos los días.'
-          : 'For traders who already hold a funded account or personal live capital and want to delegate execution to the algorithm to maintain strict daily risk management.',
+          ? 'Para traders que ya cuentan con una cuenta fondeada o capital real propio y desean delegar la ejecución al algoritmo Nova o Pulsar para mantener una gestión de riesgo estricta todos los días.'
+          : 'For traders who already hold a funded account or personal live capital and want to delegate execution to the Nova or Pulsar algorithm to maintain strict daily risk management.',
     },
     {
       title: lang === 'es' ? '3. Estudiantes y Personas sin Tiempo' : '3. Students & Busy Professionals',
       profile: lang === 'es' ? 'Alumnos de la Academia y Público General' : 'Academy Students & General Public',
       benefit: lang === 'es' ? 'Opera sin Estar Pegado al Monitor' : 'Trade Without Staring at Charts',
-      botRecommended: 'VWAPReversion Institutional',
+      botRecommended: 'Bot Proton (Eficiencia Base)',
       icon: <Users className="h-5 w-5 text-sky-400" />,
       text:
         lang === 'es'
-          ? 'Tanto si eres alumno de Trading Life Academy como si tienes un trabajo a tiempo completo, puedes suscribirte, activar el bot en tu sesión y supervisarlo desde tu teléfono móvil.'
-          : 'Whether you are a Trading Life Academy student or work a full-time job, you can subscribe, activate the bot for the session, and supervise it right from your mobile phone.',
+          ? 'Tanto si eres alumno de Trading Life Academy como si tienes un trabajo a tiempo completo, puedes suscribirte a Proton, Nova o Pulsar, activarlo en tu sesión y supervisarlo desde tu teléfono móvil.'
+          : 'Whether you are a Trading Life Academy student or work a full-time job, you can subscribe to Proton, Nova, or Pulsar, activate it for the session, and supervise it right from your mobile phone.',
     },
   ];
 

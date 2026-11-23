@@ -1,6 +1,8 @@
+import { env } from '@core/config/env';
 import type {
   AuthSession,
   User,
+  UserRole,
 } from '@features/auth/domain/entities/User';
 import {
   AuthResponseDtoSchema,
@@ -24,12 +26,23 @@ export class AuthMapper {
       const parsed = BackendUserDtoSchema.parse(u);
       const email = parsed.correoElectronico;
       const fullName = parsed.nombreCompleto || email.split('@')[0] || 'Trader TLA';
+      const rawRole = String(parsed.role ?? u.role ?? u.rol ?? '')
+        .trim()
+        .toLowerCase();
+      const explicitRole: UserRole | undefined =
+        rawRole === 'admin'
+          ? 'ADMIN'
+          : rawRole === 'client' || rawRole === 'trader'
+          ? 'TRADER'
+          : undefined;
+      const isEnvAdmin = env.adminUserIds.includes(String(parsed.id));
+
       return {
         id: parsed.id,
         fullName,
         email,
         handle: u.handle || `@${email.split('@')[0].toLowerCase() || 'trader'}`,
-        role: u.role || (email.toLowerCase().includes('admin') ? 'ADMIN' : 'TRADER'),
+        role: explicitRole ?? (isEnvAdmin ? 'ADMIN' : 'TRADER'),
         ninjaVersion: u.ninjaVersion || 'NinjaTrader 8.1.3.1 (64-bit)',
         defaultMachineId: u.defaultMachineId || 'WIN11-TRD-9F82A1C0',
         memberSince: parsed.fechaCreacion

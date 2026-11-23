@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { LandingNavbar } from '../components/LandingNavbar';
 import { LandingHero } from '../components/LandingHero';
-import { LandingStatsTicker } from '../components/LandingStatsTicker';
 import { LandingPropFirms } from '../components/LandingPropFirms';
 import { LandingBotsShowcase } from '../components/LandingBotsShowcase';
 import { LandingMechanism } from '../components/LandingMechanism';
@@ -35,7 +34,6 @@ export const LandingPage: React.FC = () => {
         {/* Secciones de conversión */}
         <main className="flex-1 w-full flex flex-col">
           <LandingHero />
-          <LandingStatsTicker />
           <LandingPropFirms />
           <LandingBotsShowcase />
           <LandingMechanism />

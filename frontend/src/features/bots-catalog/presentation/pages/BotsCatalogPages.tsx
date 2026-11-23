@@ -52,7 +52,7 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
   const linkMutation = useLinkBotToLicenseMutation();
 
   const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL' | 'LIFETIME'>('MONTHLY');
-  const [riskProfile, setRiskProfile] = useState<'PULSAR' | 'PROTON' | 'NOVA' | 'LIVE'>('PULSAR');
+  const [riskProfile, setRiskProfile] = useState<'LUCID' | 'MFFU' | 'TRADEIFY' | 'LIVE'>('LUCID');
 
   if (!bot) return null;
 
@@ -161,7 +161,7 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
                   ¿Por qué necesitas iniciar sesión antes de comprar?
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Al adquirir la suscripción de <strong>{bot.name}</strong>, el sistema genera automáticamente tu <strong>LicenseKey remota única</strong> vinculada a tu usuario y habilita la descarga del paquete <code className="text-amber-300">.zip</code> para NinjaTrader 8 con los perfiles de riesgo para <strong>Pulsar, Proton, Nova y Cuenta Real</strong>.
+                  Al adquirir la suscripción de <strong>{bot.name}</strong>, el sistema genera automáticamente tu <strong>LicenseKey remota única</strong> vinculada a tu usuario y habilita la descarga del paquete <code className="text-amber-300">.zip</code> para NinjaTrader 8 con los perfiles de riesgo para <strong>Lucid Trading, My Funded Futures (MFFU), Tradeify y Cuenta Real</strong>.
                 </p>
               </div>
 
@@ -248,9 +248,9 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {(
                     [
-                      { id: 'PULSAR', label: 'Perfil Pulsar', sub: 'Trailing Intradía' },
-                      { id: 'PROTON', label: 'Perfil Proton', sub: 'Regla Consistencia' },
-                      { id: 'NOVA', label: 'Perfil Nova', sub: 'Stop Diario Estricto' },
+                      { id: 'LUCID', label: 'Lucid Trading', sub: 'Trailing Intradía' },
+                      { id: 'MFFU', label: 'MFFU', sub: 'My Funded Futures' },
+                      { id: 'TRADEIFY', label: 'Tradeify', sub: 'Stop Diario Estricto' },
                       { id: 'LIVE', label: 'Cuenta Real', sub: 'Capital Propio Live' },
                     ] as const
                   ).map((prof) => (
@@ -836,14 +836,9 @@ export const BotsCatalogPage: React.FC = () => {
             <h1 className="text-2xl font-bold tracking-tight text-white">
               {t.catalog.title}
             </h1>
-<<<<<<< HEAD
-            {/* <Badge variant="emerald">{t.catalog.badge}</Badge> */}
-=======
-            <Badge variant="emerald">{t.catalog.badge}</Badge>
             {!isAuthenticated && (
               <Badge variant="amber">Exploración Pública • Sin Login</Badge>
             )}
->>>>>>> c88b4cb484586d6459171b8dbb28e4aad5399381
           </div>
           <p className="mt-1 text-sm text-slate-400">
             {t.catalog.subtitle}
@@ -918,9 +913,9 @@ export const BotsCatalogPage: React.FC = () => {
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">
                     Perfiles:
                   </span>
-                  <Badge variant="amber">Pulsar</Badge>
-                  <Badge variant="sky">Proton</Badge>
-                  <Badge variant="emerald">Nova</Badge>
+                  <Badge variant="amber">Lucid Trading</Badge>
+                  <Badge variant="sky">MFFU</Badge>
+                  <Badge variant="emerald">Tradeify</Badge>
                   <Badge variant="slate">Cuenta Real Live</Badge>
                 </div>
 
@@ -1091,9 +1086,9 @@ export const BotDetailPage: React.FC = () => {
               <span className="text-xs font-semibold text-slate-400">
                 Plantillas de Riesgo Incluidas:
               </span>
-              <Badge variant="amber">Perfil Pulsar</Badge>
-              <Badge variant="sky">Perfil Proton</Badge>
-              <Badge variant="emerald">Perfil Nova</Badge>
+              <Badge variant="amber">Lucid Trading</Badge>
+              <Badge variant="sky">My Funded Futures (MFFU)</Badge>
+              <Badge variant="emerald">Tradeify</Badge>
               <Badge variant="slate">Cuenta Real Personal (Live)</Badge>
             </div>
           </div>

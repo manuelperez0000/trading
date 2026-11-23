@@ -45,12 +45,12 @@ interface ProfilePreset {
 
 export const LandingPropFirms: React.FC = () => {
   const { lang } = useI18n();
-  const [selectedProfileId, setSelectedProfileId] = useState<string>('pulsar');
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('lucid');
 
   const profiles: ProfilePreset[] = [
     {
-      id: 'pulsar',
-      name: 'Pulsar',
+      id: 'lucid',
+      name: 'Lucid Trading',
       tag: lang === 'es' ? 'EVALUACIÓN & FONDEO' : 'FUNDING EVALUATION',
       badge: lang === 'es' ? '★ Perfil Preconfigurado' : '★ Pre-Configured',
       accentColor: 'from-amber-400 via-yellow-300 to-amber-500',
@@ -70,12 +70,12 @@ export const LandingPropFirms: React.FC = () => {
       accountSizes: '$25k • $50k • $100k • $150k',
       highlightNote:
         lang === 'es'
-          ? 'Evita picos de lotaje y detiene el bot automáticamente antes de comprometer el drawdown diario en Pulsar.'
-          : 'Prevents lot-size spikes and automatically halts the bot before compromising Pulsar daily drawdown.',
+          ? 'Evita picos de lotaje y detiene el bot automáticamente antes de comprometer el drawdown diario en Lucid Trading.'
+          : 'Prevents lot-size spikes and automatically halts the bot before compromising Lucid Trading daily drawdown.',
     },
     {
-      id: 'proton',
-      name: 'Proton',
+      id: 'mffu',
+      name: 'My Funded Futures (MFFU)',
       tag: lang === 'es' ? 'EVALUACIÓN & FONDEO' : 'FUNDING EVALUATION',
       badge: lang === 'es' ? '★ Perfil Preconfigurado' : '★ Pre-Configured',
       accentColor: 'from-emerald-400 via-teal-300 to-emerald-500',
@@ -85,22 +85,22 @@ export const LandingPropFirms: React.FC = () => {
       icon: <ShieldCheck className="h-6 w-6 text-emerald-400" />,
       shortDesc:
         lang === 'es'
-          ? 'Control estricto de pérdida diaria y protección automática de racha.'
-          : 'Strict daily loss control & automated streak protection.',
+          ? 'Control estricto de pérdida diaria, EOD trailing y protección de racha.'
+          : 'Strict daily loss control, EOD trailing & automated streak protection.',
       keyMetricLabel: lang === 'es' ? 'Velocidad Freno' : 'Stop Speed',
       keyMetricValue: '< 35 ms',
       dailyStopRule: lang === 'es' ? 'Bloqueo instantáneo en < 35 ms al tocar tope' : 'Instant lock in < 35 ms when limit hits',
       trailingRule: lang === 'es' ? 'Escalado progresivo según balance alcanzado' : 'Progressive scaling by equity buffer',
       sessionClose: '15:50 EST (Auto-Flatten)',
-      accountSizes: '$25k • $50k • $100k • $200k',
+      accountSizes: '$50k • $100k • $150k (Starter / Expert)',
       highlightNote:
         lang === 'es'
-          ? 'Ajusta la frecuencia de órdenes en apertura de NY para cumplir con las métricas de consistencia de Proton.'
-          : 'Adjusts order frequency during NY open to comply with Proton consistency metrics.',
+          ? 'Ajusta la frecuencia de órdenes y el tamaño de posición en apertura de NY para cumplir con las métricas de consistencia de My Funded Futures (MFFU).'
+          : 'Adjusts order frequency and position sizing during NY open to comply with My Funded Futures (MFFU) consistency metrics.',
     },
     {
-      id: 'nova',
-      name: 'Nova',
+      id: 'tradeify',
+      name: 'Tradeify',
       tag: lang === 'es' ? 'EVALUACIÓN & FONDEO' : 'FUNDING EVALUATION',
       badge: lang === 'es' ? '★ Perfil Preconfigurado' : '★ Pre-Configured',
       accentColor: 'from-sky-400 via-cyan-300 to-sky-500',
@@ -117,11 +117,11 @@ export const LandingPropFirms: React.FC = () => {
       dailyStopRule: lang === 'es' ? 'Tope diario en USD + límite de 3 stops seguidos' : 'Daily USD cap + 3 consecutive stops limit',
       trailingRule: lang === 'es' ? 'Break-even automático a partir de +15 ticks' : 'Automated break-even after +15 ticks',
       sessionClose: '15:55 EST (Auto-Flatten)',
-      accountSizes: '$50k • $100k • $250k',
+      accountSizes: '$50k • $100k • $150k',
       highlightNote:
         lang === 'es'
-          ? 'Ideal para superar fases de evaluación en Nova manteniendo una curva de equidad limpia y sin sobresaltos.'
-          : 'Ideal for passing Nova evaluation phases while keeping a smooth, disciplined equity curve.',
+          ? 'Ideal para superar evaluaciones y operar cuentas fondeadas en Tradeify manteniendo una curva de equidad limpia y sin sobresaltos.'
+          : 'Ideal for passing evaluations and running funded accounts on Tradeify while keeping a smooth, disciplined equity curve.',
     },
     {
       id: 'live',
@@ -191,8 +191,8 @@ export const LandingPropFirms: React.FC = () => {
             <Sparkles className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
             <span>
               {lang === 'es'
-                ? 'PERFILES PRECONFIGURADOS • PULSAR • PROTON • NOVA • CUENTAS REALES'
-                : 'PRE-CONFIGURED PROFILES • PULSAR • PROTON • NOVA • LIVE ACCOUNTS'}
+                ? 'PERFILES PRECONFIGURADOS • LUCID TRADING • MY FUNDED FUTURES (MFFU) • TRADEIFY • CUENTAS REALES'
+                : 'PRE-CONFIGURED PROFILES • LUCID TRADING • MY FUNDED FUTURES (MFFU) • TRADEIFY • LIVE ACCOUNTS'}
             </span>
           </div>
 
@@ -216,8 +216,8 @@ export const LandingPropFirms: React.FC = () => {
 
           <p className="text-slate-300 text-sm sm:text-base lg:text-lg leading-relaxed max-w-3xl mx-auto">
             {lang === 'es'
-              ? 'Ya seas estudiante de Trading Life Academy o cualquier trader que quiera suscribirse, nuestros bots incluyen perfiles calibrados para superar evaluaciones en Pulsar, Proton y Nova, o gestionar tu cuenta real con disciplina matemática.'
-              : 'Whether you are a Trading Life Academy student or any trader looking to subscribe, our bots include calibrated profiles to pass evaluations on Pulsar, Proton, and Nova, or manage your live account with mathematical discipline.'}
+              ? 'Ya seas estudiante de Trading Life Academy o cualquier trader que quiera suscribirse, nuestros bots incluyen perfiles calibrados para superar evaluaciones en Lucid Trading, My Funded Futures (MFFU) y Tradeify, o gestionar tu cuenta real con disciplina matemática.'
+              : 'Whether you are a Trading Life Academy student or any trader looking to subscribe, our bots include calibrated profiles to pass evaluations on Lucid Trading, My Funded Futures (MFFU), and Tradeify, or manage your live account with mathematical discipline.'}
           </p>
         </div>
 
@@ -568,8 +568,8 @@ export const LandingPropFirms: React.FC = () => {
 
               <p className="text-xs text-slate-300 leading-relaxed">
                 {lang === 'es'
-                  ? 'Dejar una operación abierta fuera de horario invalida pruebas en Pulsar, Proton o Nova. El bot cierra todas las órdenes pendientes y posiciones abiertas minutos antes del cierre del mercado.'
-                  : 'Leaving a trade open after hours voids evaluations in Pulsar, Proton, or Nova. The bot closes all pending orders and open positions minutes before market close.'}
+                  ? 'Dejar una operación abierta fuera de horario invalida pruebas en Lucid Trading, My Funded Futures (MFFU) o Tradeify. El bot cierra todas las órdenes pendientes y posiciones abiertas minutos antes del cierre del mercado.'
+                  : 'Leaving a trade open after hours voids evaluations in Lucid Trading, My Funded Futures (MFFU), or Tradeify. The bot closes all pending orders and open positions minutes before market close.'}
               </p>
 
               {/* Mini-Widget Visual de Reloj de Cierre */}
@@ -677,8 +677,8 @@ export const LandingPropFirms: React.FC = () => {
 
           <p className="text-center text-[11px] text-slate-500 max-w-3xl mx-auto leading-relaxed">
             {lang === 'es'
-              ? '*Nota de compatibilidad técnica (Uso Nominativo): Las menciones a Pulsar, Proton y Nova indican únicamente que el software incluye plantillas de parámetros de riesgo adaptables a las reglas técnicas de dichas evaluaciones. Trading Life Academy es una entidad independiente sin afiliación comercial con ellas.'
-              : '*Technical compatibility notice (Nominative Fair Use): References to Pulsar, Proton, and Nova indicate solely that the software includes risk parameter templates adaptable to those evaluation rules. Trading Life Academy is an independent entity with no commercial affiliation with them.'}
+              ? '*Nota de compatibilidad técnica (Uso Nominativo): Las menciones a Lucid Trading, My Funded Futures (MFFU) y Tradeify indican únicamente que el software incluye plantillas de parámetros de riesgo adaptables a las reglas técnicas de dichas evaluaciones. Trading Life Academy es una entidad independiente sin afiliación comercial con ellas.'
+              : '*Technical compatibility notice (Nominative Fair Use): References to Lucid Trading, My Funded Futures (MFFU), and Tradeify indicate solely that the software includes risk parameter templates adaptable to those evaluation rules. Trading Life Academy is an independent entity with no commercial affiliation with them.'}
           </p>
         </div>
       </div>

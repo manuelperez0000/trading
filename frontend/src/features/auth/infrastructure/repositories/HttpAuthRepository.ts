@@ -1,14 +1,48 @@
+import { env } from '@core/config/env';
 import { httpClient } from '@core/http/httpClient';
 import type {
   AuthSession,
   LoginCredentials,
   RegisterInput,
   User,
+  UserRole,
 } from '@features/auth/domain/entities/User';
 import type { IAuthRepository } from '@features/auth/domain/repositories/AuthRepository';
 import { AuthMapper } from '@features/auth/infrastructure/mappers/AuthMapper';
 
 export class HttpAuthRepository implements IAuthRepository {
+  /**
+   * Determina el rol real del usuario según la respuesta de `/users/login`:
+   * 1. Si el backend devuelve `role: "admin"` o `role: "client"` (calculado desde `process.env.ADMINS`), lo mapea a `'ADMIN'` o `'TRADER'`.
+   * 2. Si `VITE_ADMIN_USER_IDS` en el frontend incluye `user.id`, asigna `'ADMIN'`.
+   * 3. Como respaldo (ej. en `GET /users/me` que no incluye `role`), consulta `/users`.
+   */
+  private async resolveRoleFromBackendEnv(user: User, rawPayload: unknown): Promise<UserRole> {
+    const r = (rawPayload ?? {}) as Record<string, any>;
+    const rawUser = r.body?.user ?? r.user ?? r;
+    const rawRole = String(rawUser?.role ?? rawUser?.rol ?? '')
+      .trim()
+      .toLowerCase();
+
+    if (rawRole === 'admin') {
+      return 'ADMIN';
+    }
+    if (rawRole === 'client' || rawRole === 'trader') {
+      return 'TRADER';
+    }
+
+    if (env.adminUserIds.includes(String(user.id))) {
+      return 'ADMIN';
+    }
+
+    try {
+      await httpClient.get<unknown>('/users');
+      return 'ADMIN';
+    } catch {
+      return 'TRADER';
+    }
+  }
+
   public async login(credentials: LoginCredentials): Promise<AuthSession> {
     const raw = await httpClient.post<unknown>('/users/login', {
       correoElectronico: credentials.email.trim(),
@@ -16,12 +50,11 @@ export class HttpAuthRepository implements IAuthRepository {
     });
 
     const session = AuthMapper.sessionToDomain(raw);
-    if (credentials.requestedRole) {
-      session.user.role = credentials.requestedRole;
-    }
     if (session.tokens.accessToken) {
       localStorage.setItem('nt_admin_jwt_token', session.tokens.accessToken);
     }
+
+    session.user.role = await this.resolveRoleFromBackendEnv(session.user, raw);
     return session;
   }
 
@@ -59,7 +92,9 @@ export class HttpAuthRepository implements IAuthRepository {
 
   public async getCurrentUser(): Promise<User | null> {
     const raw = await httpClient.get<unknown>('/users/me');
-    return AuthMapper.userToDomain(raw);
+    const user = AuthMapper.userToDomain(raw);
+    user.role = await this.resolveRoleFromBackendEnv(user, raw);
+    return user;
   }
 
   public async listUsers(): Promise<User[]> {

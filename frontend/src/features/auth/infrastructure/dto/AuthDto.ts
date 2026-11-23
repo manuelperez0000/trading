@@ -21,6 +21,7 @@ export const BackendUserDtoSchema = z.object({
     val instanceof Date ? val.toISOString() : String(val)
   ).optional().default(() => new Date().toISOString()),
   estado: z.string().optional().default('activo'),
+  role: z.string().optional(),
 });
 
 export type BackendUserDto = z.infer<typeof BackendUserDtoSchema>;
