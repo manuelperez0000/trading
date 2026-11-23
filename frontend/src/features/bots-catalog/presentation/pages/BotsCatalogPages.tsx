@@ -836,14 +836,10 @@ export const BotsCatalogPage: React.FC = () => {
             <h1 className="text-2xl font-bold tracking-tight text-white">
               {t.catalog.title}
             </h1>
-<<<<<<< HEAD
-            {/* <Badge variant="emerald">{t.catalog.badge}</Badge> */}
-=======
             <Badge variant="emerald">{t.catalog.badge}</Badge>
             {!isAuthenticated && (
               <Badge variant="amber">Exploración Pública • Sin Login</Badge>
             )}
->>>>>>> c88b4cb484586d6459171b8dbb28e4aad5399381
           </div>
           <p className="mt-1 text-sm text-slate-400">
             {t.catalog.subtitle}
