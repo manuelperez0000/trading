@@ -102,14 +102,31 @@ Responde `200 OK`:
 {
   "body": {
     "token": "<jwt>",
-    "user": { "...": "estructura del usuario" }
+    "user": {
+      "id": "12",
+      "nombreCompleto": "Ana Pérez",
+      "direccion": "Calle 123",
+      "telefono": "+1 213-373-4253",
+      "whatsapp": "+44 20 8366 1177",
+      "correoElectronico": "ana@example.com",
+      "urlDocumentoIdentidad": "https://example.com/identidad.pdf",
+      "urlReciboServicio": "https://example.com/recibo.pdf",
+      "urlContratoDisclaimer": "https://example.com/contrato.pdf",
+      "urlComprobanteAceptacion": "https://example.com/aceptacion.pdf",
+      "fechaCreacion": "2026-11-18T20:00:00.000Z",
+      "fechaActualizacion": "2026-11-18T20:00:00.000Z",
+      "estado": "activo",
+      "role": "client"
+    }
   },
   "message": "Inicio de sesión exitoso.",
   "status": 200
 }
 ```
 
-El token es JWT con vigencia de una hora. Credenciales incorrectas responden
+`role` es `"admin"` si el ID del usuario está incluido en la variable de
+entorno `ADMINS` (IDs separados por comas); en caso contrario es `"client"`.
+El token es JWT con vigencia de 10 días. Credenciales incorrectas responden
 `401 Unauthorized`.
 
 ### Consultar el usuario autenticado

@@ -26,6 +26,8 @@ import {
 } from "../utils/utils.js";
 import responser from "../utils/responser.js";
 
+const admins =  process.env.ADMINS ? process.env.ADMINS.split(",").map((id) => id.trim()) : [];
+
 const router = Router();
 const BCRYPT_ROUNDS = 12;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
@@ -123,7 +125,10 @@ router.post("/login", async (req, res, next) => {
       message: "Inicio de sesión exitoso.",
       body: {
         token,
-        user: toPublicUser(user),
+        user: {
+          ...toPublicUser(user),
+          role: admins.includes(String(user.id)) ? "admin" : "client",
+        },
       },
     });
   } catch (error) {

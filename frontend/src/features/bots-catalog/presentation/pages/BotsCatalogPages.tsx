@@ -549,7 +549,7 @@ export const BotsCatalogPage: React.FC = () => {
             <h1 className="text-2xl font-bold tracking-tight text-white">
               {t.catalog.title}
             </h1>
-            <Badge variant="emerald">{t.catalog.badge}</Badge>
+            {/* <Badge variant="emerald">{t.catalog.badge}</Badge> */}
           </div>
           <p className="mt-1 text-sm text-slate-400">
             {t.catalog.subtitle}
