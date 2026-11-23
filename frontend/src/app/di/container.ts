@@ -21,6 +21,7 @@ import type { IAuthRepository } from '@features/auth/domain/repositories/AuthRep
 import { HttpAuthRepository } from '@features/auth/infrastructure/repositories/HttpAuthRepository';
 import {
   GetCurrentUserUseCase,
+  ListUsersUseCase,
   LoginUseCase,
   LogoutUseCase,
   RecoverPasswordUseCase,
@@ -76,6 +77,7 @@ class AppDependencyContainer {
   public loginUseCase: LoginUseCase;
   public registerUseCase: RegisterUseCase;
   public getCurrentUserUseCase: GetCurrentUserUseCase;
+  public listUsersUseCase: ListUsersUseCase;
   public recoverPasswordUseCase: RecoverPasswordUseCase;
   public resetPasswordUseCase: ResetPasswordUseCase;
   public logoutUseCase: LogoutUseCase;
@@ -125,6 +127,7 @@ class AppDependencyContainer {
     this.loginUseCase = new LoginUseCase(this.authRepository);
     this.registerUseCase = new RegisterUseCase(this.authRepository);
     this.getCurrentUserUseCase = new GetCurrentUserUseCase(this.authRepository);
+    this.listUsersUseCase = new ListUsersUseCase(this.authRepository);
     this.recoverPasswordUseCase = new RecoverPasswordUseCase(this.authRepository);
     this.resetPasswordUseCase = new ResetPasswordUseCase(this.authRepository);
     this.logoutUseCase = new LogoutUseCase(this.authRepository);

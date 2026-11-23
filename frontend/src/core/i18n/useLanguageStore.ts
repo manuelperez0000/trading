@@ -58,7 +58,7 @@ export const translations = {
       kpiPnlTitle: 'PnL Diario Consolidado',
       kpiPnlSub: 'Reportado por telemetría de clientes',
       searchPlaceholder:
-        'Buscar por trader, licencia NT8, cuenta Apex/Topstep o futuro...',
+        'Buscar por trader, licencia, cuenta de fondeo o contrato de futuros...',
       filterAll: 'Todas',
       filterEnabled: 'Activas (ON)',
       filterDisabled: 'Apagadas (OFF)',
@@ -291,7 +291,7 @@ export const translations = {
       kpiPnlTitle: 'Consolidated Daily PnL',
       kpiPnlSub: 'Reported via client telemetry',
       searchPlaceholder:
-        'Search by trader, NT8 license, Apex/Topstep account or futures contract...',
+        'Search by trader, license, funded account or futures contract...',
       filterAll: 'All',
       filterEnabled: 'Enabled (ON)',
       filterDisabled: 'Disabled (OFF)',

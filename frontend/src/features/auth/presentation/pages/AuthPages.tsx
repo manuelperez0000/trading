@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   KeyRound,
   Lock,
   Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
   User,
 } from 'lucide-react';
 import { Button } from '@shared/ui/Button';
@@ -20,8 +25,9 @@ import { toast } from '@shared/ui/toast/toastStore';
 const AuthShell: React.FC<{
   title: string;
   subtitle: string;
+  maxWidthClass?: string;
   children: React.ReactNode;
-}> = ({ title, subtitle, children }) => {
+}> = ({ title, subtitle, maxWidthClass = 'max-w-md', children }) => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-10 relative overflow-hidden">
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
@@ -30,14 +36,16 @@ const AuthShell: React.FC<{
       </div>
       <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-80 w-80 rounded-full bg-amber-500/15 blur-3xl" />
 
-      <div className="w-full max-w-md space-y-6 relative z-10">
+      <div className={`w-full ${maxWidthClass} space-y-5 relative z-10`}>
         <div className="flex flex-col items-center text-center">
-          <img
-            src="/tla-logo.jpg"
-            alt="Trading Life Academy"
-            className="h-20 w-20 rounded-2xl object-cover border-2 border-amber-500/50 shadow-xl shadow-amber-500/20 mb-3"
-          />
-          <Badge variant="amber">Trading Life Academy • NinjaTrader 8</Badge>
+          <Link to="/">
+            <img
+              src="/tla-logo.jpg"
+              alt="Trading Life Academy"
+              className="h-20 w-20 rounded-2xl object-cover border-2 border-amber-500/50 shadow-xl shadow-amber-500/20 mb-3 hover:scale-105 transition-transform"
+            />
+          </Link>
+          <Badge variant="amber">Trading Life Academy • Portal Educativo</Badge>
           <span className="text-[11px] font-bold tracking-widest text-amber-400 uppercase mt-1.5">
             Learn • Trade • Grow
           </span>
@@ -45,6 +53,14 @@ const AuthShell: React.FC<{
             {title}
           </h1>
           <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
+        </div>
+
+        {/* Aviso Anti-Phishing de Transparencia Exigido por Proveedores de Dominio */}
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-[11px] text-emerald-300 flex items-start gap-2">
+          <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+          <span>
+            <strong>Aviso de Seguridad Anti-Phishing:</strong> Este portal es exclusivo para estudiantes de Trading Life Academy. Nunca solicitamos ni almacenamos contraseñas de brokers ni credenciales de plataformas de terceros.
+          </span>
         </div>
 
         <Card className="p-6 border-slate-800 bg-slate-900/80">{children}</Card>
@@ -55,35 +71,66 @@ const AuthShell: React.FC<{
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
-  const [email, setEmail] = useState('carlos@tradinglifeacademy.com');
-  const [password, setPassword] = useState('••••••••••••');
-  const [role, setRole] = useState<'ADMIN' | 'TRADER'>('ADMIN');
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/catalog';
+  const hasPurchaseRedirect = Boolean(searchParams.get('redirect'));
+
+  const { login, loginAsDemoUser } = useAuthStore();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'ADMIN' | 'TRADER'>('TRADER');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login({ email, password, requestedRole: role });
-      toast.success('Sesión iniciada', `Bienvenido al panel como ${role}.`);
-      navigate('/catalog');
+      const loggedUser = await login({ email, password, requestedRole: role });
+      toast.success(
+        'Inicio de sesión exitoso',
+        `Bienvenido ${loggedUser.fullName} (${loggedUser.email}).`
+      );
+      navigate(redirectTo);
     } catch (err) {
-      toast.danger('Error al iniciar sesión', err instanceof Error ? err.message : 'Credenciales inválidas');
+      toast.danger(
+        'Error al iniciar sesión',
+        err instanceof Error ? err.message : 'Correo o contraseña incorrectos.'
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleQuickDemoLogin = (demoRole: 'TRADER' | 'ADMIN') => {
+    loginAsDemoUser(demoRole);
+    toast.success(
+      'Sesión iniciada correctamente',
+      demoRole === 'TRADER'
+        ? 'Conectado como Cliente / Trader. Redirigiendo a tu solicitud...'
+        : 'Conectado como Administrador. Redirigiendo al panel...'
+    );
+    navigate(redirectTo);
+  };
+
+  const registerUrl = hasPurchaseRedirect
+    ? `/auth/register?redirect=${encodeURIComponent(redirectTo)}`
+    : '/auth/register';
+
   return (
     <AuthShell
-      title="Iniciar Sesión en la Plataforma"
-      subtitle="Accede a tus bots de NinjaTrader 8, licencias remotas y comunidad verificada."
+      title="Acceso al Portal de Clientes y Estudiantes"
+      subtitle="Ingresa con tus credenciales para adquirir suscripciones de bots, gestionar tu LicenseKey o descargar el AddOn de NinjaTrader 8."
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {hasPurchaseRedirect && (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+            <strong>Autenticación requerida:</strong> Inicia sesión para continuar con tu compra o acceder a la sección solicitada. Al ingresar volverás automáticamente donde estabas.
+          </div>
+        )}
+
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Correo Electrónico
+            Correo Electrónico (<code className="text-amber-300">correoElectronico</code>)
           </label>
           <div className="relative">
             <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -91,6 +138,7 @@ export const LoginPage: React.FC = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="cliente@correo.com"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-sm text-white focus:border-emerald-500 focus:outline-none"
               required
             />
@@ -100,7 +148,7 @@ export const LoginPage: React.FC = () => {
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-medium text-slate-400">
-              Contraseña
+              Contraseña del Portal (<code className="text-amber-300">password</code>)
             </label>
             <Link
               to="/auth/recover-password"
@@ -115,6 +163,7 @@ export const LoginPage: React.FC = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Entre 8 y 72 caracteres"
               className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-sm text-white focus:border-emerald-500 focus:outline-none"
               required
             />
@@ -123,18 +172,18 @@ export const LoginPage: React.FC = () => {
 
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Modo de Acceso (Simulación de Rol)
+            Vista de Rol en el Panel
           </label>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as 'ADMIN' | 'TRADER')}
             className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-emerald-300"
           >
-            <option value="ADMIN">
-              Administrador (Panel Control Remoto + Portal Trader)
-            </option>
             <option value="TRADER">
-              Trader / Cliente (Catálogo, Licencias, Facturación y Comunidad)
+              Cliente / Estudiante (Compra de Bots, Mis Licencias y Comunidad)
+            </option>
+            <option value="ADMIN">
+              Administrador (Gestión de Licencias + Directorio de Usuarios)
             </option>
           </select>
         </div>
@@ -146,16 +195,43 @@ export const LoginPage: React.FC = () => {
           className="w-full"
           isLoading={isLoading}
         >
-          Entrar al Panel
+          Iniciar Sesión
         </Button>
 
-        <div className="pt-2 text-center text-xs text-slate-400">
+        {/* Acceso Rápido para probar el flujo completo sin servidor PostgreSQL local */}
+        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5 space-y-2.5">
+          <div className="text-[11px] font-semibold text-slate-300 text-center">
+            ¿Probando el flujo de compra sin servidor PostgreSQL local?
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="w-full border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/15"
+              onClick={() => handleQuickDemoLogin('TRADER')}
+            >
+              Entrar como Cliente Demo
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="w-full border-amber-500/30 text-amber-300 hover:bg-amber-500/15"
+              onClick={() => handleQuickDemoLogin('ADMIN')}
+            >
+              Entrar como Admin Demo
+            </Button>
+          </div>
+        </div>
+
+        <div className="pt-1 text-center text-xs text-slate-400">
           ¿Aún no tienes cuenta?{' '}
           <Link
-            to="/auth/register"
+            to={registerUrl}
             className="font-semibold text-emerald-400 hover:underline"
           >
-            Crear cuenta de Trader
+            Crear cuenta para suscribirme
           </Link>
         </div>
       </form>
@@ -165,102 +241,194 @@ export const LoginPage: React.FC = () => {
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/catalog';
+  const hasPurchaseRedirect = Boolean(searchParams.get('redirect'));
+
   const { register } = useAuthStore();
+
+  // Campos obligatorios en backend/routes/users.js
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [machineId, setMachineId] = useState('WIN11-TRD-9F82A1C0');
   const [password, setPassword] = useState('');
+
+  // Campos de contacto opcionales (sin recolección de documentos sensibles en formulario público)
+  const [showOptionalContact, setShowOptionalContact] = useState(false);
+  const [direccion, setDireccion] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await register({
-        fullName: fullName.trim() || 'Nuevo Trader',
+      const createdUser = await register({
+        fullName,
         email,
         password,
-        defaultMachineId: machineId.trim(),
+        direccion,
+        telefono,
+        whatsapp,
       });
-      toast.success('Cuenta creada', 'Bienvenido a Trading Life Academy.');
-      navigate('/catalog');
+      toast.success(
+        'Usuario registrado (201 Created)',
+        `Cuenta creada para ${createdUser.fullName} (ID #${createdUser.id}).`
+      );
+      navigate(redirectTo);
     } catch (err) {
-      toast.danger('Error en el registro', err instanceof Error ? err.message : 'No se pudo crear la cuenta');
+      toast.danger(
+        'Error en el registro',
+        err instanceof Error ? err.message : 'No se pudo registrar el usuario.'
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
+  const loginUrl = hasPurchaseRedirect
+    ? `/auth/login?redirect=${encodeURIComponent(redirectTo)}`
+    : '/auth/login';
+
+  const inputClass =
+    'w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-sm text-white focus:border-emerald-500 focus:outline-none';
+
   return (
     <AuthShell
-      title="Registro de Nuevo Trader"
-      subtitle="Crea tu cuenta para adquirir bots automatizados y vincular tu licencia de NinjaTrader 8."
+      title="Registro de Cuenta de Estudiante"
+      subtitle="Crea tu cuenta para acceder al material educativo y herramientas de software."
+      maxWidthClass="max-w-xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Nombre Completo
-          </label>
-          <div className="relative">
-            <User className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Ej. Alejandro Mendoza"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-sm text-white focus:border-emerald-500 focus:outline-none"
-              required
-            />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Nombre Completo * (<code className="text-amber-300">nombreCompleto</code>, máx 120)
+            </label>
+            <div className="relative">
+              <User className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Ej. Ana Pérez"
+                maxLength={120}
+                className={inputClass}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Correo Electrónico * (<code className="text-amber-300">correoElectronico</code>)
+            </label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="estudiante@correo.com"
+                maxLength={320}
+                className={inputClass}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Contraseña Nueva * (<code className="text-amber-300">password</code>, 8 a 72 bytes)
+            </label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+                minLength={8}
+                maxLength={72}
+                className={inputClass}
+                required
+              />
+            </div>
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Correo Electrónico
-          </label>
-          <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="trader@correo.com"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-sm text-white focus:border-emerald-500 focus:outline-none"
-              required
-            />
-          </div>
-        </div>
+        {/* Acordeón opcional solo para teléfono y dirección de contacto */}
+        <div className="rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowOptionalContact((prev) => !prev)}
+            className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold text-slate-300 hover:text-amber-300 cursor-pointer"
+          >
+            <span>Datos de Contacto Adicionales (Opcionales)</span>
+            {showOptionalContact ? (
+              <ChevronUp className="h-4 w-4 text-amber-400" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-slate-400" />
+            )}
+          </button>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Machine ID de NinjaTrader 8 (Opcional — puedes vincularlo luego)
-          </label>
-          <div className="relative">
-            <KeyRound className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input
-              type="text"
-              value={machineId}
-              onChange={(e) => setMachineId(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-xs font-mono text-emerald-300 focus:border-emerald-500 focus:outline-none"
-            />
-          </div>
-        </div>
+          {showOptionalContact && (
+            <div className="border-t border-slate-800 p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">
+                  Dirección (<code className="text-slate-300">direccion</code>)
+                </label>
+                <div className="relative">
+                  <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <input
+                    type="text"
+                    value={direccion}
+                    onChange={(e) => setDireccion(e.target.value)}
+                    placeholder="Calle 123, Ciudad"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Contraseña Segura
-          </label>
-          <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mínimo 8 caracteres"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-sm text-white focus:border-emerald-500 focus:outline-none"
-              required
-            />
-          </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                    Teléfono Internacional (<code className="text-slate-300">telefono</code>)
+                  </label>
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <input
+                      type="text"
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
+                      placeholder="+1 213-373-4253"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                    WhatsApp Internacional (<code className="text-slate-300">whatsapp</code>)
+                  </label>
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500" />
+                    <input
+                      type="text"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value)}
+                      placeholder="+44 20 8366 1177"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Nota: Si ingresas teléfono o WhatsApp, incluye el código de país con prefijo <code>+</code> o <code>00</code>.
+              </p>
+            </div>
+          )}
         </div>
 
         <Button
@@ -276,7 +444,7 @@ export const RegisterPage: React.FC = () => {
         <div className="pt-2 text-center text-xs text-slate-400">
           ¿Ya tienes una cuenta activa?{' '}
           <Link
-            to="/auth/login"
+            to={loginUrl}
             className="font-semibold text-emerald-400 hover:underline"
           >
             Iniciar Sesión
@@ -288,23 +456,38 @@ export const RegisterPage: React.FC = () => {
 };
 
 export const PasswordRecoveryPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const urlToken = searchParams.get('token') ?? '';
+
   const [step, setStep] = useState<'REQUEST_TOKEN' | 'RESET_PASSWORD' | 'DONE'>(
-    'REQUEST_TOKEN'
+    urlToken ? 'RESET_PASSWORD' : 'REQUEST_TOKEN'
   );
-  const [email, setEmail] = useState('carlos@tradinglifeacademy.com');
-  const [code, setCode] = useState('849201');
+  const [email, setEmail] = useState('');
+  const [token, setToken] = useState(urlToken);
   const [newPassword, setNewPassword] = useState('');
+  const [serverNotice, setServerNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (urlToken) {
+      setToken(urlToken);
+      setStep('RESET_PASSWORD');
+    }
+  }, [urlToken]);
 
   const handleRequestToken = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await container.recoverPasswordUseCase.execute(email);
+      const res = await container.recoverPasswordUseCase.execute(email);
+      setServerNotice(res.message);
       setStep('RESET_PASSWORD');
-      toast.info('Código enviado', `Revisa tu correo ${email}`);
+      toast.info('Solicitud procesada (202 Accepted)', res.message);
     } catch (err) {
-      toast.danger('Error', err instanceof Error ? err.message : 'No se pudo enviar el código');
+      toast.danger(
+        'Error al solicitar recuperación',
+        err instanceof Error ? err.message : 'No se pudo procesar la solicitud.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -314,11 +497,17 @@ export const PasswordRecoveryPage: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await container.resetPasswordUseCase.execute({ email, code, newPassword });
+      const res = await container.resetPasswordUseCase.execute({
+        token,
+        newPassword,
+      });
       setStep('DONE');
-      toast.success('Contraseña actualizada', 'Ya puedes iniciar sesión con tu nueva contraseña.');
+      toast.success('Contraseña actualizada', res.message);
     } catch (err) {
-      toast.danger('Error', err instanceof Error ? err.message : 'Código inválido');
+      toast.danger(
+        'Error al restablecer contraseña',
+        err instanceof Error ? err.message : 'El token no es válido o ha expirado.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -326,25 +515,56 @@ export const PasswordRecoveryPage: React.FC = () => {
 
   return (
     <AuthShell
-      title="Recuperación y Cambio de Contraseña"
-      subtitle="Restablece el acceso seguro a tu cuenta y licencias de NinjaTrader."
+      title="Recuperación de Contraseña del Portal"
+      subtitle="Restablece tu clave de acceso de estudiante de Trading Life Academy."
     >
+      {step !== 'DONE' && (
+        <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-950 p-1 border border-slate-800 mb-4 text-xs">
+          <button
+            type="button"
+            onClick={() => setStep('REQUEST_TOKEN')}
+            className={`rounded-md py-1.5 font-semibold cursor-pointer transition-colors ${
+              step === 'REQUEST_TOKEN'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            1. Solicitar Enlace
+          </button>
+          <button
+            type="button"
+            onClick={() => setStep('RESET_PASSWORD')}
+            className={`rounded-md py-1.5 font-semibold cursor-pointer transition-colors ${
+              step === 'RESET_PASSWORD'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            2. Restablecer con Token
+          </button>
+        </div>
+      )}
+
       {step === 'REQUEST_TOKEN' && (
         <form onSubmit={handleRequestToken} className="space-y-4">
           <p className="text-xs text-slate-300 leading-relaxed">
-            Ingresa el correo asociado a tu cuenta. Te enviaremos un código de seguridad de 6 dígitos para autorizar el cambio de contraseña.
+            Ingresa tu correo electrónico registrado. Te enviaremos un enlace con un token temporal válido por 1 hora para actualizar tu clave.
           </p>
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1">
               Correo Electrónico Registrado
             </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
-              required
-            />
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="estudiante@correo.com"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                required
+              />
+            </div>
           </div>
           <Button
             type="submit"
@@ -353,7 +573,7 @@ export const PasswordRecoveryPage: React.FC = () => {
             className="w-full"
             isLoading={isLoading}
           >
-            Enviar Código de Recuperación
+            Solicitar Recuperación
           </Button>
           <div className="text-center">
             <Link
@@ -368,33 +588,44 @@ export const PasswordRecoveryPage: React.FC = () => {
 
       {step === 'RESET_PASSWORD' && (
         <form onSubmit={handleResetPassword} className="space-y-4">
-          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300">
-            Código enviado a <strong>{email}</strong>.
+          {serverNotice && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+              {serverNotice}
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Token de Recuperación (<code className="text-amber-300">token</code> recibido por correo)
+            </label>
+            <div className="relative">
+              <KeyRound className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <input
+                type="text"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Pega aquí el token del enlace de recuperación"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-xs font-mono text-emerald-300 focus:border-emerald-500 focus:outline-none"
+                required
+              />
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1">
-              Código de Verificación (6 dígitos)
+              Nueva Contraseña (<code className="text-amber-300">password</code>, 8 a 72 bytes UTF-8)
             </label>
-            <input
-              type="text"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono text-emerald-300"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">
-              Nueva Contraseña
-            </label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Ingresa tu nueva contraseña"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white"
-              required
-            />
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Nueva contraseña segura (mín. 8 caracteres)"
+                minLength={8}
+                maxLength={72}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                required
+              />
+            </div>
           </div>
           <Button
             type="submit"
@@ -403,8 +634,16 @@ export const PasswordRecoveryPage: React.FC = () => {
             className="w-full"
             isLoading={isLoading}
           >
-            Confirmar Cambio de Contraseña
+            Restablecer Contraseña
           </Button>
+          <div className="text-center">
+            <Link
+              to="/auth/login"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Volver a Iniciar Sesión
+            </Link>
+          </div>
         </form>
       )}
 
@@ -415,7 +654,7 @@ export const PasswordRecoveryPage: React.FC = () => {
             ¡Contraseña Actualizada con Éxito!
           </h3>
           <p className="text-xs text-slate-400">
-            Tus credenciales han sido renovadas y tus sesiones previas fueron revocadas por seguridad.
+            El token de recuperación ha sido consumido e invalidado. Ya puedes iniciar sesión con tu nueva contraseña.
           </p>
           <Link to="/auth/login" className="block">
             <Button variant="primary" size="lg" className="w-full">

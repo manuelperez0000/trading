@@ -4,6 +4,7 @@ import type {
 } from '@features/auth/domain/entities/User';
 import {
   AuthResponseDtoSchema,
+  BackendUserDtoSchema,
   UserDtoSchema,
   type AuthResponseDto,
   type UserDto,
@@ -18,26 +19,38 @@ export class AuthMapper {
     // Desempaquetar si viene envuelto en { body: { user: ... } } o { user: ... }
     const u = r.body?.user ?? r.user ?? r;
 
-    // Soporte para la estructura plana de Usuario de Manuel
+    // Soporte para la estructura plana de Usuario del backend Express / PostgreSQL
     if ('nombreCompleto' in u || 'correoElectronico' in u) {
-      const email = String(u.correoElectronico || u.email || '');
-      const fullName = String(u.nombreCompleto || u.full_name || email.split('@')[0] || 'Trader TLA');
+      const parsed = BackendUserDtoSchema.parse(u);
+      const email = parsed.correoElectronico;
+      const fullName = parsed.nombreCompleto || email.split('@')[0] || 'Trader TLA';
       return {
-        id: String(u.id ?? 'usr-remote'),
+        id: parsed.id,
         fullName,
         email,
         handle: u.handle || `@${email.split('@')[0].toLowerCase() || 'trader'}`,
         role: u.role || (email.toLowerCase().includes('admin') ? 'ADMIN' : 'TRADER'),
         ninjaVersion: u.ninjaVersion || 'NinjaTrader 8.1.3.1 (64-bit)',
         defaultMachineId: u.defaultMachineId || 'WIN11-TRD-9F82A1C0',
-        memberSince: u.fechaCreacion
-          ? new Date(u.fechaCreacion).toLocaleDateString()
+        memberSince: parsed.fechaCreacion
+          ? new Date(parsed.fechaCreacion).toLocaleDateString()
           : 'Noviembre 2026',
+        direccion: parsed.direccion,
+        telefono: parsed.telefono,
+        whatsapp: parsed.whatsapp,
+        urlDocumentoIdentidad: parsed.urlDocumentoIdentidad,
+        urlReciboServicio: parsed.urlReciboServicio,
+        urlContratoDisclaimer: parsed.urlContratoDisclaimer,
+        urlComprobanteAceptacion: parsed.urlComprobanteAceptacion,
+        fechaCreacion: parsed.fechaCreacion,
+        fechaActualizacion: parsed.fechaActualizacion,
+        estado: parsed.estado,
       };
     }
 
-    // Formato estándar DTO (mock / arquitectura previa)
+    // Formato estándar DTO
     const dto = UserDtoSchema.parse(u);
+    const nowIso = new Date().toISOString();
     return {
       id: dto.id,
       fullName: dto.full_name,
@@ -47,7 +60,32 @@ export class AuthMapper {
       ninjaVersion: dto.ninja_version,
       defaultMachineId: dto.default_machine_id,
       memberSince: dto.member_since,
+      direccion: '',
+      telefono: '',
+      whatsapp: '',
+      urlDocumentoIdentidad: '',
+      urlReciboServicio: '',
+      urlContratoDisclaimer: '',
+      urlComprobanteAceptacion: '',
+      fechaCreacion: nowIso,
+      fechaActualizacion: nowIso,
+      estado: 'activo',
     };
+  }
+
+  public static usersListToDomain(raw: unknown): User[] {
+    if (!raw || typeof raw !== 'object') {
+      return [];
+    }
+    const r = raw as Record<string, any>;
+    const list = Array.isArray(r)
+      ? r
+      : Array.isArray(r.body?.users)
+        ? r.body.users
+        : Array.isArray(r.users)
+          ? r.users
+          : [];
+    return list.map((item: unknown) => this.userToDomain(item));
   }
 
   public static userToDto(user: User): UserDto {
@@ -69,6 +107,7 @@ export class AuthMapper {
     }
     const r = raw as Record<string, any>;
     const body = r.body ?? r;
+    const message = typeof r.message === 'string' ? r.message : undefined;
 
     // Si viene del backend de Manuel con token JWT en body.token
     if ('token' in body && typeof body.token === 'string') {
@@ -79,21 +118,21 @@ export class AuthMapper {
         tokens: {
           accessToken: token,
           refreshToken: token,
-          expiresInSeconds: 3600,
+          expiresInSeconds: 864000, // 10d según backend/routes/users.js
         },
+        message,
       };
     }
 
-    // Si viene de registro directo { body: { user: { ... } } }
+    // Si viene de POST /users/register { body: { user: { ... } }, status: 201 }
     if (body.user && !body.tokens) {
       const user = this.userToDomain(body.user);
       return {
         user,
         tokens: {
-          accessToken: 'jwt-registered-session',
-          refreshToken: 'jwt-registered-session',
-          expiresInSeconds: 3600,
+          accessToken: '',
         },
+        message,
       };
     }
 
@@ -106,6 +145,7 @@ export class AuthMapper {
         refreshToken: dto.tokens.refresh_token,
         expiresInSeconds: dto.tokens.expires_in_seconds,
       },
+      message,
     };
   }
 

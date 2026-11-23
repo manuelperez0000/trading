@@ -1,5 +1,5 @@
 import React from 'react';
-import { DollarSign, ShieldAlert, TrendingUp, Zap } from 'lucide-react';
+import { Bot, ShieldCheck, TrendingUp, Users } from 'lucide-react';
 import { Card } from '@shared/ui/Card';
 import { useI18n } from '@core/i18n/useLanguageStore';
 
@@ -8,34 +8,34 @@ export const LandingStatsTicker: React.FC = () => {
 
   const stats = [
     {
-      label: lang === 'es' ? 'Retiros de Fondeo Comunitarios' : 'Community Funded Payouts',
-      value: '+$185,000 USD',
-      sub: lang === 'es' ? 'Verificados por telemetría API' : 'Verified by API telemetry',
-      icon: <DollarSign className="h-5 w-5 text-emerald-400" />,
-      accent: 'border-emerald-500/30 bg-emerald-500/5',
-      valueColor: 'text-emerald-400',
-    },
-    {
-      label: lang === 'es' ? 'Win Rate Promedio Certificado' : 'Certified Average Win Rate',
-      value: '74.8%',
-      sub: lang === 'es' ? 'En sesiones NY (Futuros NQ y ES)' : 'NY sessions (NQ & ES Futures)',
-      icon: <TrendingUp className="h-5 w-5 text-amber-400" />,
+      label: lang === 'es' ? 'Doble Propósito Operativo' : 'Dual Trading Purpose',
+      value: lang === 'es' ? 'Fondeo & Real' : 'Funded & Live',
+      sub: lang === 'es' ? 'Apto para evaluaciones y cuentas propias' : 'Built for evaluations & personal accounts',
+      icon: <Bot className="h-5 w-5 text-amber-400" />,
       accent: 'border-amber-500/30 bg-amber-500/5',
       valueColor: 'text-amber-400',
     },
     {
-      label: lang === 'es' ? 'Velocidad de Kill-Switch' : 'Kill-Switch Reaction Speed',
-      value: '< 45 ms',
-      sub: lang === 'es' ? 'Apagado remoto ultrarrápido' : 'Ultra-fast remote shutdown',
-      icon: <Zap className="h-5 w-5 text-sky-400" />,
+      label: lang === 'es' ? 'Tasa de Acierto en Backtesting' : 'Historical Backtest Win Rate',
+      value: '74.8% (BT)',
+      sub: lang === 'es' ? 'En pruebas históricas de flujo de órdenes' : 'In historical order-flow backtests',
+      icon: <TrendingUp className="h-5 w-5 text-emerald-400" />,
+      accent: 'border-emerald-500/30 bg-emerald-500/5',
+      valueColor: 'text-emerald-400',
+    },
+    {
+      label: lang === 'es' ? 'Protección Anti-Quiebra Diaria' : 'Daily Drawdown Protection',
+      value: '100% Automática',
+      sub: lang === 'es' ? 'Detiene el bot al tocar tu límite diario' : 'Stops trading when daily limit is hit',
+      icon: <ShieldCheck className="h-5 w-5 text-sky-400" />,
       accent: 'border-sky-500/30 bg-sky-500/5',
       valueColor: 'text-sky-400',
     },
     {
-      label: lang === 'es' ? 'Cumplimiento con Prop Firms' : 'Prop Firm Rule Compliance',
-      value: '100%',
-      sub: lang === 'es' ? 'Apex, Topstep, Bulenox, MFF' : 'Apex, Topstep, Bulenox, MFF',
-      icon: <ShieldAlert className="h-5 w-5 text-emerald-400" />,
+      label: lang === 'es' ? 'Acceso Abierto por Suscripción' : 'Open Subscription Access',
+      value: lang === 'es' ? 'Para Todos' : 'Open to All',
+      sub: lang === 'es' ? 'Alumnos de la academia y público general' : 'Academy students & general public',
+      icon: <Users className="h-5 w-5 text-emerald-400" />,
       accent: 'border-emerald-500/30 bg-emerald-500/5',
       valueColor: 'text-white',
     },
@@ -57,7 +57,7 @@ export const LandingStatsTicker: React.FC = () => {
                 <div className="text-xs font-medium text-slate-400 truncate">
                   {st.label}
                 </div>
-                <div className={`text-2xl font-black font-mono tracking-tight ${st.valueColor}`}>
+                <div className={`text-xl font-black font-mono tracking-tight ${st.valueColor}`}>
                   {st.value}
                 </div>
                 <div className="text-[11px] text-slate-500 truncate mt-0.5">

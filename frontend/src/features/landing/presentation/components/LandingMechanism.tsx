@@ -14,34 +14,34 @@ export const LandingMechanism: React.FC = () => {
 
   const mechanisms = [
     {
-      title: lang === 'es' ? 'Motor de Order Flow y Footprint L2' : 'Level 2 Order Flow & Footprint Engine',
-      subtitle: lang === 'es' ? 'Sin indicadores rezagados' : 'Zero lagging indicators',
+      title: lang === 'es' ? 'Ejecución Automática por Order Flow L2' : 'Automated Level 2 Order Flow Execution',
+      subtitle: lang === 'es' ? 'Sin indicadores lentos ni emociones' : 'Zero lagging indicators or emotions',
       desc:
         lang === 'es'
-          ? 'Nuestros bots no usan medias móviles obsoletas. Analizan desequilibrios diagonales de volumen (Imbalance Ratio 3.5x) y trampas de absorción institucional en máximos y mínimos de sesión en NinjaTrader 8.'
-          : 'Our bots do not rely on lagging indicators. They compute real-time diagonal volume imbalances (3.5x ratio) and institutional absorption traps at key session highs and lows in NinjaTrader 8.',
+          ? 'El bot detecta en tiempo real desequilibrios diagonales de volumen (Imbalance Ratio 3.5x) y absorciones institucionales, abriendo y gestionando las órdenes con Stop Loss y Trailing Stop automáticos.'
+          : 'The bot detects real-time diagonal volume imbalances (3.5x ratio) and institutional absorptions, opening and managing orders with automated Stop Loss and Trailing Stop.',
       icon: <Layers className="h-6 w-6 text-amber-400" />,
-      tag: 'Tick-Replay L2',
+      tag: 'Order Flow L2',
     },
     {
-      title: lang === 'es' ? 'Kill-Switch Remoto en la Nube' : 'Cloud Remote Kill-Switch',
-      subtitle: lang === 'es' ? 'Control total desde tu teléfono o web' : 'Full control from mobile or web',
+      title: lang === 'es' ? 'Apagado y Pausa Remota desde tu Móvil' : 'Mobile Remote Pause & Control',
+      subtitle: lang === 'es' ? 'Control total sin estar frente a la PC' : 'Full control away from your desk',
       desc:
         lang === 'es'
-          ? '¿Vas a salir de casa o el mercado tiene alta volatilidad? Puedes apagar o encender cualquiera de tus bots desde el panel web en 1 clic. El terminal NinjaTrader 8 confirma el apagado en su siguiente ciclo de polling.'
-          : 'Stepping away or facing unexpected news volatility? Toggle your bots on or off from the web panel with 1 click. The NinjaTrader terminal acknowledges and terminates execution on the next poll cycle.',
+          ? '¿Saliste de casa o se acerca una noticia fuerte? Desde tu panel web en Trading Life Academy puedes pausar o reactivar tu bot en 1 clic desde cualquier teléfono o navegador.'
+          : 'Stepping away or facing major market news? From your Trading Life Academy web panel you can pause or resume your bot with 1 click from any phone or browser.',
       icon: <PowerOff className="h-6 w-6 text-rose-400" />,
-      tag: 'Zero Latency Web Polling',
+      tag: 'Remote Web Sync',
     },
     {
-      title: lang === 'es' ? 'Seguridad Criptográfica HMAC & HWID' : 'HMAC & Machine ID Security',
-      subtitle: lang === 'es' ? 'Protección institucional de licencia' : 'Institutional license armor',
+      title: lang === 'es' ? 'Software en Tu Propia Cuenta (Non-Custodial)' : 'Runs on Your Own Account (Non-Custodial)',
+      subtitle: lang === 'es' ? 'Tú mantienes el 100% del control' : 'You keep 100% control of your account',
       desc:
         lang === 'es'
-          ? 'Cada solicitud entre tu PC y la nube se firma con HMAC-SHA256 y queda anclada a la huella digital física de tu procesador (Machine ID). Puedes desvincular y cambiar de PC en cualquier momento desde tu perfil.'
-          : 'Every handshake between your PC and the cloud is cryptographically signed via HMAC-SHA256 and locked to your unique hardware Machine ID, preventing unauthorized hijacking.',
+          ? 'Con tu suscripción recibes tu clave de licencia para instalar el bot directamente en tu equipo o VPS. Operas en tu propia cuenta de fondeo o cuenta real sin entregar jamás tu capital ni tus contraseñas a terceros.'
+          : 'With your subscription you receive a license key to install the bot directly on your PC or VPS. You trade on your own funded or live account without ever handing over capital or passwords.',
       icon: <Lock className="h-6 w-6 text-emerald-400" />,
-      tag: 'HMAC-SHA256 Sealed',
+      tag: '100% Non-Custodial',
     },
   ];
 
@@ -50,29 +50,29 @@ export const LandingMechanism: React.FC = () => {
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
           <Badge variant="amber">
-            {lang === 'es' ? 'Ventaja Cuantitativa' : 'Quantitative Edge'}
+            {lang === 'es' ? 'Tecnología de Automatización' : 'Automation Technology'}
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
             {lang === 'es' ? (
               <>
-                Por Qué los Bots de TLA Superan a los{' '}
+                Por Qué Nuestros Bots Marcan la Diferencia en{' '}
                 <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
-                  Indicadores Convencionales
+                  Cuentas de Fondeo y Cuentas Reales
                 </span>
               </>
             ) : (
               <>
-                Why TLA Bots Outperform{' '}
+                Why Our Bots Make the Difference on{' '}
                 <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
-                  Conventional Retail Indicators
+                  Funded & Live Accounts
                 </span>
               </>
             )}
           </h2>
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
             {lang === 'es'
-              ? 'El 95% de los sistemas comerciales venden plantillas decorativas. En Trading Life Academy desarrollamos infraestructura cuantitativa de grado institucional en C# para NinjaTrader 8.'
-              : '95% of commercial tools sell decorative chart templates. At Trading Life Academy, we engineer institutional-grade quantitative C# infrastructure for NinjaTrader 8.'}
+              ? 'Combinamos velocidad de ejecución cuantitativa con reglas estrictas de preservación de capital, diseñadas para traders que buscan resultados consistentes sin desgaste emocional.'
+              : 'We combine quantitative execution speed with strict capital preservation rules, engineered for traders seeking consistent execution without emotional burnout.'}
           </p>
         </div>
 
@@ -106,7 +106,7 @@ export const LandingMechanism: React.FC = () => {
 
               <div className="border-t border-slate-800/80 pt-4 flex items-center gap-2 text-[11px] font-mono text-slate-400">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                <span>NinjaTrader 8 Core Framework</span>
+                <span>C# Automated Execution Engine</span>
               </div>
             </Card>
           ))}

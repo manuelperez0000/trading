@@ -39,26 +39,8 @@ export class HttpAccountRepository implements IAccountRepository {
   }
 
   public async getUserProfile(): Promise<User> {
-    try {
-      const raw = await httpClient.get<unknown>('/users/me');
-      return AuthMapper.userToDomain(raw);
-    } catch {
-      try {
-        const raw = await httpClient.get<unknown>('/account/profile');
-        return AuthMapper.userToDomain(raw);
-      } catch {
-        return {
-          id: 'usr-default',
-          fullName: 'Trader TLA',
-          email: 'trader@tradinglifeacademy.com',
-          handle: '@trader_tla',
-          role: 'ADMIN',
-          ninjaVersion: 'NinjaTrader 8.1.3.1 (64-bit)',
-          defaultMachineId: 'WIN11-TRD-9F82A1C0',
-          memberSince: 'Noviembre 2026',
-        };
-      }
-    }
+    const raw = await httpClient.get<unknown>('/users/me');
+    return AuthMapper.userToDomain(raw);
   }
 
   public async updateUserProfile(data: Partial<UserProfileData>): Promise<User> {

@@ -12,52 +12,52 @@ export const LandingFaq: React.FC = () => {
     {
       q:
         lang === 'es'
-          ? '¿Necesito saber programar o compilar código para usar los bots?'
-          : 'Do I need programming skills or C# coding experience?',
+          ? '¿Necesito ser estudiante de Trading Life Academy para comprar o suscribirme a un bot?'
+          : 'Do I need to be a Trading Life Academy student to subscribe to a bot?',
       a:
         lang === 'es'
-          ? 'No, absolutamente nada. Todos los algoritmos se entregan pre-compilados en paquetes oficiales de Add-On para NinjaTrader 8 (.zip). Solo debes importarlo desde el menú Tools -> Import en NinjaTrader 8 e introducir tu clave de licencia para empezar.'
-          : 'No, absolutely not. All strategies come pre-compiled in ready-to-run NinjaTrader 8 Add-On packages (.zip). You simply import the file through Tools -> Import in NinjaTrader 8, enter your license key, and you are ready to go.',
+          ? 'No. Nuestras suscripciones de bots están abiertas tanto para los alumnos de la academia como para cualquier trader o persona externa que desee automatizar su operativa. Recibes acceso inmediato al instalador, a tu clave de licencia y al video-tutorial paso a paso.'
+          : 'No. Our bot subscriptions are open to both academy students and any independent trader or individual who wants to automate their trading. You receive instant access to the installer, your license key, and the step-by-step video guide.',
     },
     {
       q:
         lang === 'es'
-          ? '¿Están permitidos estos bots en empresas de fondeo (Apex, Topstep, etc.)?'
-          : 'Are automated bots allowed on prop firms like Apex and Topstep?',
+          ? '¿Los bots están configurados para las empresas de fondeo Pulsar, Proton y Nova, además de cuentas reales?'
+          : 'Are the bots configured for Pulsar, Proton, and Nova funding evaluations as well as live accounts?',
       a:
         lang === 'es'
-          ? 'Sí. Las principales empresas de fondeo de futuros permiten trading algorítmico en NinjaTrader 8 siempre y cuando se respeten sus reglas de riesgo. Nuestros bots cuentan con Hard-Stop de Drawdown Diario y liquidación obligatoria antes del cierre de mercado para blindar tu cuenta.'
-          : 'Yes. Major futures prop firms explicitly allow NinjaScript automation as long as risk rules are obeyed. Our algorithms feature strict daily loss limit stops and auto-flattening before market close to keep you 100% compliant.',
+          ? 'Sí. Nuestros bots incluyen plantillas de gestión de riesgo preconfiguradas para adaptarse a los parámetros técnicos exigidos en evaluaciones y cuentas fondeadas de Pulsar, Proton y Nova (límite de pérdida diaria, trailing drawdown y cierre antes de fin de sesión), además de poder utilizarse en cualquier cuenta real de capital propio.'
+          : 'Yes. Our bots include pre-configured risk management templates tailored to the technical parameters required in Pulsar, Proton, and Nova evaluations and funded accounts (daily loss limit, trailing drawdown, and end-of-session close), and can also run on any personal live account.',
     },
     {
       q:
         lang === 'es'
-          ? '¿Puedo ejecutar los bots en un VPS o en mi PC habitual?'
-          : 'Can I run the bots on a VPS or on my personal computer?',
+          ? '¿Debo entregar mi capital o las contraseñas de mi broker para usar el bot?'
+          : 'Do I have to hand over my capital or my broker passwords to use the bot?',
       a:
         lang === 'es'
-          ? 'Puedes correrlos en cualquier máquina con Windows 10/11 y NinjaTrader 8 de 64 bits. Recomendamos un VPS si deseas que los bots operen sin depender de cortes de luz o de la conexión de tu hogar, pero funcionan idénticamente en tu PC personal.'
-          : 'You can run them on any machine running 64-bit Windows 10/11 with NinjaTrader 8. A VPS is recommended for 24/5 uptime without residential internet drops, but they work flawlessly on your home desktop as well.',
+          ? 'Jamás. Nuestro modelo es 100% Software en Tu Propia Cuenta (SaaS Non-Custodial). Tú descargas el bot y lo instalas directamente en tu computadora o VPS. Trading Life Academy nunca capta dinero de inversión ni solicita contraseñas de tus cuentas de broker.'
+          : 'Never. Our model is 100% Non-Custodial SaaS. You download the bot and install it directly on your own computer or VPS. Trading Life Academy never accepts investment capital and never asks for your broker account passwords.',
     },
     {
       q:
         lang === 'es'
-          ? '¿Qué sucede si cambio de computadora o formateo mi Windows?'
-          : 'What happens if I change computers or re-install Windows?',
+          ? '¿Cómo evita el bot que se queme mi cuenta de fondeo o mi cuenta real?'
+          : 'How does the bot protect my funded evaluation or live account from blowing up?',
       a:
         lang === 'es'
-          ? 'No hay problema. Desde tu Portal del Trader en la sección "Mis Suscripciones / Licencias" tienes un botón para Desvincular PC (Reset HWID) que libera tu licencia inmediatamente para que puedas registrar tu nueva máquina sin costo adicional ni esperas.'
-          : 'No problem at all. Inside your Trader Portal under "My Licenses", you have an instant "Unbind PC" (HWID Reset) button that releases your license key so you can bind your new machine immediately with no support delays.',
+          ? 'Cada bot incluye un Freno Automático de Pérdida Diaria (Hard Daily Stop) y liquidación obligatoria antes del cierre de sesión. Si el mercado presenta un día adverso y alcanza tu límite diario configurado, el bot cierra la posición y bloquea nuevas entradas hasta la siguiente sesión.'
+          : 'Every bot includes an Automated Daily Loss Hard-Stop and mandatory end-of-session flattening. If the market has an adverse day and hits your configured daily limit, the bot closes positions and locks new entries until the next session.',
     },
     {
       q:
         lang === 'es'
-          ? '¿Qué mercados e instrumentos operan los algoritmos de TLA?'
-          : 'Which futures instruments and markets do the bots trade?',
+          ? '¿Necesito saber programar y qué pasa si cambio de computadora o VPS?'
+          : 'Do I need coding skills, and what happens if I switch my PC or VPS?',
       a:
         lang === 'es'
-          ? 'Están optimizados para los contratos de futuros con mayor liquidez y volumen institucional del CME Group: E-mini Nasdaq (NQ), Micro Nasdaq (MNQ), E-mini S&P 500 (ES), Futuros de Oro (GC) y Petróleo Crudo (CL).'
-          : 'They are optimized for the highest-liquidity institutional contracts on the CME Group: E-mini Nasdaq (NQ), Micro E-mini Nasdaq (MNQ), E-mini S&P 500 (ES), Gold Futures (GC), and Crude Oil (CL).',
+          ? 'No necesitas saber programar nada; el bot viene listo para importar en menos de 5 minutos. Además, si cambias de PC o contratas un VPS, desde tu panel en "Mis Licencias" puedes desvincular tu equipo anterior (Reset HWID) en 1 clic sin costo adicional.'
+          : 'Zero coding skills are required; the bot comes ready to import in under 5 minutes. Plus, if you change your PC or move to a VPS, you can unbind your previous machine (HWID Reset) in 1 click from your "My Licenses" panel at no extra cost.',
     },
   ];
 
@@ -72,16 +72,16 @@ export const LandingFaq: React.FC = () => {
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
             {lang === 'es' ? (
               <>
-                Todo lo que Necesitas Saber Sobre los{' '}
+                Resolvemos tus Dudas Sobre la{' '}
                 <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
-                  Bots de Trading Life Academy
+                  Suscripción a Nuestros Bots
                 </span>
               </>
             ) : (
               <>
-                Everything You Need to Know About{' '}
+                Answers to Your Questions About{' '}
                 <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
-                  Trading Life Academy Bots
+                  Our Bot Subscriptions
                 </span>
               </>
             )}

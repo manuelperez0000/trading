@@ -1,29 +1,37 @@
 import { httpClient } from '@core/http/httpClient';
-import type {
-  CreateTradingBotInput,
-  TradingBot,
+import {
+  TRADING_BOTS_CATALOG,
+  type CreateTradingBotInput,
+  type TradingBot,
 } from '@features/bots-catalog/domain/entities/TradingBot';
 import type { IBotRepository } from '@features/bots-catalog/domain/repositories/BotRepository';
 import { BotMapper } from '@features/bots-catalog/infrastructure/mappers/BotMapper';
 
 export class HttpBotRepository implements IBotRepository {
   public async getAllBots(): Promise<TradingBot[]> {
-    const res = await httpClient.get<any>('/bots');
-    // Desempaquetar responser { body: { bots: [...] } } o arreglo directo
-    const rawList = Array.isArray(res)
-      ? res
-      : (res && typeof res === 'object' && 'body' in res && Array.isArray((res as any).body?.bots))
-        ? (res as any).body.bots
-        : (res && typeof res === 'object' && Array.isArray((res as any).bots))
-          ? (res as any).bots
-          : [];
-    return rawList.map((item: unknown) => BotMapper.toDomain(item));
+    try {
+      const res = await httpClient.get<any>('/bots');
+      const rawList = Array.isArray(res)
+        ? res
+        : res && typeof res === 'object' && 'body' in res && Array.isArray((res as any).body?.bots)
+          ? (res as any).body.bots
+          : res && typeof res === 'object' && Array.isArray((res as any).bots)
+            ? (res as any).bots
+            : [];
+      const mapped = rawList.map((item: unknown) => BotMapper.toDomain(item));
+      return mapped.length > 0 ? mapped : TRADING_BOTS_CATALOG;
+    } catch {
+      // Si el servidor API no está levantado localmente, mostrar el catálogo base para exploración pública
+      return TRADING_BOTS_CATALOG;
+    }
   }
 
   public async getBotById(id: string): Promise<TradingBot | null> {
+    // 1. Verificar si corresponde a un bot del catálogo base por slug o ID
+    const catalogMatch = TRADING_BOTS_CATALOG.find((b) => b.id === id);
+
     try {
       const res = await httpClient.get<any>(`/bots/${id}`);
-      // Desempaquetar responser { body: { bot: { ... } } } o bot directo
       const raw =
         res && typeof res === 'object' && 'body' in res && (res as any).body?.bot
           ? (res as any).body.bot
@@ -32,7 +40,7 @@ export class HttpBotRepository implements IBotRepository {
             : res;
       return BotMapper.toDomain(raw);
     } catch {
-      return null;
+      return catalogMatch ?? null;
     }
   }
 

@@ -87,5 +87,42 @@ describe('BotMapper & AuthMapper - Backend Compatibility', () => {
     expect(session.user.email).toBe('ana@example.com');
     expect(session.user.handle).toBe('@ana');
     expect(session.user.role).toBe('TRADER');
+    expect(session.user.direccion).toBe('Calle 123');
+    expect(session.user.telefono).toBe('+1 213-373-4253');
+    expect(session.user.whatsapp).toBe('+44 20 8366 1177');
+    expect(session.user.urlDocumentoIdentidad).toBe('https://example.com/id.pdf');
+    expect(session.user.estado).toBe('activo');
+  });
+
+  it('should map GET /api/v1/users list response to Domain User[]', () => {
+    const backendUsersResponse = {
+      body: {
+        users: [
+          {
+            id: '1',
+            nombreCompleto: 'Carlos Figuera',
+            correoElectronico: 'admin@tradinglifeacademy.com',
+            direccion: 'Av. Principal',
+            telefono: '+1 213-373-4253',
+            whatsapp: '+1 213-373-4253',
+            estado: 'activo',
+          },
+          {
+            id: '2',
+            nombreCompleto: 'Ana Pérez',
+            correoElectronico: 'ana@example.com',
+            estado: 'activo',
+          },
+        ],
+      },
+      message: 'Usuarios listados correctamente.',
+      status: 200,
+    };
+
+    const users = AuthMapper.usersListToDomain(backendUsersResponse);
+    expect(users).toHaveLength(2);
+    expect(users[0].id).toBe('1');
+    expect(users[0].role).toBe('ADMIN');
+    expect(users[1].fullName).toBe('Ana Pérez');
   });
 });
