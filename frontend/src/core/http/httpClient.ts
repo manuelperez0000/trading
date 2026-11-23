@@ -1,6 +1,12 @@
 import { env } from '@core/config/env';
 import { HttpInfrastructureError } from '@core/errors/DomainError';
 
+export interface ApiResponse<T = unknown> {
+  body: T;
+  message: string;
+  status: number;
+}
+
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
   timeoutMs?: number;
@@ -42,10 +48,19 @@ export class HttpClient {
       });
 
       if (!response.ok) {
-        const errorBody = await response.text().catch(() => '');
+        const errorText = await response.text().catch(() => '');
+        let parsedMessage = errorText;
+        try {
+          const jsonError = JSON.parse(errorText);
+          if (jsonError && typeof jsonError.message === 'string') {
+            parsedMessage = jsonError.message;
+          }
+        } catch {
+          // ignore
+        }
         throw new HttpInfrastructureError(
           response.status,
-          errorBody || `Error HTTP ${response.status}: ${response.statusText}`
+          parsedMessage || `Error HTTP ${response.status}: ${response.statusText}`
         );
       }
 
@@ -65,6 +80,10 @@ export class HttpClient {
 
   public patch<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
     return this.request<T>(path, { ...options, method: 'PATCH', body });
+  }
+
+  public delete<T>(path: string, options?: RequestOptions): Promise<T> {
+    return this.request<T>(path, { ...options, method: 'DELETE' });
   }
 }
 

@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -7,12 +7,17 @@ import {
   CheckCircle2,
   Cpu,
   Download,
+  Lock,
+  LogIn,
   Plus,
   PlusCircle,
+  ShieldCheck,
+  ShoppingCart,
   Sliders,
   Sparkles,
   Trash2,
   TrendingUp,
+  UserPlus,
   X,
 } from 'lucide-react';
 import { Badge } from '@shared/ui/Badge';
@@ -27,7 +32,287 @@ import {
   useCreateBotMutation,
   useLinkBotToLicenseMutation,
 } from '@features/bots-catalog/application/hooks/useBots';
+import type { TradingBot } from '@features/bots-catalog/domain/entities/TradingBot';
+import { useAuthStore } from '@features/auth/application/useAuthStore';
 import { toast } from '@shared/ui/toast/toastStore';
+
+interface PurchaseGateModalProps {
+  bot: TradingBot | null;
+  onClose: () => void;
+  onSuccessActivated?: () => void;
+}
+
+const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
+  bot,
+  onClose,
+  onSuccessActivated,
+}) => {
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuthStore();
+  const linkMutation = useLinkBotToLicenseMutation();
+
+  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL' | 'LIFETIME'>('MONTHLY');
+  const [riskProfile, setRiskProfile] = useState<'PULSAR' | 'PROTON' | 'NOVA' | 'LIVE'>('PULSAR');
+
+  if (!bot) return null;
+
+  const redirectUrl = `/catalog/${bot.id}?intent=buy`;
+  const loginHref = `/auth/login?redirect=${encodeURIComponent(redirectUrl)}`;
+  const registerHref = `/auth/register?redirect=${encodeURIComponent(redirectUrl)}`;
+
+  const computedPriceUsd =
+    billingCycle === 'MONTHLY'
+      ? bot.monthlyPriceUsd
+      : billingCycle === 'ANNUAL'
+      ? Math.round(bot.monthlyPriceUsd * 12 * 0.8)
+      : Math.round(bot.monthlyPriceUsd * 6);
+
+  const handleConfirmPurchase = () => {
+    linkMutation.mutate(
+      { botId: bot.id, licenseKey: 'NT8-QTM-9921-ALPHA' },
+      {
+        onSuccess: () => {
+          toast.success(
+            '¡Suscripción Activada con Éxito!',
+            `${bot.name} (${riskProfile}) vinculado a tu LicenseKey de NinjaTrader 8.`
+          );
+          onSuccessActivated?.();
+          onClose();
+        },
+        onError: () => {
+          toast.danger('Error al procesar la suscripción');
+        },
+      }
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/70 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950/70">
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                isAuthenticated
+                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                  : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+              }`}
+            >
+              {isAuthenticated ? (
+                <ShoppingCart className="h-5 w-5" />
+              ) : (
+                <Lock className="h-5 w-5" />
+              )}
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">
+                {isAuthenticated
+                  ? 'Confirmar Suscripción y Activar Licencia NT8'
+                  : 'Inicia Sesión para Proceder con la Compra'}
+              </h2>
+              <p className="text-xs text-slate-400">
+                {isAuthenticated
+                  ? `Cuenta activa: ${user.fullName} (${user.email})`
+                  : 'La exploración es pública, pero la compra requiere una cuenta registrada'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-5">
+          {/* Resumen del Bot Seleccionado */}
+          <div className="rounded-xl border border-slate-800 bg-slate-950/90 p-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
+                <Bot className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white">{bot.name}</span>
+                  <Badge variant="emerald">{bot.primaryInstrument}</Badge>
+                </div>
+                <div className="text-xs font-mono text-slate-400 mt-0.5">
+                  {bot.codeName} • Win Rate {bot.winRatePercent}% • PF {bot.profitFactor}
+                </div>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-lg font-extrabold text-emerald-400">
+                {formatUsd(bot.monthlyPriceUsd)}
+              </div>
+              <div className="text-[11px] text-slate-400">por mes</div>
+            </div>
+          </div>
+
+          {!isAuthenticated ? (
+            <>
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-2.5">
+                <div className="text-xs font-bold text-amber-300 flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-amber-400 shrink-0" />
+                  ¿Por qué necesitas iniciar sesión antes de comprar?
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Al adquirir la suscripción de <strong>{bot.name}</strong>, el sistema genera automáticamente tu <strong>LicenseKey remota única</strong> vinculada a tu usuario y habilita la descarga del paquete <code className="text-amber-300">.zip</code> para NinjaTrader 8 con los perfiles de riesgo para <strong>Pulsar, Proton, Nova y Cuenta Real</strong>.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full"
+                  onClick={() => navigate(loginHref)}
+                >
+                  <LogIn className="h-4 w-4" />
+                  Iniciar Sesión y Comprar
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="w-full border-amber-500/40 text-amber-300 hover:bg-amber-500/15"
+                  onClick={() => navigate(registerHref)}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Crear Cuenta Nueva
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Selector de Ciclo de Facturación */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                  1. Selecciona tu Plan de Suscripción
+                </label>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {(
+                    [
+                      {
+                        id: 'MONTHLY',
+                        title: 'Mensual',
+                        price: `${formatUsd(bot.monthlyPriceUsd)}/mes`,
+                        tag: 'Flexible',
+                      },
+                      {
+                        id: 'ANNUAL',
+                        title: 'Anual (-20%)',
+                        price: `${formatUsd(Math.round(bot.monthlyPriceUsd * 12 * 0.8))}/año`,
+                        tag: 'Más Popular',
+                      },
+                      {
+                        id: 'LIFETIME',
+                        title: 'Vitalicio',
+                        price: `${formatUsd(Math.round(bot.monthlyPriceUsd * 6))} único`,
+                        tag: 'Pago Único',
+                      },
+                    ] as const
+                  ).map((plan) => (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => setBillingCycle(plan.id)}
+                      className={`rounded-xl border p-3 text-left transition-all cursor-pointer ${
+                        billingCycle === plan.id
+                          ? 'border-emerald-500 bg-emerald-500/15 text-white'
+                          : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="text-[10px] font-bold uppercase text-amber-400">
+                        {plan.tag}
+                      </div>
+                      <div className="text-xs font-bold text-white mt-0.5">
+                        {plan.title}
+                      </div>
+                      <div className="text-xs font-mono text-emerald-400 mt-1">
+                        {plan.price}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selector de Perfil Preconfigurado */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                  2. Perfil de Riesgo Preconfigurado Inicial
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(
+                    [
+                      { id: 'PULSAR', label: 'Perfil Pulsar', sub: 'Trailing Intradía' },
+                      { id: 'PROTON', label: 'Perfil Proton', sub: 'Regla Consistencia' },
+                      { id: 'NOVA', label: 'Perfil Nova', sub: 'Stop Diario Estricto' },
+                      { id: 'LIVE', label: 'Cuenta Real', sub: 'Capital Propio Live' },
+                    ] as const
+                  ).map((prof) => (
+                    <button
+                      key={prof.id}
+                      type="button"
+                      onClick={() => setRiskProfile(prof.id)}
+                      className={`rounded-xl border p-2.5 text-left transition-all cursor-pointer ${
+                        riskProfile === prof.id
+                          ? 'border-amber-500 bg-amber-500/15 text-white'
+                          : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="text-xs font-bold text-white">{prof.label}</div>
+                      <div className="text-[10px] text-slate-400">{prof.sub}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Resumen de Activación */}
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 flex items-center justify-between text-xs">
+                <div className="space-y-0.5">
+                  <div className="text-slate-300">
+                    LicenseKey Asignada:{' '}
+                    <span className="font-mono font-bold text-emerald-300">
+                      NT8-QTM-9921-ALPHA
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Activación remota inmediata para NinjaTrader 8 (64-bit)
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[11px] text-slate-400">Total a Pagar</div>
+                  <div className="text-lg font-extrabold text-white">
+                    {formatUsd(computedPriceUsd)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-1">
+                <Button variant="ghost" size="md" onClick={onClose}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  isLoading={linkMutation.isPending}
+                  onClick={handleConfirmPurchase}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Confirmar Compra y Activar Bot
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface CreateBotModalProps {
   isOpen: boolean;
@@ -57,7 +342,7 @@ const CreateBotModal: React.FC<CreateBotModalProps> = ({ isOpen, onClose }) => {
     'Estrategia algorítmica para NinjaTrader 8 basada en desequilibrios de volumen y Value Area.'
   );
   const [fullDescription, setFullDescription] = useState(
-    'Diseñada para operar futuros del Nasdaq (NQ) y Mini-Nasdaq (MNQ) con protección de capital para cuentas de fondeo (Apex, Topstep). Ejecuta entradas con confirmación de Order Flow y trailing stop dinámico.'
+    'Diseñada para operar futuros (NQ y MNQ) con protección de capital para evaluaciones de fondeo y cuentas reales. Ejecuta entradas con confirmación de Order Flow y trailing stop dinámico.'
   );
 
   const [parameters, setParameters] = useState<
@@ -332,7 +617,7 @@ const CreateBotModal: React.FC<CreateBotModalProps> = ({ isOpen, onClose }) => {
                   htmlFor="propFirmCheckbox"
                   className="text-xs text-slate-200 font-medium cursor-pointer"
                 >
-                  Compatible con Reglas de Prop Firms (Apex, Topstep, Bulenox)
+                  Compatible con Evaluaciones de Fondeo y Cuentas Reales
                 </label>
               </div>
             </div>
@@ -530,8 +815,10 @@ const CreateBotModal: React.FC<CreateBotModalProps> = ({ isOpen, onClose }) => {
 
 export const BotsCatalogPage: React.FC = () => {
   const { t } = useI18n();
+  const { isAuthenticated, user } = useAuthStore();
   const [selectedInstrument, setSelectedInstrument] = useState<string>('ALL');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [botForPurchase, setBotForPurchase] = useState<TradingBot | null>(null);
   const { data: bots = [], isLoading } = useBotsQuery();
 
   const filteredBots = useMemo(() => {
@@ -545,11 +832,18 @@ export const BotsCatalogPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl font-bold tracking-tight text-white">
               {t.catalog.title}
             </h1>
+<<<<<<< HEAD
             {/* <Badge variant="emerald">{t.catalog.badge}</Badge> */}
+=======
+            <Badge variant="emerald">{t.catalog.badge}</Badge>
+            {!isAuthenticated && (
+              <Badge variant="amber">Exploración Pública • Sin Login</Badge>
+            )}
+>>>>>>> c88b4cb484586d6459171b8dbb28e4aad5399381
           </div>
           <p className="mt-1 text-sm text-slate-400">
             {t.catalog.subtitle}
@@ -574,15 +868,17 @@ export const BotsCatalogPage: React.FC = () => {
             ))}
           </div>
 
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="cursor-pointer shadow-md shadow-amber-500/20"
-          >
-            <PlusCircle className="h-4 w-4" />
-            {t.catalog.addBotButton}
-          </Button>
+          {isAuthenticated && user.role === 'ADMIN' && (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="cursor-pointer shadow-md shadow-amber-500/20"
+            >
+              <PlusCircle className="h-4 w-4" />
+              {t.catalog.addBotButton}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -617,6 +913,17 @@ export const BotsCatalogPage: React.FC = () => {
                   {bot.shortDescription}
                 </p>
 
+                {/* Etiquetas de Perfiles Soportados */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">
+                    Perfiles:
+                  </span>
+                  <Badge variant="amber">Pulsar</Badge>
+                  <Badge variant="sky">Proton</Badge>
+                  <Badge variant="emerald">Nova</Badge>
+                  <Badge variant="slate">Cuenta Real Live</Badge>
+                </div>
+
                 {/* Métricas Clave */}
                 <div className="grid grid-cols-3 gap-3 rounded-xl border border-slate-800 bg-slate-950/80 p-3.5 text-center">
                   <div>
@@ -646,7 +953,7 @@ export const BotsCatalogPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between border-t border-slate-800/80 pt-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/80 pt-4">
                 <div>
                   <span className="text-xl font-extrabold text-white">
                     {formatUsd(bot.monthlyPriceUsd)}
@@ -654,22 +961,38 @@ export const BotsCatalogPage: React.FC = () => {
                   <span className="text-xs text-slate-400"> {t.catalog.perMonth}</span>
                 </div>
 
-                <Link to={`/catalog/${bot.id}`}>
-                  <Button variant="primary" size="md">
-                    {t.catalog.viewDetails}
-                    <ArrowUpRight className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <Link to={`/catalog/${bot.id}`}>
+                    <Button variant="secondary" size="md">
+                      {t.catalog.viewDetails}
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => setBotForPurchase(bot)}
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    Comprar
                   </Button>
-                </Link>
+                </div>
               </div>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Modal Interactivo para Crear / Publicar Nuevo Bot */}
+      {/* Modal Interactivo para Crear / Publicar Nuevo Bot (Solo Admin) */}
       <CreateBotModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+      />
+
+      {/* Modal de Compra / Gate de Autenticación */}
+      <PurchaseGateModal
+        bot={botForPurchase}
+        onClose={() => setBotForPurchase(null)}
       />
     </div>
   );
@@ -677,28 +1000,23 @@ export const BotsCatalogPage: React.FC = () => {
 
 export const BotDetailPage: React.FC = () => {
   const { botId } = useParams<{ botId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuthStore();
   const [activatedBanner, setActivatedBanner] = useState(false);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
   const { data: bot, isLoading } = useBotDetailQuery(botId);
-  const linkMutation = useLinkBotToLicenseMutation();
 
-  const handleLinkLicense = () => {
-    if (!bot) return;
-    linkMutation.mutate(
-      { botId: bot.id, licenseKey: 'NT8-QTM-9921-ALPHA' },
-      {
-        onSuccess: () => {
-          setActivatedBanner(true);
-          toast.success(
-            'Estrategia vinculada',
-            `${bot.codeName} agregada a tu licencia NinjaTrader 8.`
-          );
-        },
-        onError: () => toast.danger('Error al vincular estrategia'),
-      }
-    );
-  };
+  // Si el usuario vuelve del Login con ?intent=buy, abrimos el modal de compra automáticamente
+  useEffect(() => {
+    if (bot && searchParams.get('intent') === 'buy') {
+      setIsPurchaseModalOpen(true);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('intent');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [bot, searchParams, setSearchParams]);
 
   if (isLoading) {
     return (
@@ -732,7 +1050,7 @@ export const BotDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           to="/catalog"
           className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white"
@@ -740,13 +1058,24 @@ export const BotDetailPage: React.FC = () => {
           <ArrowLeft className="h-4 w-4" />
           Volver al Catálogo de Bots
         </Link>
-        <Badge variant="emerald">Licencia Remota Integrada</Badge>
+        <div className="flex items-center gap-2">
+          {!isAuthenticated ? (
+            <Badge variant="amber">
+              Vista Pública • Requiere Iniciar Sesión para Comprar
+            </Badge>
+          ) : (
+            <Badge variant="emerald">
+              Sesión Activa: {user.fullName}
+            </Badge>
+          )}
+          <Badge variant="emerald">Licencia Remota Integrada</Badge>
+        </div>
       </div>
 
       {/* Cabecera Técnica del Bot */}
       <Card className="p-6 border-emerald-500/30">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2 max-w-2xl">
+          <div className="space-y-3 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="sky">{bot.version}</Badge>
               <Badge variant="emerald">
@@ -758,9 +1087,18 @@ export const BotDetailPage: React.FC = () => {
             <p className="text-sm text-slate-300 leading-relaxed">
               {bot.fullDescription}
             </p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-xs font-semibold text-slate-400">
+                Plantillas de Riesgo Incluidas:
+              </span>
+              <Badge variant="amber">Perfil Pulsar</Badge>
+              <Badge variant="sky">Perfil Proton</Badge>
+              <Badge variant="emerald">Perfil Nova</Badge>
+              <Badge variant="slate">Cuenta Real Personal (Live)</Badge>
+            </div>
           </div>
 
-          <div className="flex flex-col items-start lg:items-end gap-3 shrink-0 rounded-xl border border-slate-800 bg-slate-950 p-4">
+          <div className="flex flex-col items-start lg:items-end gap-3 shrink-0 rounded-xl border border-slate-800 bg-slate-950 p-5">
             <div className="text-xs text-slate-400">Suscripción Mensual</div>
             <div className="text-3xl font-extrabold text-emerald-400">
               {formatUsd(bot.monthlyPriceUsd)}
@@ -770,20 +1108,32 @@ export const BotDetailPage: React.FC = () => {
               <Button
                 variant="primary"
                 size="md"
-                isLoading={linkMutation.isPending}
-                onClick={handleLinkLicense}
+                onClick={() => setIsPurchaseModalOpen(true)}
               >
-                <Sparkles className="h-4 w-4" />
-                Vincular a Mi Licencia NT8
+                <ShoppingCart className="h-4 w-4" />
+                {isAuthenticated
+                  ? 'Comprar Suscripción / Vincular Licencia'
+                  : 'Comprar Suscripción (Requiere Login)'}
               </Button>
-              <Button
-                variant="secondary"
-                size="md"
-                onClick={() => navigate('/my-subscriptions')}
-              >
-                <Download className="h-4 w-4" />
-                Ir a Mis Licencias
-              </Button>
+              {isAuthenticated ? (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => navigate('/my-subscriptions')}
+                >
+                  <Download className="h-4 w-4" />
+                  Ir a Mis Licencias
+                </Button>
+              ) : (
+                <Link
+                  to={`/auth/login?redirect=${encodeURIComponent(`/catalog/${bot.id}?intent=buy`)}`}
+                >
+                  <Button variant="secondary" size="md">
+                    <LogIn className="h-4 w-4" />
+                    Iniciar Sesión
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -866,6 +1216,13 @@ export const BotDetailPage: React.FC = () => {
           ))}
         </div>
       </Card>
+
+      {/* Modal de Compra / Gate de Autenticación en Detalle del Bot */}
+      <PurchaseGateModal
+        bot={isPurchaseModalOpen ? bot : null}
+        onClose={() => setIsPurchaseModalOpen(false)}
+        onSuccessActivated={() => setActivatedBanner(true)}
+      />
     </div>
   );
 };

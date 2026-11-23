@@ -63,6 +63,7 @@ const AppRoutes: React.FC = () => {
         path="/auth/recover-password"
         element={<PasswordRecoveryPage />}
       />
+      <Route path="/reset-password" element={<PasswordRecoveryPage />} />
 
       {/* Alias de rutas comunes para evitar 404 o puntos muertos */}
       <Route path="/login" element={<Navigate to="/auth/login" replace />} />

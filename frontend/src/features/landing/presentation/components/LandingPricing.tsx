@@ -13,52 +13,52 @@ export const LandingPricing: React.FC = () => {
   const plans = [
     {
       id: 'single',
-      name: lang === 'es' ? 'Bot Individual' : 'Single Strategy',
-      subtitle: lang === 'es' ? 'Ideal para un mercado específico' : 'Ideal for one target instrument',
+      name: lang === 'es' ? 'Suscripción Bot Individual' : 'Single Bot Subscription',
+      subtitle: lang === 'es' ? 'Ideal para iniciar en fondeo o cuenta real' : 'Ideal to start on funded or live accounts',
       price: billingCycle === 'MONTHLY' ? 149 : 119,
       period: lang === 'es' ? '/ mes' : '/ mo',
       popular: false,
       features: [
-        lang === 'es' ? 'Acceso a 1 bot a elección (ej: Quantum OrderFlow)' : 'Access to 1 bot of your choice',
-        lang === 'es' ? 'Licencia NinjaTrader 8 para 1 PC (HWID)' : '1 PC Machine ID license',
-        lang === 'es' ? 'Control de Kill-Switch remoto web' : 'Web remote Kill-Switch control',
-        lang === 'es' ? 'Protección hard-stop para fondeos' : 'Prop firm hard-stop protection',
-        lang === 'es' ? 'Soporte y actualizaciones continuas' : 'Continuous updates & technical support',
+        lang === 'es' ? '1 Bot automatizado a elección (ej. Quantum OrderFlow)' : '1 Automated bot of your choice (e.g. Quantum OrderFlow)',
+        lang === 'es' ? 'Apto para Evaluaciones de Fondeo y Cuentas Reales' : 'Ready for Funded Evaluations & Live Accounts',
+        lang === 'es' ? 'Licencia para 1 PC o VPS (con protección de Drawdown)' : '1 PC or VPS license (with Drawdown protection)',
+        lang === 'es' ? 'Control de pausa y encendido remoto desde la web' : 'Web remote pause & toggle control',
+        lang === 'es' ? 'Guía de instalación paso a paso y soporte técnico' : 'Step-by-step setup guide & technical support',
       ],
-      cta: lang === 'es' ? 'Elegir Bot Individual' : 'Choose Single Bot',
+      cta: lang === 'es' ? 'Suscribirme al Bot Individual' : 'Subscribe to Single Bot',
     },
     {
       id: 'pro',
-      name: lang === 'es' ? 'Pro Trader Suite' : 'Pro Trader Suite',
-      subtitle: lang === 'es' ? 'Nuestra opción más recomendada' : 'Our most recommended option',
+      name: lang === 'es' ? 'Pro Trader Suite (Todos los Bots)' : 'Pro Trader Suite (All Bots)',
+      subtitle: lang === 'es' ? 'El plan más elegido por estudiantes y traders' : 'Most chosen by students & active traders',
       price: billingCycle === 'MONTHLY' ? 199 : 159,
       period: lang === 'es' ? '/ mes' : '/ mo',
       popular: true,
       features: [
-        lang === 'es' ? 'Acceso a TODOS los bots del catálogo (3+ bots)' : 'Access to ALL bots in the catalog (3+ bots)',
-        lang === 'es' ? 'Licencia para 2 PCs o VPS simultáneo' : '2 PC / VPS simultaneous licenses',
-        lang === 'es' ? 'Reset de Machine ID instantáneo desde el perfil' : 'Instant self-serve HWID reset',
-        lang === 'es' ? 'Kill-Switch Global y telemetría avanzada' : 'Global Kill-Switch & priority telemetry',
-        lang === 'es' ? 'Publicación en el Muro Social con sello API' : 'Verified Social Wall verified badge',
-        lang === 'es' ? 'Acceso a canales VIP en Discord' : 'Private VIP Discord channels access',
+        lang === 'es' ? 'Acceso a TODOS los bots del catálogo (3+ algoritmos)' : 'Access to ALL catalog bots (3+ algorithms)',
+        lang === 'es' ? 'Opera Cuentas de Fondeo ($25k-$250k) y Cuentas Reales' : 'Trade Funded Evaluations ($25k-$250k) & Live Accounts',
+        lang === 'es' ? 'Licencia activa para 2 equipos o VPS simultáneos' : 'Active license for 2 simultaneous PCs or VPS',
+        lang === 'es' ? 'Cambio de equipo (Reset HWID) inmediato desde tu perfil' : 'Instant self-serve PC switch (HWID Reset)',
+        lang === 'es' ? 'Apagado remoto global desde tu teléfono móvil' : 'Global remote pause from your mobile phone',
+        lang === 'es' ? 'Acceso completo a la comunidad y soporte prioritario' : 'Full community access & priority support',
       ],
-      cta: lang === 'es' ? 'Obtener Acceso Pro' : 'Get Pro Trader Access',
+      cta: lang === 'es' ? 'Suscribirme a Pro Trader Suite' : 'Subscribe to Pro Trader Suite',
     },
     {
       id: 'lifetime',
-      name: lang === 'es' ? 'Licencia Vitalicia VIP' : 'Lifetime VIP Pass',
-      subtitle: lang === 'es' ? 'Pago único sin cuotas mensuales' : 'One-time payment, no monthly fees',
+      name: lang === 'es' ? 'Licencia Vitalicia VIP' : 'Lifetime VIP License',
+      subtitle: lang === 'es' ? 'Un solo pago, sin mensualidades futuras' : 'One-time payment, zero monthly fees',
       price: 997,
       period: lang === 'es' ? 'pago único' : 'one-time',
       popular: false,
       features: [
-        lang === 'es' ? 'Acceso de POR VIDA a todos los bots actuales y futuros' : 'LIFETIME access to all current and future bots',
-        lang === 'es' ? 'Licencias ilimitadas para tus máquinas/VPS' : 'Unlimited PC / VPS machine bindings',
-        lang === 'es' ? 'Soporte prioritario 1 a 1 de instalación' : '1-on-1 priority installation support',
-        lang === 'es' ? 'Plantillas NinjaScript C# descompiladas' : 'Configurable NinjaScript presets',
-        lang === 'es' ? 'Todas las actualizaciones mayores incluidas' : 'All major upgrades included forever',
+        lang === 'es' ? 'Acceso de POR VIDA a todos los bots actuales y nuevos' : 'LIFETIME access to all current and future bots',
+        lang === 'es' ? 'Uso ilimitado en tus pruebas de fondeo y cuentas reales' : 'Unlimited use on your funded & live accounts',
+        lang === 'es' ? 'Sesión 1 a 1 de asistencia en instalación y ajustes' : '1-on-1 setup & parameter configuration session',
+        lang === 'es' ? 'Plantillas preconfiguradas para distintos tamaños de cuenta' : 'Pre-configured risk presets for all account sizes',
+        lang === 'es' ? 'Todas las actualizaciones futuras incluidas para siempre' : 'All future upgrades included forever',
       ],
-      cta: lang === 'es' ? 'Adquirir Licencia Vitalicia' : 'Get Lifetime License',
+      cta: lang === 'es' ? 'Obtener Licencia Vitalicia' : 'Get Lifetime VIP License',
     },
   ];
 
@@ -67,29 +67,29 @@ export const LandingPricing: React.FC = () => {
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-12">
           <Badge variant="amber">
-            {lang === 'es' ? 'Inversión en tu Carrera de Trading' : 'Invest in Your Edge'}
+            {lang === 'es' ? 'Planes de Suscripción Abiertos a Todos' : 'Subscription Plans Open to Everyone'}
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
             {lang === 'es' ? (
               <>
-                Precios Transparentes,{' '}
+                Suscríbete a tu Bot y Automatiza tus{' '}
                 <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
-                  Sin Letra Chica
+                  Cuentas de Fondeo y Cuentas Reales
                 </span>
               </>
             ) : (
               <>
-                Transparent Pricing,{' '}
+                Subscribe to Your Bot & Automate Your{' '}
                 <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
-                  Zero Hidden Fees
+                  Funded & Live Accounts
                 </span>
               </>
             )}
           </h2>
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
             {lang === 'es'
-              ? '¿Sabías que quemar una sola cuenta de fondeo cuesta entre $150 y $300 USD por reinicio? Nuestros algoritmos se pagan solos evitando violaciones de riesgo desde el primer día.'
-              : 'Did you know that blowing a single evaluation account costs $150 to $300 in reset fees? Our algorithms pay for themselves by preventing costly risk breaches on day one.'}
+              ? 'Sin requisitos previos: tanto alumnos de Trading Life Academy como cualquier trader independiente pueden suscribirse hoy, instalar el bot en su propia cuenta y cancelar o cambiar de plan en cualquier momento.'
+              : 'No prior requirements: both Trading Life Academy students and any independent trader can subscribe today, install the bot on their own account, and cancel or switch plans anytime.'}
           </p>
 
           {/* Toggle Mensual / Anual */}
@@ -103,7 +103,7 @@ export const LandingPricing: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              {lang === 'es' ? 'Facturación Mensual' : 'Monthly Billing'}
+              {lang === 'es' ? 'Suscripción Mensual' : 'Monthly Subscription'}
             </button>
             <button
               type="button"
@@ -114,7 +114,7 @@ export const LandingPricing: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span>{lang === 'es' ? 'Facturación Anual' : 'Annual Billing'}</span>
+              <span>{lang === 'es' ? 'Suscripción Anual' : 'Annual Subscription'}</span>
               <span className="rounded bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.2">
                 -20% OFF
               </span>
@@ -135,7 +135,7 @@ export const LandingPricing: React.FC = () => {
             >
               {plan.popular && (
                 <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 via-yellow-400 to-amber-600 text-slate-950 font-black text-[11px] tracking-wider uppercase px-4 py-1.5 rounded-bl-2xl shadow-md">
-                  ★ {lang === 'es' ? 'RECOMENDADO' : 'BEST VALUE'}
+                  ★ {lang === 'es' ? 'MÁS RECOMENDADO' : 'MOST POPULAR'}
                 </div>
               )}
 
@@ -150,13 +150,13 @@ export const LandingPricing: React.FC = () => {
                     ${plan.price}
                   </span>
                   <span className="text-xs text-slate-400 font-medium">
-                    {plan.period}
+                    USD {plan.period}
                   </span>
                 </div>
 
                 <div className="space-y-3 pt-2 border-t border-slate-800/80">
                   <div className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    {lang === 'es' ? 'Incluye:' : 'Included:'}
+                    {lang === 'es' ? 'Tu suscripción incluye:' : 'Your subscription includes:'}
                   </div>
                   <ul className="space-y-2.5 text-xs text-slate-300">
                     {plan.features.map((feat, idx) => (
@@ -182,6 +182,12 @@ export const LandingPricing: React.FC = () => {
             </Card>
           ))}
         </div>
+
+        <p className="text-center text-[11px] text-slate-500 mt-8 max-w-2xl mx-auto">
+          {lang === 'es'
+            ? '*Nota de transparencia: La suscripción otorga una licencia de uso de software automatizado (SaaS Non-Custodial) que el usuario instala en su propio equipo. El usuario mantiene en todo momento el control exclusivo de sus cuentas de trading.'
+            : '*Transparency notice: The subscription grants an automated software license (Non-Custodial SaaS) that the user installs on their own machine. The user retains exclusive control of their trading accounts at all times.'}
+        </p>
       </div>
     </section>
   );

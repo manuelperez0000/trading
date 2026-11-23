@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { env, type DataSourceMode } from '@core/config/env';
+import { env } from '@core/config/env';
 import { container } from '@app/di/container';
 import type { SimulateHeartbeatInput } from '@features/subscriptions/application/use-cases/subscriptionUseCases';
 
@@ -9,30 +9,16 @@ interface PollingControlState {
   autoSimulateNinjaPolls: boolean;
   ninjaPollCycleCount: number;
   lastGlobalPollAt: string | null;
-  dataSourceMode: DataSourceMode;
   setPanelPollIntervalMs: (ms: number) => void;
   setAutoSimulateNinjaPolls: (enabled: boolean) => void;
   incrementCycle: () => void;
-  setDataSourceMode: (mode: DataSourceMode) => void;
 }
-
-const getInitialDataSourceMode = (): DataSourceMode => {
-  const stored = localStorage.getItem('tla_data_source_mode');
-  if (stored === 'REMOTE_API' || stored === 'SIMULATOR_MOCK') {
-    return stored;
-  }
-  return env.dataSourceMode;
-};
-
-const initialMode = getInitialDataSourceMode();
-container.switchMode(initialMode);
 
 export const usePollingControlStore = create<PollingControlState>((set) => ({
   panelPollIntervalMs: env.panelPollIntervalMs,
   autoSimulateNinjaPolls: true,
   ninjaPollCycleCount: 1,
   lastGlobalPollAt: new Date().toISOString(),
-  dataSourceMode: initialMode,
   setPanelPollIntervalMs: (ms) => set({ panelPollIntervalMs: ms }),
   setAutoSimulateNinjaPolls: (enabled) =>
     set({ autoSimulateNinjaPolls: enabled }),
@@ -41,11 +27,6 @@ export const usePollingControlStore = create<PollingControlState>((set) => ({
       ninjaPollCycleCount: state.ninjaPollCycleCount + 1,
       lastGlobalPollAt: new Date().toISOString(),
     })),
-  setDataSourceMode: (mode) => {
-    localStorage.setItem('tla_data_source_mode', mode);
-    container.switchMode(mode);
-    set({ dataSourceMode: mode });
-  },
 }));
 
 export const SUBSCRIPTIONS_QUERY_KEY = ['subscriptions', 'list'] as const;

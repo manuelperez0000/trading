@@ -12,33 +12,33 @@ export const LandingHowItWorks: React.FC = () => {
   const steps = [
     {
       num: '01',
-      title: lang === 'es' ? 'Elige tu Bot en el Catálogo' : 'Select Your Bot from the Catalog',
+      title: lang === 'es' ? 'Suscríbete al Plan o Bot de tu Elección' : 'Subscribe to Your Chosen Plan or Bot',
       desc:
         lang === 'es'
-          ? 'Explora las métricas de rendimiento certificadas, requisitos de capital y mercados (NQ, ES, GC) para elegir la estrategia ideal para tu cuenta.'
-          : 'Review certified performance metrics, capital requirements, and instruments (NQ, ES, GC) to pick the perfect bot for your prop account.',
+          ? 'Elige una licencia individual o la Suite Completa de Bots. No necesitas ser alumno previo de la academia: cualquier persona puede suscribirse y recibir su clave de licencia al instante.'
+          : 'Pick a single bot license or the Full Bot Suite. No prior academy enrollment is required: anyone can subscribe and receive their license key immediately.',
       icon: <Bot className="h-6 w-6 text-amber-400" />,
-      detail: lang === 'es' ? 'Licencia generada al instante' : 'Instant automated key delivery',
+      detail: lang === 'es' ? 'Activación inmediata 24/7' : 'Instant 24/7 license delivery',
     },
     {
       num: '02',
-      title: lang === 'es' ? 'Descarga e Importa en NinjaTrader 8' : 'Download & Import into NinjaTrader 8',
+      title: lang === 'es' ? 'Descarga e Instala el Bot en Minutos' : 'Download & Install the Bot in Minutes',
       desc:
         lang === 'es'
-          ? 'Descarga el paquete Add-On oficial (.zip) desde tu panel web. En NinjaTrader 8 ve a Tools -> Import -> NinjaScript Add-On e introduce tu clave de licencia.'
-          : 'Download the official Add-On (.zip) package from your web portal. In NinjaTrader 8 navigate to Tools -> Import -> NinjaScript Add-On and paste your key.',
+          ? 'Descarga el paquete instalador (.zip) desde tu área de miembro, impórtalo en tu plataforma de futuros en Windows o VPS y pega tu clave de licencia.'
+          : 'Download the installer package (.zip) from your member portal, import it into your Windows or VPS futures terminal, and paste your license key.',
       icon: <Download className="h-6 w-6 text-sky-400" />,
-      detail: lang === 'es' ? 'Instalación en menos de 2 minutos' : 'Setup completed in under 2 minutes',
+      detail: lang === 'es' ? 'Sin programar ni tocar código' : 'Zero coding or programming required',
     },
     {
       num: '03',
-      title: lang === 'es' ? 'Activa y Monitorea en la Nube' : 'Enable Strategy & Monitor Live',
+      title: lang === 'es' ? 'Actívalo en tu Cuenta de Fondeo o Cuenta Real' : 'Run It on Your Funded or Live Account',
       desc:
         lang === 'es'
-          ? 'Habilita el bot en tu cuenta de fondeo o simulación. Supervisa los balances, operaciones y control de apagado remoto desde cualquier navegador o teléfono móvil.'
-          : 'Enable the bot on your funded or live account. Supervise equity curves, trades, and remote kill-switch controls from any desktop or mobile browser.',
+          ? 'Selecciona tu cuenta de evaluación de fondeo o tu cuenta real, define tu tope de pérdida diaria y deja que el bot opere con disciplina automática mientras lo supervisas desde la web.'
+          : 'Select your funded evaluation account or live personal account, set your daily loss limit, and let the bot execute with automated discipline while you supervise from the web.',
       icon: <PlayCircle className="h-6 w-6 text-emerald-400" />,
-      detail: lang === 'es' ? 'Control total y telemetría 24/7' : 'Full cloud control & 24/7 telemetry',
+      detail: lang === 'es' ? 'Operativa automática y control remoto' : 'Automated execution & remote control',
     },
   ];
 
@@ -47,33 +47,33 @@ export const LandingHowItWorks: React.FC = () => {
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
           <Badge variant="emerald">
-            {lang === 'es' ? 'Fácil de Implementar' : 'Zero Code Required'}
+            {lang === 'es' ? 'Instalación Rápida Sin Código' : 'Fast Zero-Code Setup'}
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
             {lang === 'es' ? (
               <>
-                De la Suscripción a Operar en Vivo en{' '}
+                De la Suscripción a Operar en Automático en{' '}
                 <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
-                  Menos de 5 Minutos
+                  3 Pasos Simples
                 </span>
               </>
             ) : (
               <>
-                From Registration to Live Trading in{' '}
+                From Subscription to Automated Trading in{' '}
                 <span className="bg-gradient-to-r from-amber-400 to-yellow-300 bg-clip-text text-transparent">
-                  Under 5 Minutes
+                  3 Simple Steps
                 </span>
               </>
             )}
           </h2>
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
             {lang === 'es'
-              ? 'Sin necesidad de programar ni compilar código en C#. Todo el sistema está paquetizado y listo para correr en tu terminal de NinjaTrader 8.'
-              : 'No coding or C# programming required. The entire ecosystem is pre-compiled, tested, and plug-and-play for your NinjaTrader 8 terminal.'}
+              ? 'Diseñado para que tanto traders experimentados como personas sin conocimientos de programación puedan poner su bot en marcha en menos de 5 minutos.'
+              : 'Engineered so both experienced traders and users with zero coding knowledge can get their bot up and running in under 5 minutes.'}
           </p>
         </div>
 
-        {/* Pasos en 3 Columnas con Conectores */}
+        {/* Pasos en 3 Columnas */}
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3 relative">
           {steps.map((st, i) => (
             <Card
@@ -104,7 +104,7 @@ export const LandingHowItWorks: React.FC = () => {
           <Link to="/catalog">
             <Button variant="primary" size="lg" className="shadow-lg shadow-amber-500/20">
               <Bot className="h-4 w-4" />
-              {lang === 'es' ? 'Comenzar Paso 1: Explorar Catálogo' : 'Start Step 1: Browse Catalog'}
+              {lang === 'es' ? 'Elegir mi Bot y Suscribirme Ahora' : 'Choose My Bot & Subscribe Now'}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </Link>

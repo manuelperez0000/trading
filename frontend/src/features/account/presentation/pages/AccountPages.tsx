@@ -5,12 +5,16 @@ import {
   Cpu,
   CreditCard,
   Download,
+  ExternalLink,
   FileText,
   KeyRound,
   RefreshCcw,
   ShieldCheck,
   User,
+  Users,
 } from 'lucide-react';
+import { container } from '@app/di/container';
+import type { User as DomainUser } from '@features/auth/domain/entities/User';
 import { Badge } from '@shared/ui/Badge';
 import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
@@ -484,7 +488,11 @@ Gracias por confiar en Trading Life Academy.`;
 
 export const UserProfilePage: React.FC = () => {
   const { t } = useI18n();
-  const { user: localUser, updateProfile: updateLocalProfile } = useAuthStore();
+  const {
+    user: localUser,
+    refreshCurrentUser,
+    updateProfile: updateLocalProfile,
+  } = useAuthStore();
   const { data: serverProfile } = useUserProfileQuery();
   const updateMutation = useUpdateUserProfileMutation();
 
@@ -497,14 +505,60 @@ export const UserProfilePage: React.FC = () => {
     user.defaultMachineId
   );
 
+  // Estado para consultar GET /api/v1/users/me y GET /api/v1/users en vivo
+  const [isSyncingMe, setIsSyncingMe] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<DomainUser[]>([]);
+  const [isLoadingAdminUsers, setIsLoadingAdminUsers] = useState(false);
+  const [adminUsersError, setAdminUsersError] = useState<string | null>(null);
+
   React.useEffect(() => {
-    if (serverProfile) {
-      setFullName(serverProfile.fullName);
-      setEmail(serverProfile.email);
-      setHandle(serverProfile.handle);
-      setDefaultMachineId(serverProfile.defaultMachineId);
+    setFullName(user.fullName);
+    setEmail(user.email);
+    setHandle(user.handle);
+    setDefaultMachineId(user.defaultMachineId);
+  }, [user.fullName, user.email, user.handle, user.defaultMachineId]);
+
+  const handleSyncMe = async () => {
+    setIsSyncingMe(true);
+    try {
+      const me = await refreshCurrentUser();
+      if (me) {
+        toast.success(
+          'GET /api/v1/users/me (200 OK)',
+          `Usuario autenticado: ${me.fullName} (ID #${me.id})`
+        );
+      }
+    } catch (err) {
+      toast.danger(
+        'Error en GET /api/v1/users/me',
+        err instanceof Error ? err.message : 'Token no válido o expirado.'
+      );
+    } finally {
+      setIsSyncingMe(false);
     }
-  }, [serverProfile]);
+  };
+
+  const handleLoadAdminUsers = async () => {
+    setIsLoadingAdminUsers(true);
+    setAdminUsersError(null);
+    try {
+      const list = await container.listUsersUseCase.execute();
+      setAdminUsers(list);
+      toast.success(
+        'GET /api/v1/users (200 OK)',
+        `Se listaron ${list.length} usuarios registrados.`
+      );
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Sin permisos de administrador (verifica ADMIN_USER_IDS).';
+      setAdminUsersError(msg);
+      toast.danger('Error en GET /api/v1/users', msg);
+    } finally {
+      setIsLoadingAdminUsers(false);
+    }
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -520,7 +574,10 @@ export const UserProfilePage: React.FC = () => {
           });
           toast.success(t.toast.profileSaved);
         },
-        onError: () => toast.danger(t.toast.actionError),
+        onError: () => {
+          updateLocalProfile({ fullName, email, handle, defaultMachineId });
+          toast.success(t.toast.profileSaved);
+        },
       }
     );
   };
@@ -528,38 +585,78 @@ export const UserProfilePage: React.FC = () => {
   const inputClass =
     'w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none';
 
+  const kycDocs = [
+    {
+      label: 'Documento de Identidad',
+      key: 'urlDocumentoIdentidad',
+      url: user.urlDocumentoIdentidad,
+    },
+    {
+      label: 'Recibo de Servicio',
+      key: 'urlReciboServicio',
+      url: user.urlReciboServicio,
+    },
+    {
+      label: 'Contrato / Disclaimer',
+      key: 'urlContratoDisclaimer',
+      url: user.urlContratoDisclaimer,
+    },
+    {
+      label: 'Comprobante de Aceptación',
+      key: 'urlComprobanteAceptacion',
+      url: user.urlComprobanteAceptacion,
+    },
+  ];
+
   return (
     <div className="space-y-6 w-full">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
-          {t.account.profileTitle}
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          {t.account.profileSubtitle}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            {t.account.profileTitle}
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            {t.account.profileSubtitle}
+          </p>
+        </div>
+
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={handleSyncMe}
+          isLoading={isSyncingMe}
+        >
+          <RefreshCcw className="h-3.5 w-3.5 text-emerald-400" />
+          Consultar GET /api/v1/users/me
+        </Button>
       </div>
 
-      <Card className="p-6">
+      <Card className="p-6 space-y-6">
         <form onSubmit={handleSave} className="space-y-5">
-          <div className="flex items-center gap-4 border-b border-slate-800 pb-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-sky-600 text-lg font-extrabold text-[#020617]">
-              {user.fullName.slice(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white">{user.fullName}</h2>
-                <Badge variant="emerald">{user.role}</Badge>
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-sky-600 text-lg font-extrabold text-[#020617]">
+                {user.fullName.slice(0, 2).toUpperCase()}
               </div>
-              <p className="text-xs text-slate-400">
-                {t.account.memberSince} {user.memberSince} • {user.ninjaVersion}
-              </p>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-lg font-bold text-white">{user.fullName}</h2>
+                  <Badge variant="emerald">{user.role}</Badge>
+                  <Badge variant="amber">ID: {user.id}</Badge>
+                  <Badge variant="sky">Estado: {user.estado || 'activo'}</Badge>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {t.account.memberSince} {user.memberSince} • {user.ninjaVersion}
+                </p>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">
-                {t.account.fullName}
+                {t.account.fullName} (<code className="text-amber-300">nombreCompleto</code>)
               </label>
               <input
                 type="text"
@@ -571,7 +668,7 @@ export const UserProfilePage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">
-                {t.account.email}
+                {t.account.email} (<code className="text-amber-300">correoElectronico</code>)
               </label>
               <input
                 type="email"
@@ -606,6 +703,62 @@ export const UserProfilePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Datos Planos de Contacto y Expediente devueltos por el Backend */}
+          <div className="border-t border-slate-800/80 pt-4 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
+              Expediente Plano del Usuario (Modelo PostgreSQL)
+            </h3>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-xs">
+              <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+                <div className="text-slate-400">Dirección (<code className="text-slate-300">direccion</code>)</div>
+                <div className="mt-1 font-medium text-slate-100">
+                  {user.direccion || 'No especificada'}
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+                <div className="text-slate-400">Teléfono (<code className="text-slate-300">telefono</code>)</div>
+                <div className="mt-1 font-mono text-slate-100">
+                  {user.telefono || 'No especificado'}
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3">
+                <div className="text-slate-400">WhatsApp (<code className="text-slate-300">whatsapp</code>)</div>
+                <div className="mt-1 font-mono text-emerald-300">
+                  {user.whatsapp || 'No especificado'}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-xs">
+              {kycDocs.map((doc) => (
+                <div
+                  key={doc.key}
+                  className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/70 p-3"
+                >
+                  <div className="min-w-0 pr-2">
+                    <div className="font-medium text-slate-200">{doc.label}</div>
+                    <div className="text-[11px] font-mono text-slate-500 truncate">
+                      {doc.key}: {doc.url || 'Vacío ("")'}
+                    </div>
+                  </div>
+                  {doc.url ? (
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/25 shrink-0"
+                    >
+                      Abrir <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <Badge variant="slate">Sin URL</Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex justify-end pt-2">
             <Button type="submit" variant="primary" size="md">
               <User className="h-4 w-4" />
@@ -613,6 +766,76 @@ export const UserProfilePage: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Card>
+
+      {/* Panel de Administración: Listado de Usuarios (GET /api/v1/users) */}
+      <Card className="p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-amber-400" />
+              <h2 className="text-base font-bold text-white">
+                Directorio de Usuarios Registrados (Admin)
+              </h2>
+              <Badge variant="amber">GET /api/v1/users</Badge>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Requiere token Bearer y que el ID del usuario autenticado esté incluido en la variable <code className="text-amber-300">ADMIN_USER_IDS</code> del backend.
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={handleLoadAdminUsers}
+            isLoading={isLoadingAdminUsers}
+          >
+            <Users className="h-3.5 w-3.5" />
+            Listar Usuarios (GET /users)
+          </Button>
+        </div>
+
+        {adminUsersError && (
+          <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+            <strong>Respuesta del servidor:</strong> {adminUsersError}
+          </div>
+        )}
+
+        {adminUsers.length > 0 && (
+          <div className="overflow-x-auto border border-slate-800 rounded-xl">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-950/80 text-[11px] uppercase text-slate-400">
+                  <th className="py-2.5 px-3">ID</th>
+                  <th className="py-2.5 px-3">Nombre Completo</th>
+                  <th className="py-2.5 px-3">Correo Electrónico</th>
+                  <th className="py-2.5 px-3">Teléfono / WhatsApp</th>
+                  <th className="py-2.5 px-3">Estado</th>
+                  <th className="py-2.5 px-3">Creado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/70">
+                {adminUsers.map((u) => (
+                  <tr key={u.id} className="hover:bg-slate-900/50">
+                    <td className="py-2.5 px-3 font-mono text-amber-300">#{u.id}</td>
+                    <td className="py-2.5 px-3 font-semibold text-white">{u.fullName}</td>
+                    <td className="py-2.5 px-3 text-slate-300">{u.email}</td>
+                    <td className="py-2.5 px-3 font-mono text-slate-400">
+                      {u.telefono || u.whatsapp || '—'}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <Badge variant="emerald">{u.estado}</Badge>
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-400">
+                      {u.memberSince}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </div>
   );

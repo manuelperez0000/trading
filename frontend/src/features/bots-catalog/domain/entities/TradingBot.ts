@@ -50,7 +50,7 @@ export const TRADING_BOTS_CATALOG: TradingBot[] = [
     shortDescription:
       'Detecta absorción institucional y desequilibrios diagonales en el Footprint de NQ durante los primeros 90 minutos de NY.',
     fullDescription:
-      'Diseñado específicamente para cuentas de fondeo (Apex, Topstep, Bulenox). Utiliza datos Tick-Replay de Nivel 1 y Nivel 2 en NinjaTrader 8 para identificar trampas de liquidez en máximos/mínimos de sesión y ejecutar entradas con Stop Loss y Trailing Stop dinámicos.',
+      'Diseñado específicamente para evaluaciones de fondeo y cuentas reales. Utiliza lectura de flujo de órdenes de Nivel 1 y Nivel 2 para identificar absorciones de liquidez en máximos y mínimos de sesión y ejecutar entradas con Stop Loss y Trailing Stop dinámicos.',
     recommendedAccountSizeUsd: 50000,
     ninjaParameters: [
       {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
   Bot,
@@ -14,6 +14,7 @@ import {
   Menu,
   MessageSquareShare,
   Radio,
+  ShieldCheck,
   Sliders,
   Terminal,
   User,
@@ -24,6 +25,8 @@ import { useI18n } from '@core/i18n/useLanguageStore';
 import { ThemeToggleButton } from '@shared/ui/ThemeToggleButton';
 import { LanguageSwitcherButton } from '@shared/ui/LanguageSwitcherButton';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
+import { LandingNavbar } from '@features/landing/presentation/components/LandingNavbar';
+import { LandingFooter } from '@features/landing/presentation/components/LandingFooter';
 import {
   usePollingControlStore,
   useSimulateNinjaHeartbeatMutation,
@@ -47,7 +50,7 @@ export const PlatformShellLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { t, lang } = useI18n();
-  const { user, logout, switchRolePreview } = useAuthStore();
+  const { isAuthenticated, user, logout, switchRolePreview } = useAuthStore();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -364,6 +367,45 @@ export const PlatformShellLayout: React.FC = () => {
     </div>
   );
 
+  // Rutas que se pueden explorar públicamente sin haber iniciado sesión
+  const isPubliclyBrowsableRoute =
+    location.pathname === '/catalog' ||
+    location.pathname.startsWith('/catalog/') ||
+    location.pathname === '/social';
+
+  // Si el usuario NO está autenticado e intenta entrar a una ruta privada (Licencias, Facturación, Perfil, Admin), exigir Login
+  if (!isAuthenticated && !isPubliclyBrowsableRoute) {
+    const redirectTarget = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/auth/login?redirect=${redirectTarget}`} replace />;
+  }
+
+  // Si el usuario NO está autenticado y visita el Catálogo o Detalle de Bot, mostrar la Vista Pública limpia (con Navbar y Footer de la Landing)
+  if (!isAuthenticated && isPubliclyBrowsableRoute) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+        <LandingNavbar />
+        <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-200 flex flex-wrap items-center justify-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-amber-400 shrink-0" />
+          <span>
+            {lang === 'es'
+              ? 'Modo Exploración Pública: Puedes revisar todos los bots y sus especificaciones. Para suscribirte o comprar un bot se te solicitará iniciar sesión.'
+              : 'Public Exploration Mode: You can browse all bots and technical specs. Signing in is required when you choose to subscribe or purchase a bot.'}
+          </span>
+          <Link
+            to={`/auth/login?redirect=${encodeURIComponent(location.pathname)}`}
+            className="font-bold text-amber-400 underline hover:text-amber-300 ml-1"
+          >
+            {lang === 'es' ? 'Iniciar Sesión →' : 'Sign In →'}
+          </Link>
+        </div>
+        <main className="flex-1 w-full px-4 py-8 sm:px-6 lg:px-8">
+          <Outlet />
+        </main>
+        <LandingFooter />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
       <aside
@@ -429,29 +471,13 @@ export const PlatformShellLayout: React.FC = () => {
               {/* Controles técnicos visibles solo para Administradores */}
               {user.role === 'ADMIN' && (
                 <>
-                  {/* Selector interactivo de Modo de Datos: Mock vs Backend API */}
-                  <div className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/90 px-2 py-1">
-                    <span className="text-[11px] text-slate-400">Origen:</span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        usePollingControlStore.getState().setDataSourceMode(
-                          usePollingControlStore.getState().dataSourceMode === 'SIMULATOR_MOCK'
-                            ? 'REMOTE_API'
-                            : 'SIMULATOR_MOCK'
-                        )
-                      }
-                      title="Haz clic para alternar entre el Simulador en memoria y el Backend REST en Express"
-                      className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold cursor-pointer transition-colors ${
-                        usePollingControlStore((s) => s.dataSourceMode) === 'REMOTE_API'
-                          ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
-                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      }`}
-                    >
-                      {usePollingControlStore((s) => s.dataSourceMode) === 'REMOTE_API'
-                        ? 'REST API (Backend)'
-                        : 'Simulador Mock'}
-                    </button>
+                  {/* Indicador de conexión en vivo a la API REST */}
+                  <div
+                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-mono font-bold text-emerald-300"
+                    title="Conectado directamente a la API REST (Backend Express / PostgreSQL)"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>API REST v1</span>
                   </div>
               <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/90 px-2.5 py-1.5">
                 <Radio className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
@@ -493,6 +519,18 @@ export const PlatformShellLayout: React.FC = () => {
 
               <LanguageSwitcherButton />
               <ThemeToggleButton />
+
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 cursor-pointer transition-colors"
+                title="Cerrar sesión para ver el catálogo en modo público (sin menú lateral)"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>{lang === 'es' ? 'Cerrar Sesión' : 'Sign Out'}</span>
+              </button>
             </div>
           </div>
         </header>

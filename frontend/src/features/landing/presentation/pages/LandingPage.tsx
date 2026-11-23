@@ -13,8 +13,8 @@ import { LandingFooter } from '../components/LandingFooter';
 
 export const LandingPage: React.FC = () => {
   useEffect(() => {
-    // Título dinámico optimizado para SEO y branding
-    document.title = 'Trading Life Academy | Bots Algorítmicos NinjaTrader 8 & Prop Firms';
+    // Título dinámico transparente y alineado con políticas de cumplimiento (Anti-Phishing / PUA)
+    document.title = 'Trading Life Academy | Educación Cuantitativa y Software de Gestión de Riesgo';
   }, []);
 
   return (

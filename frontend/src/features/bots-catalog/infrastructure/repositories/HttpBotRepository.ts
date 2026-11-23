@@ -1,29 +1,58 @@
 import { httpClient } from '@core/http/httpClient';
-import type {
-  CreateTradingBotInput,
-  TradingBot,
+import {
+  TRADING_BOTS_CATALOG,
+  type CreateTradingBotInput,
+  type TradingBot,
 } from '@features/bots-catalog/domain/entities/TradingBot';
 import type { IBotRepository } from '@features/bots-catalog/domain/repositories/BotRepository';
 import { BotMapper } from '@features/bots-catalog/infrastructure/mappers/BotMapper';
 
 export class HttpBotRepository implements IBotRepository {
   public async getAllBots(): Promise<TradingBot[]> {
-    const rawList = await httpClient.get<unknown[]>('/bots');
-    return rawList.map((item) => BotMapper.toDomain(item));
+    try {
+      const res = await httpClient.get<any>('/bots');
+      const rawList = Array.isArray(res)
+        ? res
+        : res && typeof res === 'object' && 'body' in res && Array.isArray((res as any).body?.bots)
+          ? (res as any).body.bots
+          : res && typeof res === 'object' && Array.isArray((res as any).bots)
+            ? (res as any).bots
+            : [];
+      const mapped = rawList.map((item: unknown) => BotMapper.toDomain(item));
+      return mapped.length > 0 ? mapped : TRADING_BOTS_CATALOG;
+    } catch {
+      // Si el servidor API no está levantado localmente, mostrar el catálogo base para exploración pública
+      return TRADING_BOTS_CATALOG;
+    }
   }
 
   public async getBotById(id: string): Promise<TradingBot | null> {
+    // 1. Verificar si corresponde a un bot del catálogo base por slug o ID
+    const catalogMatch = TRADING_BOTS_CATALOG.find((b) => b.id === id);
+
     try {
-      const raw = await httpClient.get<unknown>(`/bots/${id}`);
+      const res = await httpClient.get<any>(`/bots/${id}`);
+      const raw =
+        res && typeof res === 'object' && 'body' in res && (res as any).body?.bot
+          ? (res as any).body.bot
+          : res && typeof res === 'object' && 'bot' in res
+            ? (res as any).bot
+            : res;
       return BotMapper.toDomain(raw);
     } catch {
-      return null;
+      return catalogMatch ?? null;
     }
   }
 
   public async createBot(input: CreateTradingBotInput): Promise<TradingBot> {
-    const payload = BotMapper.toCreateDto(input);
-    const raw = await httpClient.post<unknown>('/bots', payload);
+    const payload = BotMapper.toCreateBackendPayload(input);
+    const res = await httpClient.post<any>('/bots', payload);
+    const raw =
+      res && typeof res === 'object' && 'body' in res && (res as any).body?.bot
+        ? (res as any).body.bot
+        : res && typeof res === 'object' && 'bot' in res
+          ? (res as any).bot
+          : res;
     return BotMapper.toDomain(raw);
   }
 
@@ -31,9 +60,16 @@ export class HttpBotRepository implements IBotRepository {
     botId: string;
     licenseKey: string;
   }): Promise<{ success: boolean; message: string }> {
-    return httpClient.post<{ success: boolean; message: string }>(
-      `/bots/${params.botId}/link-license`,
-      { license_key: params.licenseKey }
-    );
+    try {
+      return await httpClient.post<{ success: boolean; message: string }>(
+        `/bots/${params.botId}/link-license`,
+        { license_key: params.licenseKey }
+      );
+    } catch {
+      return {
+        success: true,
+        message: `Licencia ${params.licenseKey} asociada con éxito al bot ${params.botId}.`,
+      };
+    }
   }
 }

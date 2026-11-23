@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Award,
   CheckCircle,
   Heart,
+  Lock,
   MessageSquare,
   Pin,
   PlusCircle,
@@ -17,6 +19,7 @@ import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
 import { StatCard } from '@shared/ui/StatCard';
 import { useI18n } from '@core/i18n/useLanguageStore';
+import { useAuthStore } from '@features/auth/application/useAuthStore';
 import { toast } from '@shared/ui/toast/toastStore';
 import { formatRelativeTime, formatUsd } from '@shared/utils/formatters';
 import {
@@ -31,6 +34,8 @@ import type { VerificationType } from '@features/social-wall/domain/entities/Soc
 
 export const SocialWallPage: React.FC = () => {
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuthStore();
   const { data: posts = [], isLoading } = useSocialPostsQuery();
   const createPostMutation = useCreateSocialPostMutation();
   const toggleLikeMutation = useToggleLikePostMutation();
@@ -136,6 +141,14 @@ export const SocialWallPage: React.FC = () => {
   };
 
   const handleSendComment = (postId: string) => {
+    if (!isAuthenticated) {
+      toast.info(
+        'Inicia sesión para comentar',
+        'La lectura del muro es pública, pero debes iniciar sesión para publicar comentarios.'
+      );
+      navigate('/auth/login?redirect=/social');
+      return;
+    }
     const text = (commentDrafts[postId] || '').trim();
     if (!text) return;
 
@@ -143,11 +156,23 @@ export const SocialWallPage: React.FC = () => {
       postId,
       authorName: isAdminModerationMode
         ? 'Admin Oficial Trading Life Academy'
-        : 'Trader Comunidad',
+        : user.fullName || 'Trader Comunidad',
       content: text,
     });
 
     setCommentDrafts((prev) => ({ ...prev, [postId]: '' }));
+  };
+
+  const handleToggleCreateForm = () => {
+    if (!isAuthenticated) {
+      toast.info(
+        'Inicia sesión para publicar en el muro',
+        'Necesitas una cuenta activa para compartir tus resultados y testimonios.'
+      );
+      navigate('/auth/login?redirect=/social');
+      return;
+    }
+    setShowCreateForm((prev) => !prev);
   };
 
   return (
@@ -155,13 +180,16 @@ export const SocialWallPage: React.FC = () => {
       {/* Cabecera de la Red Social */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl font-bold tracking-tight text-white">
               {t.social.title}
             </h1>
             <Badge variant="emerald" pulse>
               {t.social.badge}
             </Badge>
+            {!isAuthenticated && (
+              <Badge variant="amber">Lectura Pública • Sin Login</Badge>
+            )}
           </div>
           <p className="mt-1 text-sm text-slate-400">
             {t.social.subtitle}
@@ -169,24 +197,34 @@ export const SocialWallPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            variant={isAdminModerationMode ? 'warning' : 'secondary'}
-            size="md"
-            onClick={() => setIsAdminModerationMode((prev) => !prev)}
-          >
-            <ShieldCheck className="h-4 w-4" />
-            {isAdminModerationMode
-              ? `${t.social.moderationActive} (${stats.pendingReviewCount})`
-              : t.social.enableModeration}
-          </Button>
+          {isAuthenticated && user.role === 'ADMIN' && (
+            <Button
+              variant={isAdminModerationMode ? 'warning' : 'secondary'}
+              size="md"
+              onClick={() => setIsAdminModerationMode((prev) => !prev)}
+            >
+              <ShieldCheck className="h-4 w-4" />
+              {isAdminModerationMode
+                ? `${t.social.moderationActive} (${stats.pendingReviewCount})`
+                : t.social.enableModeration}
+            </Button>
+          )}
 
           <Button
             variant="primary"
             size="md"
-            onClick={() => setShowCreateForm((prev) => !prev)}
+            onClick={handleToggleCreateForm}
           >
-            <PlusCircle className="h-4 w-4" />
-            {showCreateForm ? t.social.closeFormBtn : t.social.newPostBtn}
+            {isAuthenticated ? (
+              <PlusCircle className="h-4 w-4" />
+            ) : (
+              <Lock className="h-4 w-4" />
+            )}
+            {showCreateForm
+              ? t.social.closeFormBtn
+              : isAuthenticated
+              ? t.social.newPostBtn
+              : 'Publicar Resultado (Requiere Login)'}
           </Button>
         </div>
       </div>
