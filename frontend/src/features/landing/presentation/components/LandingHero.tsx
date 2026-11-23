@@ -76,8 +76,8 @@ export const LandingHero: React.FC = () => {
 
             <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto lg:mx-0">
               {lang === 'es'
-                ? 'Suscríbete a nuestros algoritmos de Order Flow y ejecuta tu operativa en piloto automático. Cuentan con perfiles de riesgo calibrados para las reglas de evaluación de Pulsar, Proton y Nova, así como para operar en Cuentas Reales sin errores emocionales. Abierto a estudiantes de la academia y a cualquier trader.'
-                : 'Subscribe to our Order Flow algorithms and run your trading on autopilot. Features risk profiles calibrated for Pulsar, Proton, and Nova evaluation rules, as well as personal Live Accounts without emotional mistakes. Open to academy students and any independent trader.'}
+                ? 'Suscríbete a nuestros algoritmos de Order Flow y ejecuta tu operativa en piloto automático. Cuentan con perfiles de riesgo calibrados para las reglas de evaluación de Lucid Trading, My Funded Futures (MFFU) y Tradeify, así como para operar en Cuentas Reales sin errores emocionales. Abierto a estudiantes de la academia y a cualquier trader.'
+                : 'Subscribe to our Order Flow algorithms and run your trading on autopilot. Features risk profiles calibrated for Lucid Trading, My Funded Futures (MFFU), and Tradeify evaluation rules, as well as personal Live Accounts without emotional mistakes. Open to academy students and any independent trader.'}
             </p>
 
             {/* Destacado de Público Objetivo y Modelo Software Non-Custodial */}
@@ -86,7 +86,9 @@ export const LandingHero: React.FC = () => {
                 <ShieldCheck className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
                 <div>
                   <strong className="text-amber-300 block">
-                    {lang === 'es' ? 'Perfiles para Pulsar, Proton, Nova y Live' : 'Profiles for Pulsar, Proton, Nova & Live'}
+                    {lang === 'es'
+                      ? 'Perfiles para Lucid Trading, MFFU, Tradeify y Live'
+                      : 'Profiles for Lucid Trading, MFFU, Tradeify & Live'}
                   </strong>
                   <span className="text-slate-300 text-[11px]">
                     {lang === 'es'
@@ -167,11 +169,13 @@ export const LandingHero: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                      QuantumOrderFlow Bot V4
+                      Bot Pulsar V4 (Máxima Eficiencia)
                       <Badge variant="amber" className="text-[10px]">AUTO-TRADING</Badge>
                     </div>
                     <div className="text-[11px] font-mono text-slate-400">
-                      {lang === 'es' ? 'Modo: Evaluación Fondeo $50k / Cuenta Live' : 'Mode: $50k Funded Eval / Live Account'}
+                      {lang === 'es'
+                        ? 'Perfiles: Lucid Trading • MFFU • Tradeify • Cuenta Live'
+                        : 'Profiles: Lucid Trading • MFFU • Tradeify • Live Account'}
                     </div>
                   </div>
                 </div>

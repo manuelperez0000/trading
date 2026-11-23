@@ -75,20 +75,19 @@ export const LoginPage: React.FC = () => {
   const redirectTo = searchParams.get('redirect') || '/catalog';
   const hasPurchaseRedirect = Boolean(searchParams.get('redirect'));
 
-  const { login, loginAsDemoUser } = useAuthStore();
+  const { login } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'ADMIN' | 'TRADER'>('TRADER');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const loggedUser = await login({ email, password, requestedRole: role });
+      const loggedUser = await login({ email, password });
       toast.success(
         'Inicio de sesión exitoso',
-        `Bienvenido ${loggedUser.fullName} (${loggedUser.email}).`
+        `Bienvenido ${loggedUser.fullName} (${loggedUser.role === 'ADMIN' ? 'Administrador' : 'Cliente / Estudiante'}).`
       );
       navigate(redirectTo);
     } catch (err) {
@@ -99,17 +98,6 @@ export const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleQuickDemoLogin = (demoRole: 'TRADER' | 'ADMIN') => {
-    loginAsDemoUser(demoRole);
-    toast.success(
-      'Sesión iniciada correctamente',
-      demoRole === 'TRADER'
-        ? 'Conectado como Cliente / Trader. Redirigiendo a tu solicitud...'
-        : 'Conectado como Administrador. Redirigiendo al panel...'
-    );
-    navigate(redirectTo);
   };
 
   const registerUrl = hasPurchaseRedirect
@@ -170,24 +158,6 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Vista de Rol en el Panel
-          </label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as 'ADMIN' | 'TRADER')}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-emerald-300"
-          >
-            <option value="TRADER">
-              Cliente / Estudiante (Compra de Bots, Mis Licencias y Comunidad)
-            </option>
-            <option value="ADMIN">
-              Administrador (Gestión de Licencias + Directorio de Usuarios)
-            </option>
-          </select>
-        </div>
-
         <Button
           type="submit"
           variant="primary"
@@ -197,33 +167,6 @@ export const LoginPage: React.FC = () => {
         >
           Iniciar Sesión
         </Button>
-
-        {/* Acceso Rápido para probar el flujo completo sin servidor PostgreSQL local */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5 space-y-2.5">
-          <div className="text-[11px] font-semibold text-slate-300 text-center">
-            ¿Probando el flujo de compra sin servidor PostgreSQL local?
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="w-full border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/15"
-              onClick={() => handleQuickDemoLogin('TRADER')}
-            >
-              Entrar como Cliente Demo
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="w-full border-amber-500/30 text-amber-300 hover:bg-amber-500/15"
-              onClick={() => handleQuickDemoLogin('ADMIN')}
-            >
-              Entrar como Admin Demo
-            </Button>
-          </div>
-        </div>
 
         <div className="pt-1 text-center text-xs text-slate-400">
           ¿Aún no tienes cuenta?{' '}

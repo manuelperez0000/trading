@@ -15,33 +15,50 @@ import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
 import { formatUsd } from '@shared/utils/formatters';
 import { useI18n } from '@core/i18n/useLanguageStore';
+import { useBotsQuery } from '@features/bots-catalog/application/hooks/useBots';
 import { TRADING_BOTS_CATALOG } from '@features/bots-catalog/domain/entities/TradingBot';
 
 export const LandingBotsShowcase: React.FC = () => {
   const { lang } = useI18n();
-  const featuredBots = TRADING_BOTS_CATALOG.slice(0, 3);
+  const { data: apiBots } = useBotsQuery();
+  const featuredBots = (apiBots && apiBots.length > 0 ? apiBots : TRADING_BOTS_CATALOG).slice(0, 3);
 
   const cardThemes = [
     {
-      topBar: 'from-amber-400 via-yellow-300 to-amber-500',
-      glow: 'from-amber-500/15 via-transparent to-transparent',
-      border: 'border-2 border-amber-500/60 shadow-2xl shadow-amber-500/15',
-      bars: [40, 55, 48, 70, 65, 85, 78, 95, 88, 100],
-      barColor: 'bg-amber-400',
+      topBar: 'from-sky-400 via-cyan-300 to-sky-500',
+      glow: 'from-sky-500/15 via-transparent to-transparent',
+      border: 'border-2 border-sky-500/35 hover:border-sky-400 shadow-xl',
+      bars: [35, 42, 49, 55, 60, 66, 70, 76, 80, 85],
+      barColor: 'bg-sky-400',
+      efficiencyLabelEs: '● NIVEL 1 • EFICIENCIA BASE',
+      efficiencyLabelEn: '● TIER 1 • BASE EFFICIENCY',
+      ribbonStyle:
+        'bg-gradient-to-l from-sky-500 via-cyan-400 to-sky-500 text-slate-950',
+      isTopEfficiency: false,
     },
     {
       topBar: 'from-emerald-400 via-teal-300 to-emerald-500',
       glow: 'from-emerald-500/15 via-transparent to-transparent',
       border: 'border-2 border-emerald-500/35 hover:border-emerald-400 shadow-xl',
-      bars: [35, 45, 60, 52, 72, 68, 80, 90, 84, 96],
+      bars: [38, 48, 56, 60, 68, 74, 78, 85, 88, 92],
       barColor: 'bg-emerald-400',
+      efficiencyLabelEs: '⚡ NIVEL 2 • ALTA EFICIENCIA',
+      efficiencyLabelEn: '⚡ TIER 2 • HIGH EFFICIENCY',
+      ribbonStyle:
+        'bg-gradient-to-l from-emerald-500 via-teal-400 to-emerald-500 text-slate-950',
+      isTopEfficiency: false,
     },
     {
-      topBar: 'from-sky-400 via-cyan-300 to-sky-500',
-      glow: 'from-sky-500/15 via-transparent to-transparent',
-      border: 'border-2 border-sky-500/35 hover:border-sky-400 shadow-xl',
-      bars: [45, 50, 58, 64, 60, 75, 82, 79, 91, 94],
-      barColor: 'bg-sky-400',
+      topBar: 'from-amber-400 via-yellow-300 to-amber-500',
+      glow: 'from-amber-500/15 via-transparent to-transparent',
+      border: 'border-2 border-amber-500/60 shadow-2xl shadow-amber-500/15',
+      bars: [45, 58, 62, 74, 79, 86, 84, 93, 96, 100],
+      barColor: 'bg-amber-400',
+      efficiencyLabelEs: '★ EL MÁS EFICIENTE • MÁXIMA EFICIENCIA',
+      efficiencyLabelEn: '★ MOST EFFICIENT • TOP EFFICIENCY',
+      ribbonStyle:
+        'bg-gradient-to-l from-amber-500 via-yellow-400 to-amber-500 text-slate-950',
+      isTopEfficiency: true,
     },
   ];
 
@@ -75,8 +92,8 @@ export const LandingBotsShowcase: React.FC = () => {
             </h2>
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
               {lang === 'es'
-                ? 'Algoritmos automatizados listos para instalar y operar en futuros (NQ, MNQ, ES, GC). Disponibles mediante suscripción mensual o anual tanto para estudiantes de la academia como para cualquier trader.'
-                : 'Automated algorithms ready to install and run on futures (NQ, MNQ, ES, GC). Available via monthly or annual subscription for both academy students and any independent trader.'}
+                ? 'Nuestros 3 bots exclusivos — Proton, Nova y Pulsar (escalonados en eficiencia hasta Pulsar, nuestro algoritmo más eficiente) — están listos para operar futuros con perfiles para Lucid Trading, My Funded Futures (MFFU), Tradeify y Cuentas Reales.'
+                : 'Our 3 exclusive bots — Proton, Nova, and Pulsar (scaled in efficiency up to Pulsar, our most efficient flagship algorithm) — are ready to trade futures with profiles for Lucid Trading, My Funded Futures (MFFU), Tradeify, and Live Accounts.'}
             </p>
           </div>
 
@@ -105,22 +122,22 @@ export const LandingBotsShowcase: React.FC = () => {
                   className={`absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r ${theme.topBar}`}
                 />
 
-                {index === 0 && (
-                  <div className="absolute top-1.5 right-0 bg-gradient-to-l from-amber-500 via-yellow-400 to-amber-500 text-slate-950 font-black text-[10px] tracking-wider uppercase px-3.5 py-1 rounded-bl-xl shadow-lg flex items-center gap-1">
-                    <Flame className="h-3 w-3 fill-slate-950" />
-                    {lang === 'es' ? 'MÁS VENDIDO' : 'BEST SELLER'}
-                  </div>
-                )}
+                <div
+                  className={`absolute top-1.5 right-0 ${theme.ribbonStyle} font-black text-[10px] tracking-wider uppercase px-3.5 py-1 rounded-bl-xl shadow-lg flex items-center gap-1`}
+                >
+                  {theme.isTopEfficiency && <Flame className="h-3 w-3 fill-slate-950" />}
+                  {lang === 'es' ? theme.efficiencyLabelEs : theme.efficiencyLabelEn}
+                </div>
 
                 <div className="space-y-4 relative z-10">
-                  <div className="flex items-start justify-between gap-2 pt-1">
+                  <div className="flex items-start justify-between gap-2 pt-3">
                     <div className="flex items-center gap-3.5">
                       <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-400 shadow-lg group-hover:scale-110 transition-transform">
                         <Bot className="h-7 w-7" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-black text-white group-hover:text-amber-300 transition-colors">
-                          {bot.name}
+                        <h3 className="text-2xl font-black text-white group-hover:text-amber-300 transition-colors">
+                          Bot {bot.name}
                         </h3>
                         <div className="text-[11px] font-mono text-amber-400/90">
                           {bot.codeName}
@@ -129,16 +146,16 @@ export const LandingBotsShowcase: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Chips de Compatibilidad (Pulsar, Proton, Nova, Real) */}
+                  {/* Chips de Compatibilidad (Lucid Trading, MFFU, Tradeify, Real) */}
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="rounded-md bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                      Pulsar
+                      Lucid Trading
                     </span>
                     <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                      Proton
+                      MFFU
                     </span>
                     <span className="rounded-md bg-sky-500/15 border border-sky-500/30 px-2 py-0.5 text-[10px] font-bold text-sky-300">
-                      Nova
+                      Tradeify
                     </span>
                     <span className="rounded-md bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 text-[10px] font-bold text-purple-300">
                       {lang === 'es' ? 'Cuenta Real (Live)' : 'Live Account'}
@@ -201,8 +218,8 @@ export const LandingBotsShowcase: React.FC = () => {
                         <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
                         <span>
                           {lang === 'es'
-                            ? 'Perfiles preconfigurados para Pulsar, Proton y Nova'
-                            : 'Pre-configured profiles for Pulsar, Proton & Nova'}
+                            ? 'Perfiles preconfigurados para Lucid Trading, MFFU y Tradeify'
+                            : 'Pre-configured profiles for Lucid Trading, MFFU & Tradeify'}
                         </span>
                       </li>
                       <li className="flex items-center gap-2">

@@ -19,8 +19,8 @@ export const LandingPricing: React.FC = () => {
       period: lang === 'es' ? '/ mes' : '/ mo',
       popular: false,
       features: [
-        lang === 'es' ? '1 Bot automatizado a elección (ej. Quantum OrderFlow)' : '1 Automated bot of your choice (e.g. Quantum OrderFlow)',
-        lang === 'es' ? 'Apto para Evaluaciones de Fondeo y Cuentas Reales' : 'Ready for Funded Evaluations & Live Accounts',
+        lang === 'es' ? '1 Bot automatizado a elección (Proton, Nova o Pulsar)' : '1 Automated bot of your choice (Proton, Nova, or Pulsar)',
+        lang === 'es' ? 'Perfiles para Lucid Trading, MFFU, Tradeify y Cuenta Real' : 'Profiles for Lucid Trading, MFFU, Tradeify & Live Account',
         lang === 'es' ? 'Licencia para 1 PC o VPS (con protección de Drawdown)' : '1 PC or VPS license (with Drawdown protection)',
         lang === 'es' ? 'Control de pausa y encendido remoto desde la web' : 'Web remote pause & toggle control',
         lang === 'es' ? 'Guía de instalación paso a paso y soporte técnico' : 'Step-by-step setup guide & technical support',

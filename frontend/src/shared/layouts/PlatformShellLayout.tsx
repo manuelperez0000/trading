@@ -50,7 +50,7 @@ export const PlatformShellLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { t, lang } = useI18n();
-  const { isAuthenticated, user, logout, switchRolePreview } = useAuthStore();
+  const { isAuthenticated, user, logout } = useAuthStore();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -145,7 +145,7 @@ export const PlatformShellLayout: React.FC = () => {
           icon: <Bot className="h-4 w-4 shrink-0" />,
         },
         {
-          to: '/catalog/bot-quantum-orderflow-v4',
+          to: '/catalog/bot-proton',
           label: t.nav.botDetail,
           icon: <Sliders className="h-4 w-4 shrink-0" />,
         },
@@ -318,15 +318,9 @@ export const PlatformShellLayout: React.FC = () => {
         {(!isSidebarCollapsed || isMobile) && (
           <div className="flex items-center justify-between rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px]">
             <span className="text-slate-400">{t.common.activeRole}</span>
-            <button
-              type="button"
-              onClick={() =>
-                switchRolePreview(user.role === 'ADMIN' ? 'TRADER' : 'ADMIN')
-              }
-              className="font-mono font-bold text-emerald-400 hover:underline cursor-pointer"
-            >
-              {user.role} ({t.common.changeRole})
-            </button>
+            <span className="font-mono font-bold text-emerald-400">
+              {user.role}
+            </span>
           </div>
         )}
 
