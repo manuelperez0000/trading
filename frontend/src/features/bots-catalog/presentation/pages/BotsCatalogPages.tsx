@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -954,27 +954,18 @@ const CreateBotModal: React.FC<CreateBotModalProps> = ({ isOpen, onClose }) => {
 export const BotsCatalogPage: React.FC = () => {
   const { t } = useI18n();
   const { isAuthenticated, user } = useAuthStore();
-  const [selectedInstrument, setSelectedInstrument] = useState<string>('ALL');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [botForPurchase, setBotForPurchase] = useState<TradingBot | null>(null);
   const { data: bots = [], isLoading } = useBotsQuery();
 
-  const filteredBots = useMemo(() => {
-    if (selectedInstrument === 'ALL') return bots;
-    return bots.filter((bot) =>
-      bot.supportedInstruments.includes(selectedInstrument)
-    );
-  }, [bots, selectedInstrument]);
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-2xl font-bold tracking-tight text-white">
               {t.catalog.title}
             </h1>
-            <Badge variant="emerald">{t.catalog.badge}</Badge>
             {!isAuthenticated && (
               <Badge variant="amber">Exploración Pública • Sin Login</Badge>
             )}
@@ -984,36 +975,17 @@ export const BotsCatalogPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {(['ALL', 'NQ', 'ES', 'MNQ', 'GC'] as const).map((inst) => (
-              <button
-                key={inst}
-                type="button"
-                onClick={() => setSelectedInstrument(inst)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                  selectedInstrument === inst
-                    ? 'bg-emerald-500 text-[#020617]'
-                    : 'bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800'
-                }`}
-              >
-                {inst === 'ALL' ? t.catalog.allMarkets : `Futures ${inst}`}
-              </button>
-            ))}
-          </div>
-
-          {isAuthenticated && user.role === 'ADMIN' && (
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => setIsCreateModalOpen(true)}
-              className="cursor-pointer shadow-md shadow-amber-500/20"
-            >
-              <PlusCircle className="h-4 w-4" />
-              {t.catalog.addBotButton}
-            </Button>
-          )}
-        </div>
+        {isAuthenticated && user.role === 'ADMIN' && (
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="cursor-pointer shadow-md shadow-amber-500/20"
+          >
+            <PlusCircle className="h-4 w-4" />
+            {t.catalog.addBotButton}
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -1022,7 +994,7 @@ export const BotsCatalogPage: React.FC = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3">
-          {filteredBots.map((bot) => (
+          {bots.map((bot) => (
             <Card
               key={bot.id}
               className="p-6 flex flex-col justify-between space-y-5 hover:border-emerald-500/40 transition-colors"
