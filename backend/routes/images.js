@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import express, { Router } from "express";
 import responser from "../utils/responser.js";
+import authenticate from "../middleware/authenticate.js";
 
 const router = Router();
 const imagesDirectory = fileURLToPath(new URL("../images/", import.meta.url));
@@ -188,7 +189,7 @@ const parseImageBody = express.raw({
   limit: maxImageSize + 64 * 1024,
 });
 
-router.post("/", parseImageBody, receiveImage, async (req, res, next) => {
+router.post("/", authenticate, parseImageBody, receiveImage, async (req, res, next) => {
   try {
     const image = await saveImage(req.image);
     return responser.success({
@@ -204,6 +205,7 @@ router.post("/", parseImageBody, receiveImage, async (req, res, next) => {
 
 router.put(
   "/:id",
+  authenticate,
   validateImageId,
   parseImageBody,
   receiveImage,
@@ -234,7 +236,7 @@ router.put(
   },
 );
 
-router.delete("/:id", validateImageId, async (req, res, next) => {
+router.delete("/:id", authenticate, validateImageId, async (req, res, next) => {
   try {
     const image = await findStoredImage(req.params.id);
     if (!image) {
