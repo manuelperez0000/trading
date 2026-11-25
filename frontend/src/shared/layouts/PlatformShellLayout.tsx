@@ -12,7 +12,6 @@ import {
   Menu,
   MessageSquareShare,
   ShieldCheck,
-  Sliders,
   Terminal,
   User,
   X,
@@ -145,11 +144,6 @@ export const PlatformShellLayout: React.FC = () => {
           icon: <Bot className="h-4 w-4 shrink-0" />,
         },
         {
-          to: '/catalog/bot-proton',
-          label: t.nav.botDetail,
-          icon: <Sliders className="h-4 w-4 shrink-0" />,
-        },
-        {
           to: '/my-bots',
           label: lang === 'es' ? 'Mis Bots' : 'My Bots',
           icon: <Bot className="h-4 w-4 shrink-0 text-emerald-400" />,
@@ -201,7 +195,13 @@ export const PlatformShellLayout: React.FC = () => {
       }
     }
     if (location.pathname.startsWith('/catalog/')) {
-      return { group: t.nav.groupTrader, label: t.nav.botDetail };
+      const catalogGroupTitle =
+        user.role === 'ADMIN'
+          ? lang === 'es'
+            ? 'Catálogo del Sistema'
+            : 'System Catalog'
+          : t.nav.groupTrader;
+      return { group: catalogGroupTitle, label: t.nav.botDetail };
     }
     return { group: 'Trading Life Academy', label: '' };
   })();
