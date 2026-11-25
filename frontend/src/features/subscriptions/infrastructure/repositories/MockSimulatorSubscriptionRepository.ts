@@ -282,4 +282,100 @@ export class MockSimulatorSubscriptionRepository
 
     return structuredClone(evaluation.response);
   }
+
+  public async createSubscription(
+    data: Partial<Subscription>
+  ): Promise<Subscription> {
+    const cycle = data.subscriptionCycle ?? 'MONTHLY';
+    const expiresAt =
+      data.expiresAt ??
+      new Date(
+        Date.now() + (cycle === 'ANNUAL' ? 365 : 30) * 86400000
+      ).toISOString();
+
+    const newSub: Subscription = {
+      id: `sub-${Date.now()}`,
+      traderName: data.traderName ?? 'Estudiante TLA',
+      email: data.email ?? 'trader@tradinglifeacademy.com',
+      ninjaAccountName: data.ninjaAccountName ?? 'Sim101',
+      licenseKey:
+        data.licenseKey ??
+        `NT8-TLA-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+      planTier:
+        data.planTier ??
+        (cycle === 'ANNUAL' ? 'MEMBERSHIP_ANNUAL' : 'MEMBERSHIP_MONTHLY'),
+      subscriptionCycle: cycle,
+      remoteEnabled: data.remoteEnabled ?? true,
+      syncState: 'CONFIRMED_ON',
+      connectionStatus: 'ONLINE_TRADING',
+      boundMachineId: data.boundMachineId ?? null,
+      activeStrategyName: data.activeStrategyName ?? 'TLA_PRO_SUITE_V2',
+      instrument: data.instrument ?? 'NQ / ES / GC',
+      dailyPnlUsd: 0,
+      lastHeartbeatAt: new Date().toISOString(),
+      lastLatencyMs: 28,
+      expiresAt,
+      statusNote: 'Membresía activa — Catálogo completo de bots habilitado',
+    };
+
+    this.subscriptions.unshift(newSub);
+    this.pushAudit({
+      timestampIso: new Date().toISOString(),
+      licenseKey: newSub.licenseKey,
+      traderName: newSub.traderName,
+      eventType: 'ADMIN_TOGGLE_ON',
+      allowedToTrade: true,
+      remoteCommand: 'CONTINUE_TRADING',
+      machineId: newSub.boundMachineId ?? 'PENDING',
+      details: `Nueva suscripción (${cycle}) creada por el Administrador.`,
+    });
+
+    return structuredClone(newSub);
+  }
+
+  public async updateSubscription(
+    id: string,
+    updates: Partial<Subscription>
+  ): Promise<Subscription> {
+    const index = this.subscriptions.findIndex((s) => s.id === id);
+    if (index === -1) {
+      throw new Error(`Suscripción ${id} no encontrada.`);
+    }
+
+    const current = this.subscriptions[index];
+    const updated: Subscription = {
+      ...current,
+      ...updates,
+      syncState:
+        updates.remoteEnabled !== undefined &&
+        updates.remoteEnabled !== current.remoteEnabled
+          ? 'PENDING_ACK'
+          : current.syncState,
+    };
+
+    this.subscriptions[index] = updated;
+    this.pushAudit({
+      timestampIso: new Date().toISOString(),
+      licenseKey: updated.licenseKey,
+      traderName: updated.traderName,
+      eventType: updated.remoteEnabled ? 'ADMIN_TOGGLE_ON' : 'ADMIN_TOGGLE_OFF',
+      allowedToTrade: updated.remoteEnabled,
+      remoteCommand: updated.remoteEnabled
+        ? 'CONTINUE_TRADING'
+        : 'FLATTEN_AND_DISABLE',
+      machineId: updated.boundMachineId ?? 'UNBOUND',
+      details: `Suscripción actualizada por el Administrador (Plan: ${updated.subscriptionCycle ?? 'MONTHLY'}).`,
+    });
+
+    return structuredClone(updated);
+  }
+
+  public async deleteSubscription(id: string): Promise<boolean> {
+    const index = this.subscriptions.findIndex((s) => s.id === id);
+    if (index !== -1) {
+      this.subscriptions.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
 }

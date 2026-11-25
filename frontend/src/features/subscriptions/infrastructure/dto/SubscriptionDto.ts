@@ -6,7 +6,13 @@ export const SubscriptionApiDtoSchema = z.object({
   email: z.string().email(),
   ninja_account_name: z.string(),
   license_key: z.string(),
-  plan_tier: z.enum(['PRO_SCALPER', 'PROP_FIRM_ELITE', 'INSTITUTIONAL_BOT']),
+  plan_tier: z.enum([
+    'MEMBERSHIP_MONTHLY',
+    'MEMBERSHIP_ANNUAL',
+    'PRO_SCALPER',
+    'PROP_FIRM_ELITE',
+    'INSTITUTIONAL_BOT',
+  ]),
   remote_enabled: z.boolean(),
   sync_state: z.enum(['CONFIRMED_ON', 'PENDING_ACK', 'CONFIRMED_OFF']),
   connection_status: z.enum([

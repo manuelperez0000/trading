@@ -20,6 +20,7 @@ import {
 import {
   BotDetailPage,
   BotsCatalogPage,
+  MyBotsPage,
 } from '@features/bots-catalog/presentation/pages/BotsCatalogPages';
 import {
   BillingHistoryPage,
@@ -97,6 +98,7 @@ const AppRoutes: React.FC = () => {
         {/* Módulos del Tablero Frontend: Catálogo, Detalle, Licencias, Pagos y Perfil */}
         <Route path="/catalog" element={<BotsCatalogPage />} />
         <Route path="/catalog/:botId" element={<BotDetailPage />} />
+        <Route path="/my-bots" element={<MyBotsPage />} />
         <Route path="/my-subscriptions" element={<MyLicensesPage />} />
         <Route path="/billing" element={<BillingHistoryPage />} />
         <Route path="/profile" element={<UserProfilePage />} />

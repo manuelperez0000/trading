@@ -8,57 +8,85 @@ import { useI18n } from '@core/i18n/useLanguageStore';
 
 export const LandingPricing: React.FC = () => {
   const { lang } = useI18n();
-  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL'>('MONTHLY');
+  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL'>('ANNUAL');
 
   const plans = [
     {
-      id: 'single',
-      name: lang === 'es' ? 'Suscripción Bot Individual' : 'Single Bot Subscription',
-      subtitle: lang === 'es' ? 'Ideal para iniciar en fondeo o cuenta real' : 'Ideal to start on funded or live accounts',
-      price: billingCycle === 'MONTHLY' ? 149 : 119,
+      id: 'monthly',
+      name: lang === 'es' ? 'Membresía Mensual All-Access' : 'Monthly All-Access Membership',
+      badge: lang === 'es' ? 'MÁXIMA FLEXIBILIDAD' : 'MAXIMUM FLEXIBILITY',
+      subtitle:
+        lang === 'es'
+          ? 'Acceso total a todo el catálogo sin compromisos a largo plazo'
+          : 'Full access to entire bot catalog with zero long-term commitment',
+      price: 149,
       period: lang === 'es' ? '/ mes' : '/ mo',
-      popular: false,
+      equivalentNotice: lang === 'es' ? 'Facturación mensual recurrente • Cancela cuando quieras' : 'Billed monthly • Cancel anytime',
+      popular: billingCycle === 'MONTHLY',
       features: [
-        lang === 'es' ? '1 Bot automatizado a elección (Proton, Nova o Pulsar)' : '1 Automated bot of your choice (Proton, Nova, or Pulsar)',
-        lang === 'es' ? 'Perfiles para Lucid Trading, MFFU, Tradeify y Cuenta Real' : 'Profiles for Lucid Trading, MFFU, Tradeify & Live Account',
-        lang === 'es' ? 'Licencia para 1 PC o VPS (con protección de Drawdown)' : '1 PC or VPS license (with Drawdown protection)',
-        lang === 'es' ? 'Control de pausa y encendido remoto desde la web' : 'Web remote pause & toggle control',
-        lang === 'es' ? 'Guía de instalación paso a paso y soporte técnico' : 'Step-by-step setup guide & technical support',
+        lang === 'es'
+          ? 'Acceso TOTAL e ILIMITADO a todos los bots (Proton, Nova y Pulsar)'
+          : 'TOTAL & UNLIMITED access to all bots (Proton, Nova, & Pulsar)',
+        lang === 'es'
+          ? 'Descarga directa de archivos de estrategia (.cs) y AddOn para NinjaTrader 8'
+          : 'Direct download of strategy (.cs) & AddOn files for NinjaTrader 8',
+        lang === 'es'
+          ? 'Perfiles optimizados: Lucid Trading, MFFU, Tradeify y Cuentas Reales'
+          : 'Optimized profiles: Lucid Trading, MFFU, Tradeify & Live Accounts',
+        lang === 'es'
+          ? 'Licencia remota oficial para 1 PC o VPS de trading'
+          : 'Official remote license for 1 trading PC or VPS',
+        lang === 'es'
+          ? 'Control remoto de pausa y Kill-Switch de seguridad desde web y móvil'
+          : 'Remote pause & security Kill-Switch control from web & mobile',
+        lang === 'es'
+          ? 'Reset de equipo (HWID) inmediato para migrar de VPS o máquina'
+          : 'Instant self-serve HWID Reset to switch machines or VPS',
+        lang === 'es'
+          ? 'Soporte técnico y guía de instalación paso a paso'
+          : 'Technical support & step-by-step setup walkthrough',
       ],
-      cta: lang === 'es' ? 'Suscribirme al Bot Individual' : 'Subscribe to Single Bot',
+      cta: lang === 'es' ? 'Suscribirme al Plan Mensual' : 'Subscribe to Monthly Plan',
     },
     {
-      id: 'pro',
-      name: lang === 'es' ? 'Pro Trader Suite (Todos los Bots)' : 'Pro Trader Suite (All Bots)',
-      subtitle: lang === 'es' ? 'El plan más elegido por estudiantes y traders' : 'Most chosen by students & active traders',
-      price: billingCycle === 'MONTHLY' ? 199 : 159,
-      period: lang === 'es' ? '/ mes' : '/ mo',
+      id: 'annual',
+      name: lang === 'es' ? 'Membresía Anual All-Access' : 'Annual All-Access Membership',
+      badge: lang === 'es' ? '★ MÁS POPULAR • 2 MESES GRATIS' : '★ MOST POPULAR • 2 MONTHS FREE',
+      subtitle:
+        lang === 'es'
+          ? 'El plan preferido por traders profesionales: ahorra $598 USD al año'
+          : 'Preferred by professional traders: save $598 USD per year',
+      price: 1190,
+      period: lang === 'es' ? '/ año' : '/ yr',
+      equivalentNotice: lang === 'es' ? 'Equivale a solo $99 USD/mes (¡Ahorras un 33%!)' : 'Equivalent to only $99 USD/mo (Save 33%!)',
       popular: true,
       features: [
-        lang === 'es' ? 'Acceso a TODOS los bots del catálogo (3+ algoritmos)' : 'Access to ALL catalog bots (3+ algorithms)',
-        lang === 'es' ? 'Opera Cuentas de Fondeo ($25k-$250k) y Cuentas Reales' : 'Trade Funded Evaluations ($25k-$250k) & Live Accounts',
-        lang === 'es' ? 'Licencia activa para 2 equipos o VPS simultáneos' : 'Active license for 2 simultaneous PCs or VPS',
-        lang === 'es' ? 'Cambio de equipo (Reset HWID) inmediato desde tu perfil' : 'Instant self-serve PC switch (HWID Reset)',
-        lang === 'es' ? 'Apagado remoto global desde tu teléfono móvil' : 'Global remote pause from your mobile phone',
-        lang === 'es' ? 'Acceso completo a la comunidad y soporte prioritario' : 'Full community access & priority support',
+        lang === 'es'
+          ? 'Acceso TOTAL e ILIMITADO a todo el catálogo actual y futuros bots'
+          : 'TOTAL & UNLIMITED access to full current & upcoming bot catalog',
+        lang === 'es'
+          ? '2 MESES DE REGALO incluidos en comparación con el pago mensual'
+          : '2 FREE MONTHS included compared to monthly billing',
+        lang === 'es'
+          ? 'Descarga directa de estrategias (.cs) y AddOn para NinjaTrader 8'
+          : 'Direct download of strategy (.cs) & AddOn for NinjaTrader 8',
+        lang === 'es'
+          ? 'Perfiles preconfigurados para Lucid Trading, MFFU, Tradeify y Live'
+          : 'Preconfigured presets for Lucid Trading, MFFU, Tradeify & Live',
+        lang === 'es'
+          ? 'Licencia activa para 2 terminales simultáneas (VPS + PC personal)'
+          : 'Active license for 2 simultaneous terminals (VPS + personal PC)',
+        lang === 'es'
+          ? 'Reset de equipo (HWID) ilimitado con sincronización en tiempo real'
+          : 'Unlimited HWID Reset with real-time remote sync',
+        lang === 'es'
+          ? 'Sesión 1 a 1 de asistencia técnica e inducción con el equipo'
+          : '1-on-1 technical setup assistance & induction session',
+        lang === 'es'
+          ? 'Soporte VIP prioritario y acceso a la comunidad privada'
+          : 'Priority VIP support & private trader community access',
       ],
-      cta: lang === 'es' ? 'Suscribirme a Pro Trader Suite' : 'Subscribe to Pro Trader Suite',
-    },
-    {
-      id: 'lifetime',
-      name: lang === 'es' ? 'Licencia Vitalicia VIP' : 'Lifetime VIP License',
-      subtitle: lang === 'es' ? 'Un solo pago, sin mensualidades futuras' : 'One-time payment, zero monthly fees',
-      price: 997,
-      period: lang === 'es' ? 'pago único' : 'one-time',
-      popular: false,
-      features: [
-        lang === 'es' ? 'Acceso de POR VIDA a todos los bots actuales y nuevos' : 'LIFETIME access to all current and future bots',
-        lang === 'es' ? 'Uso ilimitado en tus pruebas de fondeo y cuentas reales' : 'Unlimited use on your funded & live accounts',
-        lang === 'es' ? 'Sesión 1 a 1 de asistencia en instalación y ajustes' : '1-on-1 setup & parameter configuration session',
-        lang === 'es' ? 'Plantillas preconfiguradas para distintos tamaños de cuenta' : 'Pre-configured risk presets for all account sizes',
-        lang === 'es' ? 'Todas las actualizaciones futuras incluidas para siempre' : 'All future upgrades included forever',
-      ],
-      cta: lang === 'es' ? 'Obtener Licencia Vitalicia' : 'Get Lifetime VIP License',
+      cta: lang === 'es' ? 'Obtener Membresía Anual (Recomendado)' : 'Get Annual Membership (Recommended)',
     },
   ];
 
@@ -116,42 +144,47 @@ export const LandingPricing: React.FC = () => {
             >
               <span>{lang === 'es' ? 'Suscripción Anual' : 'Annual Subscription'}</span>
               <span className="rounded bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.2">
-                -20% OFF
+                {lang === 'es' ? '2 MESES GRATIS (-33%)' : '2 MONTHS FREE (-33%)'}
               </span>
             </button>
           </div>
         </div>
 
-        {/* 3 Planes de Precios */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 max-w-6xl mx-auto">
+        {/* 2 Planes de Membresía All-Access */}
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 max-w-5xl mx-auto">
           {plans.map((plan) => (
             <Card
               key={plan.id}
-              className={`p-8 rounded-3xl flex flex-col justify-between space-y-8 transition-all hover:scale-[1.02] border-slate-800 bg-slate-900/90 ${
+              className={`p-8 rounded-3xl flex flex-col justify-between space-y-8 transition-all hover:scale-[1.01] border-slate-800 bg-slate-900/90 ${
                 plan.popular
-                  ? 'border-2 border-amber-500 shadow-2xl shadow-amber-500/15 relative overflow-hidden'
+                  ? 'border-2 border-amber-500 shadow-2xl shadow-amber-500/20 relative overflow-hidden ring-1 ring-amber-500/30'
                   : 'hover:border-slate-700'
               }`}
             >
-              {plan.popular && (
-                <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 via-yellow-400 to-amber-600 text-slate-950 font-black text-[11px] tracking-wider uppercase px-4 py-1.5 rounded-bl-2xl shadow-md">
-                  ★ {lang === 'es' ? 'MÁS RECOMENDADO' : 'MOST POPULAR'}
-                </div>
-              )}
+              <div className="absolute top-0 right-0 bg-gradient-to-l from-amber-500 via-yellow-400 to-amber-600 text-slate-950 font-black text-[11px] tracking-wider uppercase px-4 py-1.5 rounded-bl-2xl shadow-md">
+                {plan.badge}
+              </div>
 
-              <div className="space-y-6">
+              <div className="space-y-6 pt-2">
                 <div>
                   <h3 className="text-xl font-bold text-white">{plan.name}</h3>
                   <p className="text-xs text-slate-400 mt-1">{plan.subtitle}</p>
                 </div>
 
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl sm:text-5xl font-black text-white font-mono">
-                    ${plan.price}
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium">
-                    USD {plan.period}
-                  </span>
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl sm:text-5xl font-black text-white font-mono">
+                      ${plan.price}
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">
+                      USD {plan.period}
+                    </span>
+                  </div>
+                  {plan.equivalentNotice && (
+                    <div className="text-xs font-semibold text-emerald-400 mt-1">
+                      {plan.equivalentNotice}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3 pt-2 border-t border-slate-800/80">

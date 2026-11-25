@@ -12,6 +12,7 @@ import {
   resetPassword,
   savePasswordResetToken,
   toPublicUser,
+  updateUser,
 } from "../models/User.js";
 import authenticate from "../middleware/authenticate.js";
 import requireAdmin from "../middleware/requireAdmin.js";
@@ -22,6 +23,7 @@ import {
   passwordResetUrl,
   readFirstString,
   validationMessage,
+  validateProfileUpdateData,
   validateRegistrationData,
 } from "../utils/utils.js";
 import responser from "../utils/responser.js";
@@ -149,12 +151,54 @@ router.get("/me", authenticate, async (req, res, next) => {
     return responser.success({
       res,
       message: "Usuario encontrado.",
-      body: { user: toPublicUser(user) },
+      body: {
+        user: {
+          ...toPublicUser(user),
+          role: admins.includes(String(user.id)) ? "admin" : "client",
+        },
+      },
     });
   } catch (error) {
     return next(error);
   }
 });
+
+async function updateCurrentUserProfile(req, res, next) {
+  const { errors, userData } = validateProfileUpdateData(req.body);
+  if (errors.length > 0) {
+    return responser.error({
+      res,
+      message: validationMessage(errors),
+      status: 400,
+    });
+  }
+
+  try {
+    const user = await updateUser(req.user.id, userData);
+    if (!user) {
+      return responser.error({
+        res,
+        message: "No se encontró el usuario.",
+        status: 404,
+      });
+    }
+    return responser.success({
+      res,
+      message: "Perfil actualizado correctamente.",
+      body: {
+        user: {
+          ...toPublicUser(user),
+          role: admins.includes(String(user.id)) ? "admin" : "client",
+        },
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+router.put("/me", authenticate, updateCurrentUserProfile);
+router.patch("/me", authenticate, updateCurrentUserProfile);
 
 router.post("/recover-password", async (req, res, next) => {
   const body = req.body ?? {};

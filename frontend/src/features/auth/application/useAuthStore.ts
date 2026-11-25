@@ -18,6 +18,47 @@ const USER_STORAGE_KEY = 'tla_authenticated_user';
 const TOKEN_STORAGE_KEY = 'nt_admin_jwt_token';
 const SESSION_ACTIVE_KEY = 'tla_explicit_login_v2';
 const MIGRATION_CLEANUP_KEY = 'tla_clean_public_init_v2';
+const PROFILE_OVERRIDES_KEY = 'tla_user_profile_completed_v1';
+
+function getSavedProfileOverrides(userId: string): Partial<User> {
+  try {
+    const raw = localStorage.getItem(PROFILE_OVERRIDES_KEY);
+    if (!raw) return {};
+    const map = JSON.parse(raw) as Record<string, Partial<User>>;
+    return map[String(userId)] ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function saveProfileOverrides(userId: string, partial: Partial<User>): void {
+  try {
+    const raw = localStorage.getItem(PROFILE_OVERRIDES_KEY);
+    const map = raw ? (JSON.parse(raw) as Record<string, Partial<User>>) : {};
+    map[String(userId)] = { ...(map[String(userId)] ?? {}), ...partial };
+    localStorage.setItem(PROFILE_OVERRIDES_KEY, JSON.stringify(map));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function mergeUserWithSavedOverrides(user: User): User {
+  const overrides = getSavedProfileOverrides(user.id);
+  return {
+    ...user,
+    direccion: user.direccion || overrides.direccion || '',
+    telefono: user.telefono || overrides.telefono || '',
+    whatsapp: user.whatsapp || overrides.whatsapp || '',
+    urlDocumentoIdentidad:
+      user.urlDocumentoIdentidad || overrides.urlDocumentoIdentidad || '',
+    urlReciboServicio:
+      user.urlReciboServicio || overrides.urlReciboServicio || '',
+    urlContratoDisclaimer:
+      user.urlContratoDisclaimer || overrides.urlContratoDisclaimer || '',
+    urlComprobanteAceptacion:
+      user.urlComprobanteAceptacion || overrides.urlComprobanteAceptacion || '',
+  };
+}
 
 // Limpieza única de sesiones residuales antiguas para garantizar que el usuario inicie como visitante público (sin login)
 try {
@@ -73,18 +114,20 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   login: async (credentials) => {
     const session = await container.loginUseCase.execute(credentials);
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(session.user));
+    const mergedUser = mergeUserWithSavedOverrides(session.user);
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
     localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
-    set({ isAuthenticated: true, user: session.user });
-    return session.user;
+    set({ isAuthenticated: true, user: mergedUser });
+    return mergedUser;
   },
 
   register: async (input) => {
     const session = await container.registerUseCase.execute(input);
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(session.user));
+    const mergedUser = mergeUserWithSavedOverrides(session.user);
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
     localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
-    set({ isAuthenticated: true, user: session.user });
-    return session.user;
+    set({ isAuthenticated: true, user: mergedUser });
+    return mergedUser;
   },
 
   loginAsDemoUser: (role = 'TRADER') => {
@@ -109,11 +152,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   refreshCurrentUser: async () => {
     const remoteUser = await container.getCurrentUserUseCase.execute();
     if (remoteUser) {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(remoteUser));
+      const mergedUser = mergeUserWithSavedOverrides(remoteUser);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
       localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
-      set({ isAuthenticated: true, user: remoteUser });
+      set({ isAuthenticated: true, user: mergedUser });
+      return mergedUser;
     }
-    return remoteUser;
+    return null;
   },
 
   logout: async () => {
@@ -134,6 +179,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   updateProfile: (partial) =>
     set((state) => {
       const updated = { ...state.user, ...partial };
+      saveProfileOverrides(updated.id, partial);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
       return { user: updated };
     }),

@@ -1,14 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import {
   Activity,
+  Calendar,
   Cpu,
+  Edit3,
   KeyRound,
+  Plus,
   PowerOff,
   RefreshCcw,
   Search,
   ShieldAlert,
   ShieldCheck,
   Terminal,
+  Trash2,
   Zap,
 } from 'lucide-react';
 import { Badge } from '@shared/ui/Badge';
@@ -22,13 +26,23 @@ import { useI18n } from '@core/i18n/useLanguageStore';
 import { formatRelativeTime, formatUsd } from '@shared/utils/formatters';
 import {
   useAuditLogsPolling,
+  useCreateSubscriptionMutation,
+  useDeleteSubscriptionMutation,
   useGlobalKillSwitchMutation,
   useResetMachineIdMutation,
   useSimulateNinjaHeartbeatMutation,
   useSubscriptionsPolling,
   useToggleRemoteSubscriptionMutation,
+  useUpdateSubscriptionMutation,
 } from '@features/subscriptions/application/hooks/useSubscriptionsPolling';
-import type { Subscription } from '@features/subscriptions/domain/entities/Subscription';
+import {
+  getSubscriptionPlanLabel,
+  type Subscription,
+} from '@features/subscriptions/domain/entities/Subscription';
+import {
+  CreateSubscriptionModal,
+  EditSubscriptionModal,
+} from '../components/SubscriptionAdminModals';
 
 interface SubscriptionsAdminPageProps {
   onSelectLicenseForLab: (licenseKey: string) => void;
@@ -45,11 +59,81 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
   const globalKillSwitchMutation = useGlobalKillSwitchMutation();
   const resetMachineIdMutation = useResetMachineIdMutation();
   const simulateHeartbeatMutation = useSimulateNinjaHeartbeatMutation();
+  const createMutation = useCreateSubscriptionMutation();
+  const updateMutation = useUpdateSubscriptionMutation();
+  const deleteMutation = useDeleteSubscriptionMutation();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<
     'ALL' | 'ENABLED' | 'DISABLED' | 'PENDING_ACK'
   >('ALL');
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingSubscription, setEditingSubscription] =
+    useState<Subscription | null>(null);
+  const [deletingSubscription, setDeletingSubscription] =
+    useState<Subscription | null>(null);
+
+  const handleCreateSubscription = (subData: Partial<Subscription>) => {
+    createMutation.mutate(subData, {
+      onSuccess: (created) => {
+        setIsCreateModalOpen(false);
+        toast.success(
+          'Suscripción creada con éxito',
+          `${created.traderName} ahora tiene acceso al catálogo completo de bots.`
+        );
+      },
+      onError: (err) => {
+        toast.danger(
+          'Error al crear suscripción',
+          err instanceof Error ? err.message : 'No se pudo crear la suscripción.'
+        );
+      },
+    });
+  };
+
+  const handleUpdateSubscription = (
+    id: string,
+    updates: Partial<Subscription>
+  ) => {
+    updateMutation.mutate(
+      { id, updates },
+      {
+        onSuccess: (updated) => {
+          setEditingSubscription(null);
+          toast.success(
+            'Suscripción actualizada',
+            `Cambios guardados para ${updated.traderName}.`
+          );
+        },
+        onError: (err) => {
+          toast.danger(
+            'Error al actualizar',
+            err instanceof Error
+              ? err.message
+              : 'No se pudo actualizar la suscripción.'
+          );
+        },
+      }
+    );
+  };
+
+  const handleDeleteSubscription = () => {
+    if (!deletingSubscription) return;
+    const target = deletingSubscription;
+    deleteMutation.mutate(target.id, {
+      onSuccess: () => {
+        setDeletingSubscription(null);
+        toast.success(
+          'Suscripción eliminada',
+          `Se ha revocado la suscripción de ${target.traderName}.`
+        );
+      },
+      onError: () => {
+        toast.danger('Error al eliminar la suscripción');
+      },
+    });
+  };
 
   const filteredSubscriptions = useMemo(() => {
     return subscriptions.filter((sub) => {
@@ -174,6 +258,15 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="gap-2 shadow-md shadow-emerald-500/10"
+          >
+            <Plus className="h-4 w-4" />
+            + Crear Suscripción
+          </Button>
           <Button
             variant="danger"
             size="md"
@@ -308,12 +401,35 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                   >
                     {/* Trader y Cuenta */}
                     <td className="py-4 px-4">
-                      <div className="font-semibold text-white">
-                        {sub.traderName}
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-white">
+                          {sub.traderName}
+                        </span>
+                        {(() => {
+                          const planInfo = getSubscriptionPlanLabel(sub);
+                          return (
+                            <Badge
+                              variant={
+                                planInfo.cycle === 'ANNUAL' ? 'amber' : 'sky'
+                              }
+                            >
+                              {planInfo.label}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <div className="text-xs text-slate-400">{sub.email}</div>
-                      <div className="mt-1 inline-flex items-center gap-1.5 rounded bg-slate-800/90 px-2 py-0.5 text-[11px] font-mono text-sky-300">
-                        {t.adminTable.account} {sub.ninjaAccountName}
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                        <span className="inline-flex items-center gap-1 text-slate-400">
+                          <Calendar className="h-3 w-3 text-slate-500" />
+                          Vence:{' '}
+                          <strong className="text-slate-300">
+                            {new Date(sub.expiresAt).toLocaleDateString()}
+                          </strong>
+                        </span>
+                        <span className="rounded bg-slate-800/90 px-1.5 py-0.5 font-mono text-sky-300">
+                          {t.adminTable.account} {sub.ninjaAccountName}
+                        </span>
                       </div>
                     </td>
 
@@ -397,7 +513,7 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
 
                     {/* Acciones Remotas */}
                     <td className="py-4 px-4 text-right">
-                      <div className="flex flex-wrap items-center justify-end gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
                         <RemoteSwitch
                           isEnabled={sub.remoteEnabled}
                           syncState={sub.syncState}
@@ -409,19 +525,37 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                             variant="warning"
                             size="sm"
                             onClick={() => handleForceImmediateHeartbeat(sub)}
+                            title="Forzar ciclo inmediato de Polling"
                           >
                             <RefreshCcw className="h-3.5 w-3.5" />
-                            {t.adminSubs.forcePollBtn}
                           </Button>
                         )}
+
+                        <button
+                          type="button"
+                          onClick={() => setEditingSubscription(sub)}
+                          className="rounded-lg border border-slate-700 bg-slate-800/80 p-2 text-slate-300 hover:border-amber-500/50 hover:bg-slate-800 hover:text-amber-300 cursor-pointer transition-colors"
+                          title="Editar suscripción, plan y vigencia"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setDeletingSubscription(sub)}
+                          className="rounded-lg border border-slate-800 bg-slate-900 p-2 text-slate-400 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-400 cursor-pointer transition-colors"
+                          title="Eliminar o revocar suscripción"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
 
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onSelectLicenseForLab(sub.licenseKey)}
+                          title="Probar en simulador de telemetría"
                         >
                           <Terminal className="h-3.5 w-3.5 text-sky-400" />
-                          {t.adminSubs.testApiBtn}
                         </Button>
                       </div>
                     </td>
@@ -507,6 +641,39 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
         isLoading={globalKillSwitchMutation.isPending}
         onConfirm={handleConfirmKillSwitch}
         onCancel={() => setKillSwitchDialog(null)}
+      />
+
+      {/* Modal para Crear Nueva Suscripción */}
+      <CreateSubscriptionModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateSubscription}
+        isLoading={createMutation.isPending}
+      />
+
+      {/* Modal para Editar Suscripción Existente */}
+      <EditSubscriptionModal
+        subscription={editingSubscription}
+        onClose={() => setEditingSubscription(null)}
+        onSubmit={handleUpdateSubscription}
+        isLoading={updateMutation.isPending}
+      />
+
+      {/* Modal de Confirmación para Eliminar Suscripción */}
+      <ConfirmDialog
+        open={deletingSubscription !== null}
+        variant="danger"
+        title="Revocar y Eliminar Suscripción"
+        description={
+          deletingSubscription
+            ? `¿Estás seguro de que deseas revocar y eliminar la suscripción de ${deletingSubscription.traderName} (${deletingSubscription.email})? Se suspenderá su acceso al catálogo de bots y a la LicenseKey ${deletingSubscription.licenseKey}.`
+            : ''
+        }
+        confirmLabel="Eliminar Suscripción"
+        cancelLabel="Cancelar"
+        isLoading={deleteMutation.isPending}
+        onConfirm={handleDeleteSubscription}
+        onCancel={() => setDeletingSubscription(null)}
       />
     </div>
   );

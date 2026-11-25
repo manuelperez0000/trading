@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity,
   Bot,
   ChevronLeft,
   ChevronRight,
@@ -9,22 +8,20 @@ import {
   CreditCard,
   Globe,
   KeyRound,
-  LogIn,
   LogOut,
   Menu,
   MessageSquareShare,
-  Radio,
   ShieldCheck,
   Sliders,
   Terminal,
   User,
-  UserPlus,
   X,
 } from 'lucide-react';
 import { useI18n } from '@core/i18n/useLanguageStore';
 import { ThemeToggleButton } from '@shared/ui/ThemeToggleButton';
 import { LanguageSwitcherButton } from '@shared/ui/LanguageSwitcherButton';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
+import { isUserProfileComplete } from '@features/auth/domain/entities/User';
 import { LandingNavbar } from '@features/landing/presentation/components/LandingNavbar';
 import { LandingFooter } from '@features/landing/presentation/components/LandingFooter';
 import {
@@ -39,10 +36,13 @@ interface NavItemConfig {
   icon: React.ReactNode;
   badgeCount?: number;
   adminOnly?: boolean;
+  traderOnly?: boolean;
 }
 
 interface NavGroupConfig {
   groupTitle: string;
+  adminOnly?: boolean;
+  traderOnly?: boolean;
   items: NavItemConfig[];
 }
 
@@ -55,13 +55,7 @@ export const PlatformShellLayout: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
-  const {
-    panelPollIntervalMs,
-    autoSimulateNinjaPolls,
-    ninjaPollCycleCount,
-    setPanelPollIntervalMs,
-    setAutoSimulateNinjaPolls,
-  } = usePollingControlStore();
+  const { autoSimulateNinjaPolls } = usePollingControlStore();
 
   const { data: subscriptions = [] } = useSubscriptionsPolling();
   const simulateHeartbeatMutation = useSimulateNinjaHeartbeatMutation();
@@ -110,6 +104,7 @@ export const PlatformShellLayout: React.FC = () => {
     },
     {
       groupTitle: t.nav.groupAdmin,
+      adminOnly: true,
       items: [
         {
           to: '/admin/subscriptions',
@@ -137,7 +132,12 @@ export const PlatformShellLayout: React.FC = () => {
       ],
     },
     {
-      groupTitle: t.nav.groupTrader,
+      groupTitle:
+        user.role === 'ADMIN'
+          ? lang === 'es'
+            ? 'Catálogo del Sistema'
+            : 'System Catalog'
+          : t.nav.groupTrader,
       items: [
         {
           to: '/catalog',
@@ -150,42 +150,37 @@ export const PlatformShellLayout: React.FC = () => {
           icon: <Sliders className="h-4 w-4 shrink-0" />,
         },
         {
+          to: '/my-bots',
+          label: lang === 'es' ? 'Mis Bots' : 'My Bots',
+          icon: <Bot className="h-4 w-4 shrink-0 text-emerald-400" />,
+          traderOnly: true,
+        },
+        {
           to: '/my-subscriptions',
           label: t.nav.myLicenses,
           icon: <KeyRound className="h-4 w-4 shrink-0" />,
+          traderOnly: true,
         },
         {
           to: '/billing',
           label: t.nav.billing,
           icon: <CreditCard className="h-4 w-4 shrink-0" />,
-        },
-        {
-          to: '/profile',
-          label: t.nav.profile,
-          icon: <User className="h-4 w-4 shrink-0" />,
+          traderOnly: true,
         },
       ],
     },
     {
-      groupTitle: t.nav.groupAuth,
+      groupTitle: lang === 'es' ? 'Mi Cuenta' : 'My Account',
       items: [
         {
-          to: '/auth/login',
-          label: t.nav.login,
-          icon: <LogIn className="h-4 w-4 shrink-0" />,
-          adminOnly: true,
-        },
-        {
-          to: '/auth/register',
-          label: t.nav.register,
-          icon: <UserPlus className="h-4 w-4 shrink-0" />,
-          adminOnly: true,
-        },
-        {
-          to: '/auth/recover-password',
-          label: t.nav.recoverPassword,
-          icon: <KeyRound className="h-4 w-4 shrink-0" />,
-          adminOnly: true,
+          to: '/profile',
+          label:
+            user.role === 'ADMIN'
+              ? lang === 'es'
+                ? 'Perfil de Administrador'
+                : 'Admin Profile'
+              : t.nav.profile,
+          icon: <User className="h-4 w-4 shrink-0" />,
         },
       ],
     },
@@ -262,9 +257,14 @@ export const PlatformShellLayout: React.FC = () => {
 
         <div className="space-y-5 px-3 py-4 overflow-y-auto max-h-[calc(100vh-170px)]">
           {navGroups.map((group) => {
-            const visibleItems = group.items.filter(
-              (item) => !item.adminOnly || user.role === 'ADMIN'
-            );
+            if (group.adminOnly && user.role !== 'ADMIN') return null;
+            if (group.traderOnly && user.role === 'ADMIN') return null;
+
+            const visibleItems = group.items.filter((item) => {
+              if (item.adminOnly && user.role !== 'ADMIN') return false;
+              if (item.traderOnly && user.role === 'ADMIN') return false;
+              return true;
+            });
             if (visibleItems.length === 0) return null;
 
             return (
@@ -373,6 +373,15 @@ export const PlatformShellLayout: React.FC = () => {
     return <Navigate to={`/auth/login?redirect=${redirectTarget}`} replace />;
   }
 
+  // Onboarding obligatorio: un usuario con perfil incompleto debe completar contacto y documentación
+  if (
+    isAuthenticated &&
+    !isUserProfileComplete(user) &&
+    location.pathname !== '/profile'
+  ) {
+    return <Navigate to="/profile?onboarding=1" replace />;
+  }
+
   // Si el usuario NO está autenticado y visita el Catálogo o Detalle de Bot, mostrar la Vista Pública limpia (con Navbar y Footer de la Landing)
   if (!isAuthenticated && isPubliclyBrowsableRoute) {
     return (
@@ -462,55 +471,6 @@ export const PlatformShellLayout: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              {/* Controles técnicos visibles solo para Administradores */}
-              {user.role === 'ADMIN' && (
-                <>
-                  {/* Indicador de conexión en vivo a la API REST */}
-                  <div
-                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-mono font-bold text-emerald-300"
-                    title="Conectado directamente a la API REST (Backend Express / PostgreSQL)"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>API REST v1</span>
-                  </div>
-              <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/90 px-2.5 py-1.5">
-                <Radio className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
-                <span className="text-slate-400">{t.common.pollingHttp}</span>
-                <select
-                  value={panelPollIntervalMs}
-                  onChange={(e) =>
-                    setPanelPollIntervalMs(Number(e.target.value))
-                  }
-                  className="bg-transparent font-mono font-semibold text-emerald-300 focus:outline-none cursor-pointer"
-                >
-                  <option value={1500} className="bg-slate-900">
-                    1.5s
-                  </option>
-                  <option value={2500} className="bg-slate-900">
-                    2.5s
-                  </option>
-                  <option value={5000} className="bg-slate-900">
-                    5.0s
-                  </option>
-                </select>
-              </div>
-
-              <label className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/90 px-2.5 py-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={autoSimulateNinjaPolls}
-                  onChange={(e) => setAutoSimulateNinjaPolls(e.target.checked)}
-                  className="rounded border-slate-700"
-                />
-                <Activity className="h-3.5 w-3.5 text-sky-400" />
-                <span className="text-slate-300 tabular-nums">
-                  {t.common.autoAckNt8} (#{ninjaPollCycleCount})
-                </span>
-              </label>
-
-                </>
-              )}
-
               <LanguageSwitcherButton />
               <ThemeToggleButton />
 

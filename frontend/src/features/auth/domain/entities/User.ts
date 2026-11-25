@@ -53,3 +53,25 @@ export interface RegisterInput {
   urlComprobanteAceptacion?: string;
   defaultMachineId?: string;
 }
+
+/**
+ * Verifica si el usuario ha completado todos los datos obligatorios de su perfil:
+ * - Datos de contacto: direccion, telefono, whatsapp
+ * - Documentación: urlDocumentoIdentidad, urlReciboServicio, urlContratoDisclaimer
+ * (Para usuarios ADMIN retorna siempre true).
+ */
+export function isUserProfileComplete(user: User | null | undefined): boolean {
+  if (!user) return false;
+  if (user.role === 'ADMIN') return true;
+
+  const requiredFields = [
+    user.direccion,
+    user.telefono,
+    user.whatsapp,
+    user.urlDocumentoIdentidad,
+    user.urlReciboServicio,
+    user.urlContratoDisclaimer,
+  ];
+
+  return requiredFields.every((val) => typeof val === 'string' && val.trim().length > 0);
+}
