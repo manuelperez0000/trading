@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PlatformShellLayout } from '@shared/layouts/PlatformShellLayout';
 import { ToastViewport } from '@shared/ui/toast/ToastViewport';
 import { SubscriptionsAdminPage } from '@features/subscriptions/presentation/pages/SubscriptionsAdminPage';
+import { SubscriptionPlansAdminPage } from '@features/subscriptions/presentation/pages/SubscriptionPlansAdminPage';
 import { NinjaRemoteTesterPage } from '@features/subscriptions/presentation/pages/NinjaRemoteTesterPage';
 import { SocialWallPage } from '@features/social-wall/presentation/pages/SocialWallPage';
 import {
@@ -73,6 +74,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/recover-password" element={<Navigate to="/auth/recover-password" replace />} />
       <Route path="/admin" element={<Navigate to="/admin/subscriptions" replace />} />
       <Route path="/dashboard" element={<Navigate to="/admin/subscriptions" replace />} />
+      <Route path="/plans" element={<Navigate to="/admin/plans" replace />} />
       <Route path="/bots" element={<Navigate to="/catalog" replace />} />
       <Route path="/licenses" element={<Navigate to="/my-subscriptions" replace />} />
 
@@ -87,6 +89,7 @@ const AppRoutes: React.FC = () => {
             />
           }
         />
+        <Route path="/admin/plans" element={<SubscriptionPlansAdminPage />} />
         <Route
           path="/admin/ninja-lab"
           element={

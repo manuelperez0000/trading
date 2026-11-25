@@ -16,6 +16,8 @@ import type {
   Subscription,
   SubscriptionCycle,
 } from '@features/subscriptions/domain/entities/Subscription';
+import type { SubscriptionPlan } from '../../domain/entities/SubscriptionPlan';
+import { useSubscriptionPlansQuery } from '../../application/hooks/useSubscriptionPlans';
 
 function generateRandomLicenseKey(prefix = 'TLA'): string {
   const seg1 = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -42,6 +44,9 @@ export const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = (
   onSubmit,
   isLoading = false,
 }) => {
+  const { data: dynamicPlans = [] } = useSubscriptionPlansQuery();
+  const availablePlans = dynamicPlans.filter((p: SubscriptionPlan) => p.isActive);
+
   const [registeredUsers, setRegisteredUsers] = useState<UserEntity[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('manual');
   const [traderName, setTraderName] = useState('');
@@ -179,51 +184,83 @@ export const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = (
             </div>
           </div>
 
-          {/* Selector de Plan: Mensual vs Anual */}
+          {/* Selector de Plan Dinámico */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-2">
               Tipo de Membresía / Plan *
             </label>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => handleCycleChange('MONTHLY')}
-                className={`flex flex-col text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
-                  subscriptionCycle === 'MONTHLY'
-                    ? 'border-emerald-500 bg-emerald-500/10 text-white shadow-sm'
-                    : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-white">Membresía Mensual</span>
-                  <Badge variant={subscriptionCycle === 'MONTHLY' ? 'emerald' : 'slate'}>30 Días</Badge>
-                </div>
-                <div className="mt-1 text-xs text-emerald-400 font-semibold">$149 USD / mes</div>
-                <div className="mt-2 text-[11px] text-slate-400">
-                  Acceso completo a todos los bots (Proton, Nova, Pulsar) durante 1 mes.
-                </div>
-              </button>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {availablePlans.length > 0 ? (
+                availablePlans.map((plan: SubscriptionPlan) => {
+                  const isSelected =
+                    (plan.billingCycle === 'ANNUAL' && subscriptionCycle === 'ANNUAL') ||
+                    (plan.billingCycle !== 'ANNUAL' && subscriptionCycle === 'MONTHLY');
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => {
+                        const cycle = plan.billingCycle === 'ANNUAL' ? 'ANNUAL' : 'MONTHLY';
+                        setSubscriptionCycle(cycle);
+                        const target = new Date(Date.now() + plan.durationDays * 86400000);
+                        setExpiresAtDate(target.toISOString().split('T')[0]);
+                      }}
+                      className={`flex flex-col text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-500/10 text-white shadow-sm ring-1 ring-amber-500/40'
+                          : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white truncate">{plan.name}</span>
+                        <Badge variant={isSelected ? 'amber' : 'slate'}>{plan.durationDays}d</Badge>
+                      </div>
+                      <div className="mt-1 text-xs text-amber-300 font-semibold font-mono">
+                        ${plan.priceUsd} {plan.currency}
+                      </div>
+                      <div className="mt-1 text-[11px] text-slate-400 line-clamp-2">
+                        {plan.description}
+                      </div>
+                    </button>
+                  );
+                })
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleCycleChange('MONTHLY')}
+                    className={`flex flex-col text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
+                      subscriptionCycle === 'MONTHLY'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-white shadow-sm'
+                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-white">Membresía Mensual</span>
+                      <Badge variant={subscriptionCycle === 'MONTHLY' ? 'emerald' : 'slate'}>30 Días</Badge>
+                    </div>
+                    <div className="mt-1 text-xs text-emerald-400 font-semibold">$149 USD / mes</div>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => handleCycleChange('ANNUAL')}
-                className={`flex flex-col text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
-                  subscriptionCycle === 'ANNUAL'
-                    ? 'border-amber-500 bg-amber-500/10 text-white shadow-sm'
-                    : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-white flex items-center gap-1.5">
-                    Membresía Anual <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                  </span>
-                  <Badge variant={subscriptionCycle === 'ANNUAL' ? 'amber' : 'slate'}>365 Días</Badge>
-                </div>
-                <div className="mt-1 text-xs text-amber-300 font-semibold">$1,190 USD / año</div>
-                <div className="mt-2 text-[11px] text-slate-400">
-                  Acceso completo todo el año con ahorro equivalente a 2 meses gratis.
-                </div>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCycleChange('ANNUAL')}
+                    className={`flex flex-col text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
+                      subscriptionCycle === 'ANNUAL'
+                        ? 'border-amber-500 bg-amber-500/10 text-white shadow-sm'
+                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-white flex items-center gap-1.5">
+                        Membresía Anual <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                      </span>
+                      <Badge variant={subscriptionCycle === 'ANNUAL' ? 'amber' : 'slate'}>365 Días</Badge>
+                    </div>
+                    <div className="mt-1 text-xs text-amber-300 font-semibold">$1,190 USD / año</div>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -338,6 +375,9 @@ export const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
   onSubmit,
   isLoading = false,
 }) => {
+  const { data: dynamicPlans = [] } = useSubscriptionPlansQuery();
+  const availablePlans = dynamicPlans.filter((p: SubscriptionPlan) => p.isActive);
+
   const [traderName, setTraderName] = useState('');
   const [email, setEmail] = useState('');
   const [subscriptionCycle, setSubscriptionCycle] = useState<SubscriptionCycle>('MONTHLY');
@@ -446,32 +486,60 @@ export const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
             </div>
           </div>
 
-          {/* Selector de Plan */}
+          {/* Selector de Plan Dinámico */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5">Membresía / Plan</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setSubscriptionCycle('MONTHLY')}
-                className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
-                  subscriptionCycle === 'MONTHLY'
-                    ? 'border-emerald-500 bg-emerald-500/10 text-white font-bold'
-                    : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                Membresía Mensual ($149/m)
-              </button>
-              <button
-                type="button"
-                onClick={() => setSubscriptionCycle('ANNUAL')}
-                className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
-                  subscriptionCycle === 'ANNUAL'
-                    ? 'border-amber-500 bg-amber-500/10 text-white font-bold'
-                    : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                Membresía Anual ($1,190/a)
-              </button>
+            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+              {availablePlans.length > 0 ? (
+                availablePlans.map((plan: SubscriptionPlan) => {
+                  const isSelected =
+                    (plan.billingCycle === 'ANNUAL' && subscriptionCycle === 'ANNUAL') ||
+                    (plan.billingCycle !== 'ANNUAL' && subscriptionCycle === 'MONTHLY');
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => {
+                        const cycle = plan.billingCycle === 'ANNUAL' ? 'ANNUAL' : 'MONTHLY';
+                        setSubscriptionCycle(cycle);
+                      }}
+                      className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-500/10 text-white font-bold ring-1 ring-amber-500/30'
+                          : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold truncate text-white">{plan.name}</div>
+                      <div className="text-[11px] text-amber-300 font-mono">${plan.priceUsd} / {plan.durationDays}d</div>
+                    </button>
+                  );
+                })
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSubscriptionCycle('MONTHLY')}
+                    className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                      subscriptionCycle === 'MONTHLY'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-white font-bold'
+                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    Membresía Mensual ($149/m)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubscriptionCycle('ANNUAL')}
+                    className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                      subscriptionCycle === 'ANNUAL'
+                        ? 'border-amber-500 bg-amber-500/10 text-white font-bold'
+                        : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    Membresía Anual ($1,190/a)
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

@@ -1,12 +1,21 @@
 // Suscripciones y NinjaTrader Bridge
 import type { ISubscriptionRepository } from '@features/subscriptions/domain/repositories/SubscriptionRepository';
 import { HttpSubscriptionRepository } from '@features/subscriptions/infrastructure/repositories/HttpSubscriptionRepository';
+import type { ISubscriptionPlanRepository } from '@features/subscriptions/domain/repositories/SubscriptionPlanRepository';
+import { HttpSubscriptionPlanRepository } from '@features/subscriptions/infrastructure/repositories/HttpSubscriptionPlanRepository';
 import {
   GlobalKillSwitchUseCase,
   ResetMachineIdUseCase,
   SimulateNinjaHeartbeatUseCase,
   ToggleRemoteSubscriptionUseCase,
 } from '@features/subscriptions/application/use-cases/subscriptionUseCases';
+import {
+  CreateSubscriptionPlanUseCase,
+  DeleteSubscriptionPlanUseCase,
+  GetSubscriptionPlansUseCase,
+  ToggleSubscriptionPlanStatusUseCase,
+  UpdateSubscriptionPlanUseCase,
+} from '@features/subscriptions/application/use-cases/planUseCases';
 
 // Muro Social
 import type { ISocialWallRepository } from '@features/social-wall/domain/repositories/SocialWallRepository';
@@ -60,6 +69,7 @@ import {
 class AppDependencyContainer {
   // Repositorios HTTP conectados a la API REST de Express
   public subscriptionRepository: ISubscriptionRepository;
+  public subscriptionPlanRepository: ISubscriptionPlanRepository;
   public socialWallRepository: ISocialWallRepository;
   public authRepository: IAuthRepository;
   public botRepository: IBotRepository;
@@ -70,6 +80,13 @@ class AppDependencyContainer {
   public globalKillSwitchUseCase: GlobalKillSwitchUseCase;
   public resetMachineIdUseCase: ResetMachineIdUseCase;
   public simulateNinjaHeartbeatUseCase: SimulateNinjaHeartbeatUseCase;
+
+  // Casos de Uso: Planes y Membresías
+  public getSubscriptionPlansUseCase: GetSubscriptionPlansUseCase;
+  public createSubscriptionPlanUseCase: CreateSubscriptionPlanUseCase;
+  public updateSubscriptionPlanUseCase: UpdateSubscriptionPlanUseCase;
+  public deleteSubscriptionPlanUseCase: DeleteSubscriptionPlanUseCase;
+  public toggleSubscriptionPlanStatusUseCase: ToggleSubscriptionPlanStatusUseCase;
 
   // Casos de Uso: Muro Social
   public createSocialPostUseCase: CreateSocialPostUseCase;
@@ -102,6 +119,7 @@ class AppDependencyContainer {
   constructor() {
     // 1. Instanciar adaptadores HTTP que conectan a la API REST
     this.subscriptionRepository = new HttpSubscriptionRepository();
+    this.subscriptionPlanRepository = new HttpSubscriptionPlanRepository();
     this.socialWallRepository = new HttpSocialWallRepository();
     this.authRepository = new HttpAuthRepository();
     this.botRepository = new HttpBotRepository();
@@ -119,6 +137,23 @@ class AppDependencyContainer {
     );
     this.simulateNinjaHeartbeatUseCase = new SimulateNinjaHeartbeatUseCase(
       this.subscriptionRepository
+    );
+
+    // Planes y Membresías
+    this.getSubscriptionPlansUseCase = new GetSubscriptionPlansUseCase(
+      this.subscriptionPlanRepository
+    );
+    this.createSubscriptionPlanUseCase = new CreateSubscriptionPlanUseCase(
+      this.subscriptionPlanRepository
+    );
+    this.updateSubscriptionPlanUseCase = new UpdateSubscriptionPlanUseCase(
+      this.subscriptionPlanRepository
+    );
+    this.deleteSubscriptionPlanUseCase = new DeleteSubscriptionPlanUseCase(
+      this.subscriptionPlanRepository
+    );
+    this.toggleSubscriptionPlanStatusUseCase = new ToggleSubscriptionPlanStatusUseCase(
+      this.subscriptionPlanRepository
     );
 
     this.createSocialPostUseCase = new CreateSocialPostUseCase(

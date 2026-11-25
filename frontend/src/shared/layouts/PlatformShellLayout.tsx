@@ -7,6 +7,7 @@ import {
   CreditCard,
   Globe,
   KeyRound,
+  Layers,
   LogOut,
   Menu,
   MessageSquareShare,
@@ -110,6 +111,12 @@ export const PlatformShellLayout: React.FC = () => {
           label: t.nav.controlSubscriptions,
           icon: <Users className="h-4 w-4 shrink-0 text-amber-400" />,
           badgeCount: pendingSyncCount > 0 ? pendingSyncCount : undefined,
+          adminOnly: true,
+        },
+        {
+          to: '/admin/plans',
+          label: lang === 'es' ? 'Planes de Membresía' : 'Membership Plans',
+          icon: <Layers className="h-4 w-4 shrink-0 text-emerald-400" />,
           adminOnly: true,
         },
         {

@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Activity,
   Calendar,
   Cpu,
   Edit3,
   KeyRound,
+  Layers,
   Plus,
   PowerOff,
   RefreshCcw,
@@ -274,6 +276,16 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <Link to="/admin/plans">
+            <Button
+              variant="secondary"
+              size="md"
+              className="gap-2 border-slate-700 hover:border-amber-500/40 text-slate-200"
+            >
+              <Layers className="h-4 w-4 text-emerald-400" />
+              Configurar Planes
+            </Button>
+          </Link>
           <Button
             variant="primary"
             size="md"
