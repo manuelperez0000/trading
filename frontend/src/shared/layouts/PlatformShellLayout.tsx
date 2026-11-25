@@ -4,7 +4,6 @@ import {
   Bot,
   ChevronLeft,
   ChevronRight,
-  Cpu,
   CreditCard,
   Globe,
   KeyRound,
@@ -108,7 +107,7 @@ export const PlatformShellLayout: React.FC = () => {
         {
           to: '/admin/subscriptions',
           label: t.nav.controlSubscriptions,
-          icon: <Cpu className="h-4 w-4 shrink-0" />,
+          icon: <KeyRound className="h-4 w-4 shrink-0 text-amber-400" />,
           badgeCount: pendingSyncCount > 0 ? pendingSyncCount : undefined,
           adminOnly: true,
         },

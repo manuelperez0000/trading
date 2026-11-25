@@ -531,23 +531,27 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                           </Button>
                         )}
 
-                        <button
-                          type="button"
+                        <Button
+                          variant="secondary"
+                          size="sm"
                           onClick={() => setEditingSubscription(sub)}
-                          className="rounded-lg border border-slate-700 bg-slate-800/80 p-2 text-slate-300 hover:border-amber-500/50 hover:bg-slate-800 hover:text-amber-300 cursor-pointer transition-colors"
+                          className="border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200 gap-1.5 cursor-pointer text-xs"
                           title="Editar suscripción, plan y vigencia"
                         >
                           <Edit3 className="h-3.5 w-3.5" />
-                        </button>
+                          Editar
+                        </Button>
 
-                        <button
-                          type="button"
+                        <Button
+                          variant="secondary"
+                          size="sm"
                           onClick={() => setDeletingSubscription(sub)}
-                          className="rounded-lg border border-slate-800 bg-slate-900 p-2 text-slate-400 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-400 cursor-pointer transition-colors"
+                          className="border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 gap-1.5 cursor-pointer text-xs"
                           title="Eliminar o revocar suscripción"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                          Revocar
+                        </Button>
 
                         <Button
                           variant="ghost"

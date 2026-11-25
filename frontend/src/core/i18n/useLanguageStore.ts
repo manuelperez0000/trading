@@ -25,8 +25,8 @@ export const translations = {
       all: 'Todas',
     },
     nav: {
-      groupAdmin: 'Panel Admin & Conexión NT8',
-      controlSubscriptions: 'Control Suscripciones',
+      groupAdmin: 'Gestión de Clientes & Licencias',
+      controlSubscriptions: 'Suscripciones y Licencias',
       ninjaLab: 'Laboratorio API NinjaTrader',
       groupSocial: 'Comunidad & Social',
       socialWall: 'Red Social de Ganancias',
@@ -42,10 +42,10 @@ export const translations = {
       recoverPassword: 'Recuperar Contraseña',
     },
     adminSubs: {
-      title: 'Control Remoto de Suscripciones NinjaTrader 8',
+      title: 'Gestión de Suscripciones y Licencias de Clientes',
       badgePolling: 'Polling HTTP Activo',
       subtitle:
-        'Activa o desactiva licencias en tiempo real. Los cambios se aplican y confirman (ACK) en el ciclo de Polling HTTP de cada terminal NinjaTrader.',
+        'Supervisa, crea, edita y administra las licencias vendidas a los clientes con control de acceso a NinjaTrader 8 y vigencia de membresía.',
       globalKillSwitch: 'Kill-Switch Global (Apagar Todas)',
       enableAll: 'Habilitar Todas las Instancias',
       kpiAuthorizedTitle: 'Suscripciones Autorizadas',
@@ -258,8 +258,8 @@ export const translations = {
       all: 'All',
     },
     nav: {
-      groupAdmin: 'Admin Panel & NT8 Bridge',
-      controlSubscriptions: 'Subscription Control',
+      groupAdmin: 'Client Management & Licenses',
+      controlSubscriptions: 'Subscriptions & Licenses',
       ninjaLab: 'NinjaTrader API Lab',
       groupSocial: 'Community & Social',
       socialWall: 'Verified Profits Wall',
@@ -275,10 +275,10 @@ export const translations = {
       recoverPassword: 'Password Recovery',
     },
     adminSubs: {
-      title: 'NinjaTrader 8 Remote Subscription Control',
+      title: 'Customer Subscriptions & Licenses Management',
       badgePolling: 'HTTP Polling Active',
       subtitle:
-        'Enable or disable remote licenses in real time. Changes are enforced and acknowledged (ACK) on the next NinjaTrader HTTP Polling cycle.',
+        'Monitor, create, edit, and manage client licenses with NinjaTrader 8 access control and membership terms.',
       globalKillSwitch: 'Global Kill-Switch (Disable All)',
       enableAll: 'Enable All Instances',
       kpiAuthorizedTitle: 'Authorized Subscriptions',
