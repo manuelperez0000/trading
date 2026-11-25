@@ -1,4 +1,11 @@
-export type PlanTier = 'PRO_SCALPER' | 'PROP_FIRM_ELITE' | 'INSTITUTIONAL_BOT';
+export type PlanTier =
+  | 'MEMBERSHIP_MONTHLY'
+  | 'MEMBERSHIP_ANNUAL'
+  | 'PRO_SCALPER'
+  | 'PROP_FIRM_ELITE'
+  | 'INSTITUTIONAL_BOT';
+
+export type SubscriptionCycle = 'MONTHLY' | 'ANNUAL';
 
 export type RemoteSyncState = 'CONFIRMED_ON' | 'PENDING_ACK' | 'CONFIRMED_OFF';
 
@@ -21,6 +28,7 @@ export interface Subscription {
   ninjaAccountName: string;
   licenseKey: string;
   planTier: PlanTier;
+  subscriptionCycle?: SubscriptionCycle;
   /** Estado deseado por el Administrador en el Panel Web */
   remoteEnabled: boolean;
   /** Estado de sincronización con el ciclo de Polling HTTP de NinjaTrader */
@@ -214,4 +222,18 @@ export function evaluateNinjaHeartbeatDomainRule(params: {
         : `ACK de Apagado Remoto ejecutado en NinjaTrader (${updatedSubscription.activeStrategyName} detenida).`,
     },
   };
+}
+
+export function getSubscriptionPlanLabel(sub: Subscription): {
+  label: string;
+  cycle: SubscriptionCycle;
+} {
+  if (
+    sub.subscriptionCycle === 'ANNUAL' ||
+    sub.planTier === 'MEMBERSHIP_ANNUAL' ||
+    sub.planTier === 'INSTITUTIONAL_BOT'
+  ) {
+    return { label: 'Membresía Anual', cycle: 'ANNUAL' };
+  }
+  return { label: 'Membresía Mensual', cycle: 'MONTHLY' };
 }

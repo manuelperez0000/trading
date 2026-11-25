@@ -42,7 +42,7 @@ export interface PurchasedBotItem {
   botName: string;
   codeName: string;
   instrument: string;
-  billingCycle: 'MONTHLY' | 'ANNUAL' | 'LIFETIME';
+  billingCycle: 'MONTHLY' | 'ANNUAL';
   riskProfile: 'LUCID' | 'MFFU' | 'TRADEIFY' | 'LIVE';
   licenseKey: string;
   machineId: string;
@@ -51,6 +51,32 @@ export interface PurchasedBotItem {
 }
 
 const STORAGE_KEY_PURCHASED_BOTS = 'tla_purchased_bots_v1';
+
+export const ALL_ACCESS_CATALOG_BOTS: Array<{
+  botId: string;
+  botName: string;
+  codeName: string;
+  instrument: string;
+}> = [
+  {
+    botId: 'bot-proton',
+    botName: 'Proton (Mean Reversion)',
+    codeName: 'ProtonReversionV2',
+    instrument: 'MNQ 12-26',
+  },
+  {
+    botId: 'bot-nova',
+    botName: 'Nova (Momentum Breakout)',
+    codeName: 'NovaMomentumV3',
+    instrument: 'ES 12-26',
+  },
+  {
+    botId: 'bot-pulsar',
+    botName: 'Pulsar (El Más Eficiente)',
+    codeName: 'TLA_PULSAR_V2',
+    instrument: 'NQ 12-26',
+  },
+];
 
 const INITIAL_PURCHASED_BOTS: PurchasedBotItem[] = [
   {
@@ -61,6 +87,32 @@ const INITIAL_PURCHASED_BOTS: PurchasedBotItem[] = [
     instrument: 'NQ (E-mini Nasdaq)',
     billingCycle: 'MONTHLY',
     riskProfile: 'LUCID',
+    licenseKey: 'NT8-QTM-9921-ALPHA',
+    machineId: 'WIN11-TRD-9F82A1C0',
+    status: 'ACTIVE',
+    purchasedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+  },
+  {
+    id: 'pb-nova-01',
+    botId: 'bot-nova',
+    botName: 'Nova (Momentum Breakout)',
+    codeName: 'NovaMomentumV3',
+    instrument: 'ES (E-mini S&P 500)',
+    billingCycle: 'MONTHLY',
+    riskProfile: 'MFFU',
+    licenseKey: 'NT8-QTM-9921-ALPHA',
+    machineId: 'WIN11-TRD-9F82A1C0',
+    status: 'ACTIVE',
+    purchasedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+  },
+  {
+    id: 'pb-proton-01',
+    botId: 'bot-proton',
+    botName: 'Proton (Mean Reversion)',
+    codeName: 'ProtonReversionV2',
+    instrument: 'MNQ (Micro E-mini Nasdaq)',
+    billingCycle: 'MONTHLY',
+    riskProfile: 'TRADEIFY',
     licenseKey: 'NT8-QTM-9921-ALPHA',
     machineId: 'WIN11-TRD-9F82A1C0',
     status: 'ACTIVE',
@@ -104,7 +156,7 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
   const { isAuthenticated, user } = useAuthStore();
   const linkMutation = useLinkBotToLicenseMutation();
 
-  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL' | 'LIFETIME'>('MONTHLY');
+  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL'>('MONTHLY');
   const [riskProfile, setRiskProfile] = useState<'LUCID' | 'MFFU' | 'TRADEIFY' | 'LIVE'>('LUCID');
 
   if (!bot) return null;
@@ -113,12 +165,7 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
   const loginHref = `/auth/login?redirect=${encodeURIComponent(redirectUrl)}`;
   const registerHref = `/auth/register?redirect=${encodeURIComponent(redirectUrl)}`;
 
-  const computedPriceUsd =
-    billingCycle === 'MONTHLY'
-      ? bot.monthlyPriceUsd
-      : billingCycle === 'ANNUAL'
-      ? Math.round(bot.monthlyPriceUsd * 12 * 0.8)
-      : Math.round(bot.monthlyPriceUsd * 6);
+  const computedPriceUsd = billingCycle === 'MONTHLY' ? 149 : 1190;
 
   const handleConfirmPurchase = () => {
     linkMutation.mutate(
@@ -126,23 +173,36 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
       {
         onSuccess: () => {
           const current = getStoredPurchasedBots();
-          const newItem: PurchasedBotItem = {
-            id: `pb-${Date.now()}`,
-            botId: bot.id,
-            botName: bot.name,
-            codeName: bot.codeName,
-            instrument: bot.primaryInstrument,
+          const targetBots = [...ALL_ACCESS_CATALOG_BOTS];
+          if (!targetBots.some((b) => b.botId === bot.id)) {
+            targetBots.push({
+              botId: bot.id,
+              botName: bot.name,
+              codeName: bot.codeName,
+              instrument: bot.primaryInstrument,
+            });
+          }
+          const nowIso = new Date().toISOString();
+          const activatedBots: PurchasedBotItem[] = targetBots.map((b) => ({
+            id: `pb-${b.botId}-${Date.now()}`,
+            botId: b.botId,
+            botName: b.botName,
+            codeName: b.codeName,
+            instrument: b.instrument,
             billingCycle,
             riskProfile,
             licenseKey: 'NT8-QTM-9921-ALPHA',
             machineId: 'WIN11-TRD-9F82A1C0',
             status: 'ACTIVE',
-            purchasedAt: new Date().toISOString(),
-          };
-          saveStoredPurchasedBots([newItem, ...current.filter((b) => b.botId !== bot.id)]);
+            purchasedAt: nowIso,
+          }));
+          const existingOther = current.filter(
+            (c) => !targetBots.some((t) => t.botId === c.botId)
+          );
+          saveStoredPurchasedBots([...activatedBots, ...existingOther]);
           toast.success(
-            '¡Suscripción Activada con Éxito!',
-            `${bot.name} (${riskProfile}) vinculado a tu LicenseKey de NinjaTrader 8.`
+            '¡Membresía All-Access Activada!',
+            `Has desbloqueado el catálogo completo (Proton, Nova, Pulsar) con tu LicenseKey de NinjaTrader 8.`
           );
           onSuccessActivated?.();
           onClose();
@@ -259,50 +319,59 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
             <>
               {/* Selector de Ciclo de Facturación */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                  1. Selecciona tu Plan de Suscripción
-                </label>
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                    1. Selecciona tu Membresía All-Access
+                  </label>
+                  <span className="text-[11px] font-semibold text-emerald-400">
+                    ★ Acceso al 100% de los bots
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(
                     [
                       {
-                        id: 'MONTHLY',
-                        title: 'Mensual',
-                        price: `${formatUsd(bot.monthlyPriceUsd)}/mes`,
-                        tag: 'Flexible',
+                        id: 'MONTHLY' as const,
+                        title: 'Membresía Mensual',
+                        price: '$149 USD / mes',
+                        tag: 'Flexible • Cancela cuando quieras',
+                        sub: 'Desbloquea Proton, Nova y Pulsar',
                       },
                       {
-                        id: 'ANNUAL',
-                        title: 'Anual (-20%)',
-                        price: `${formatUsd(Math.round(bot.monthlyPriceUsd * 12 * 0.8))}/año`,
-                        tag: 'Más Popular',
+                        id: 'ANNUAL' as const,
+                        title: 'Membresía Anual',
+                        price: '$1,190 USD / año',
+                        tag: '2 MESES GRATIS (-33%)',
+                        sub: 'Equivale a $99/mes • Ahorras $598 USD',
                       },
-                      {
-                        id: 'LIFETIME',
-                        title: 'Vitalicio',
-                        price: `${formatUsd(Math.round(bot.monthlyPriceUsd * 6))} único`,
-                        tag: 'Pago Único',
-                      },
-                    ] as const
+                    ]
                   ).map((plan) => (
                     <button
                       key={plan.id}
                       type="button"
                       onClick={() => setBillingCycle(plan.id)}
-                      className={`rounded-xl border p-3 text-left transition-all cursor-pointer ${
+                      className={`rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
                         billingCycle === plan.id
-                          ? 'border-emerald-500 bg-emerald-500/15 text-white'
+                          ? 'border-emerald-500 bg-emerald-500/15 text-white shadow-lg shadow-emerald-500/10'
                           : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
                       }`}
                     >
-                      <div className="text-[10px] font-bold uppercase text-amber-400">
-                        {plan.tag}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                          {plan.tag}
+                        </span>
+                        {billingCycle === plan.id && (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        )}
                       </div>
-                      <div className="text-xs font-bold text-white mt-0.5">
+                      <div className="text-sm font-bold text-white mt-1">
                         {plan.title}
                       </div>
-                      <div className="text-xs font-mono text-emerald-400 mt-1">
+                      <div className="text-base font-mono font-extrabold text-emerald-400 mt-0.5">
                         {plan.price}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        {plan.sub}
                       </div>
                     </button>
                   ))}
@@ -350,7 +419,7 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
                     </span>
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    Activación remota inmediata para NinjaTrader 8 (64-bit)
+                    Desbloquea Proton + Nova + Pulsar simultáneamente en NT8
                   </div>
                 </div>
                 <div className="text-right">
@@ -372,7 +441,7 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
                   onClick={handleConfirmPurchase}
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  Confirmar Compra y Activar Bot
+                  Confirmar y Desbloquear Todos los Bots
                 </Button>
               </div>
             </>
@@ -1020,10 +1089,18 @@ export const BotsCatalogPage: React.FC = () => {
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/80 pt-4">
                 <div>
-                  <span className="text-xl font-extrabold text-white">
-                    {formatUsd(bot.monthlyPriceUsd)}
-                  </span>
-                  <span className="text-xs text-slate-400"> {t.catalog.perMonth}</span>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                    Membresía All-Access
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-xl font-extrabold text-white">
+                      $149
+                    </span>
+                    <span className="text-xs text-slate-400">/ mes (o $1,190/año)</span>
+                  </div>
+                  <div className="text-[10px] text-emerald-400 font-medium">
+                    ✓ Desbloquea todos los bots del catálogo
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -1039,7 +1116,7 @@ export const BotsCatalogPage: React.FC = () => {
                     onClick={() => setBotForPurchase(bot)}
                   >
                     <ShoppingCart className="h-4 w-4" />
-                    Comprar
+                    Suscribirme
                   </Button>
                 </div>
               </div>
@@ -1164,12 +1241,20 @@ export const BotDetailPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col items-start lg:items-end gap-3 shrink-0 rounded-xl border border-slate-800 bg-slate-950 p-5">
-            <div className="text-xs text-slate-400">Suscripción Mensual</div>
-            <div className="text-3xl font-extrabold text-emerald-400">
-              {formatUsd(bot.monthlyPriceUsd)}
-              <span className="text-xs font-normal text-slate-400"> / mes</span>
+            <div className="text-xs font-bold uppercase tracking-wider text-amber-400">
+              Membresía All-Access
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="text-3xl font-extrabold text-emerald-400">
+              $149
+              <span className="text-xs font-normal text-slate-400"> USD / mes</span>
+            </div>
+            <div className="text-xs text-slate-400">
+              o $1,190 USD / año (Ahorra 2 meses gratis)
+            </div>
+            <div className="text-[11px] text-emerald-400 font-medium text-left lg:text-right max-w-[240px]">
+              ✓ Desbloquea Proton, Nova y Pulsar con perfiles para Lucid, MFFU, Tradeify y Cuentas Reales
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
               <Button
                 variant="primary"
                 size="md"
@@ -1177,17 +1262,17 @@ export const BotDetailPage: React.FC = () => {
               >
                 <ShoppingCart className="h-4 w-4" />
                 {isAuthenticated
-                  ? 'Comprar Suscripción / Vincular Licencia'
-                  : 'Comprar Suscripción (Requiere Login)'}
+                  ? 'Obtener Membresía / Desbloquear Todo'
+                  : 'Suscribirme (Requiere Login)'}
               </Button>
               {isAuthenticated ? (
                 <Button
                   variant="secondary"
                   size="md"
-                  onClick={() => navigate('/my-subscriptions')}
+                  onClick={() => navigate('/my-bots')}
                 >
-                  <Download className="h-4 w-4" />
-                  Ir a Mis Licencias
+                  <Bot className="h-4 w-4" />
+                  Mis Bots
                 </Button>
               ) : (
                 <Link
@@ -1403,6 +1488,29 @@ namespace NinjaTrader.NinjaScript.Strategies.TradingLifeAcademy
         </Button>
       </div>
 
+      {/* Banner de Membresía All-Access */}
+      <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-amber-950/20 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 shrink-0">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-white">Membresía All-Access Activa</h2>
+              <Badge variant="emerald">Catálogo Completo Desbloqueado</Badge>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Tienes acceso sin restricciones a los 3 algoritmos de Trading Life Academy (Proton, Nova y Pulsar) con descargas directas NinjaScript y soporte para pruebas de fondeo.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="secondary" size="sm" onClick={() => navigate('/my-subscriptions')}>
+            Administrar Licencias NT8
+          </Button>
+        </div>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
@@ -1475,13 +1583,11 @@ namespace NinjaTrader.NinjaScript.Strategies.TradingLifeAcademy
                     <Badge variant="amber">{botItem.riskProfile}</Badge>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-800">
-                    <span className="text-slate-400">Ciclo:</span>
-                    <span className="text-slate-300">
-                      {botItem.billingCycle === 'MONTHLY'
-                        ? 'Mensual'
-                        : botItem.billingCycle === 'ANNUAL'
-                        ? 'Anual'
-                        : 'Vitalicio'}
+                    <span className="text-slate-400">Ciclo de Membresía:</span>
+                    <span className="text-slate-300 font-medium">
+                      {botItem.billingCycle === 'ANNUAL'
+                        ? 'Anual ($1,190/año)'
+                        : 'Mensual ($149/mes)'}
                     </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-800">

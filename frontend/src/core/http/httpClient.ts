@@ -82,6 +82,10 @@ export class HttpClient {
     return this.request<T>(path, { ...options, method: 'PATCH', body });
   }
 
+  public put<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return this.request<T>(path, { ...options, method: 'PUT', body });
+  }
+
   public delete<T>(path: string, options?: RequestOptions): Promise<T> {
     return this.request<T>(path, { ...options, method: 'DELETE' });
   }

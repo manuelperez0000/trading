@@ -23,6 +23,14 @@ export interface ISubscriptionRepository {
     reason: string;
   }): Promise<Subscription[]>;
   resetMachineId(subscriptionId: string): Promise<Subscription>;
+  createSubscription(
+    subscription: Partial<Subscription>
+  ): Promise<Subscription>;
+  updateSubscription(
+    id: string,
+    updates: Partial<Subscription>
+  ): Promise<Subscription>;
+  deleteSubscription(id: string): Promise<boolean>;
   processNinjaHeartbeat(
     payload: HeartbeatRequestPayload
   ): Promise<HeartbeatResponsePayload>;

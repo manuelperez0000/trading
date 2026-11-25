@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { env } from '@core/config/env';
 import { container } from '@app/di/container';
+import type { Subscription } from '@features/subscriptions/domain/entities/Subscription';
 import type { SimulateHeartbeatInput } from '@features/subscriptions/application/use-cases/subscriptionUseCases';
 
 interface PollingControlState {
@@ -103,6 +104,45 @@ export function useSimulateNinjaHeartbeatMutation() {
       container.simulateNinjaHeartbeatUseCase.execute(input),
     onSuccess: () => {
       incrementCycle();
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTIONS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: AUDIT_LOGS_QUERY_KEY });
+    },
+  });
+}
+
+export function useCreateSubscriptionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: Partial<Subscription>) =>
+      container.subscriptionRepository.createSubscription(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTIONS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: AUDIT_LOGS_QUERY_KEY });
+    },
+  });
+}
+
+export function useUpdateSubscriptionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: { id: string; updates: Partial<Subscription> }) =>
+      container.subscriptionRepository.updateSubscription(params.id, params.updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTIONS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: AUDIT_LOGS_QUERY_KEY });
+    },
+  });
+}
+
+export function useDeleteSubscriptionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      container.subscriptionRepository.deleteSubscription(id),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SUBSCRIPTIONS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: AUDIT_LOGS_QUERY_KEY });
     },
