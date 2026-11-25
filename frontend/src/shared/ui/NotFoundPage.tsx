@@ -1,12 +1,16 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bot, Compass, KeyRound } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Bot, Compass, KeyRound, Layers, Users } from 'lucide-react';
 import { Button } from '@shared/ui/Button';
 import { Card } from '@shared/ui/Card';
 import { Badge } from '@shared/ui/Badge';
+import { useAuthStore } from '@features/auth/application/useAuthStore';
 
 export const NotFoundPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, isAuthenticated } = useAuthStore();
+  const isAdmin = isAuthenticated && user.role === 'ADMIN';
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center p-4 text-center">
@@ -20,24 +24,47 @@ export const NotFoundPage: React.FC = () => {
             Página No Encontrada
           </h1>
           <p className="mt-2 text-xs text-slate-400 leading-relaxed max-w-sm">
-            La sección a la que intentas acceder no existe en la plataforma de Trading Life Academy o fue reubicada.
+            La sección <code className="text-amber-300 font-mono bg-slate-800 px-1 py-0.5 rounded">{location.pathname}</code> no existe en la plataforma de Trading Life Academy o fue reubicada.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-2">
-          <Link to="/catalog">
-            <Button variant="primary" size="md" className="w-full">
-              <Bot className="h-4 w-4" />
-              Catálogo de Bots
-            </Button>
-          </Link>
-          <Link to="/my-subscriptions">
-            <Button variant="secondary" size="md" className="w-full">
-              <KeyRound className="h-4 w-4" />
-              Mis Licencias
-            </Button>
-          </Link>
-        </div>
+        {isAdmin ? (
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 pt-2">
+            <Link to="/admin/subscriptions">
+              <Button variant="primary" size="md" className="w-full text-xs gap-1.5">
+                <Users className="h-3.5 w-3.5" />
+                Clientes
+              </Button>
+            </Link>
+            <Link to="/admin/plans">
+              <Button variant="secondary" size="md" className="w-full text-xs gap-1.5 border-slate-700">
+                <Layers className="h-3.5 w-3.5 text-emerald-400" />
+                Planes
+              </Button>
+            </Link>
+            <Link to="/catalog">
+              <Button variant="secondary" size="md" className="w-full text-xs gap-1.5 border-slate-700">
+                <Bot className="h-3.5 w-3.5" />
+                Catálogo
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-2">
+            <Link to="/catalog">
+              <Button variant="primary" size="md" className="w-full">
+                <Bot className="h-4 w-4" />
+                Catálogo de Bots
+              </Button>
+            </Link>
+            <Link to="/my-subscriptions">
+              <Button variant="secondary" size="md" className="w-full">
+                <KeyRound className="h-4 w-4" />
+                Mis Licencias
+              </Button>
+            </Link>
+          </div>
+        )}
 
         <div className="border-t border-slate-800/80 pt-4">
           <button

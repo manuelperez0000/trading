@@ -74,15 +74,49 @@ const AppRoutes: React.FC = () => {
       <Route path="/recover-password" element={<Navigate to="/auth/recover-password" replace />} />
       <Route path="/admin" element={<Navigate to="/admin/subscriptions" replace />} />
       <Route path="/dashboard" element={<Navigate to="/admin/subscriptions" replace />} />
+      <Route path="/clients" element={<Navigate to="/admin/clients" replace />} />
+      <Route path="/clientes" element={<Navigate to="/admin/clients" replace />} />
+      <Route path="/gestion-clientes" element={<Navigate to="/admin/clients" replace />} />
+      <Route path="/admin/gestion-clientes" element={<Navigate to="/admin/clients" replace />} />
       <Route path="/plans" element={<Navigate to="/admin/plans" replace />} />
+      <Route path="/planes" element={<Navigate to="/admin/plans" replace />} />
+      <Route path="/admin/planes" element={<Navigate to="/admin/plans" replace />} />
+      <Route path="/admin/planes-membresia" element={<Navigate to="/admin/plans" replace />} />
+      <Route path="/planes-membresia" element={<Navigate to="/admin/plans" replace />} />
+      <Route path="/memberships" element={<Navigate to="/admin/plans" replace />} />
+      <Route path="/membresias" element={<Navigate to="/admin/plans" replace />} />
+      <Route path="/admin/memberships" element={<Navigate to="/admin/plans" replace />} />
+      <Route path="/admin/membresias" element={<Navigate to="/admin/plans" replace />} />
+      <Route path="/subscriptions" element={<Navigate to="/admin/subscriptions" replace />} />
+      <Route path="/suscripciones" element={<Navigate to="/admin/subscriptions" replace />} />
+      <Route path="/admin/suscripciones" element={<Navigate to="/admin/subscriptions" replace />} />
       <Route path="/bots" element={<Navigate to="/catalog" replace />} />
       <Route path="/licenses" element={<Navigate to="/my-subscriptions" replace />} />
+      <Route path="/my-licenses" element={<Navigate to="/my-subscriptions" replace />} />
+      <Route path="/mis-licencias" element={<Navigate to="/my-subscriptions" replace />} />
+      <Route path="/mis-bots" element={<Navigate to="/my-bots" replace />} />
 
       {/* Plantilla Administrativa y Portal Trader con Menú Lateral Colapsable */}
       <Route element={<PlatformShellLayout />}>
         {/* Módulos Fase 2: Panel Admin + Laboratorio Apagado Remoto + Red Social */}
         <Route
           path="/admin/subscriptions"
+          element={
+            <SubscriptionsAdminPage
+              onSelectLicenseForLab={handleOpenLicenseInLab}
+            />
+          }
+        />
+        <Route
+          path="/admin/clients"
+          element={
+            <SubscriptionsAdminPage
+              onSelectLicenseForLab={handleOpenLicenseInLab}
+            />
+          }
+        />
+        <Route
+          path="/admin/clientes"
           element={
             <SubscriptionsAdminPage
               onSelectLicenseForLab={handleOpenLicenseInLab}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Activity,
   Calendar,
@@ -73,9 +73,20 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
     'ALL' | 'ENABLED' | 'DISABLED' | 'PENDING_ACK'
   >('ALL');
 
-  const [activeMainTab, setActiveMainTab] = useState<'SUBSCRIPTIONS' | 'USERS'>('SUBSCRIPTIONS');
+  const location = useLocation();
+  const [activeMainTab, setActiveMainTab] = useState<'SUBSCRIPTIONS' | 'USERS'>(() =>
+    location.pathname.includes('/clients') || location.pathname.includes('/clientes')
+      ? 'USERS'
+      : 'SUBSCRIPTIONS'
+  );
   const [registeredUsers, setRegisteredUsers] = useState<UserEntity[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname.includes('/clients') || location.pathname.includes('/clientes')) {
+      setActiveMainTab('USERS');
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     setIsLoadingUsers(true);
