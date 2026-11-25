@@ -30,7 +30,9 @@ import {
   useBotDetailQuery,
   useBotsQuery,
   useCreateBotMutation,
+  useDeleteBotMutation,
   useLinkBotToLicenseMutation,
+  useUpdateBotMutation,
 } from '@features/bots-catalog/application/hooks/useBots';
 import type { TradingBot } from '@features/bots-catalog/domain/entities/TradingBot';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
@@ -951,12 +953,513 @@ const CreateBotModal: React.FC<CreateBotModalProps> = ({ isOpen, onClose }) => {
   );
 };
 
+interface EditBotModalProps {
+  bot: TradingBot | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const EditBotModal: React.FC<EditBotModalProps> = ({ bot, isOpen, onClose }) => {
+  const updateMutation = useUpdateBotMutation();
+
+  const [name, setName] = useState('');
+  const [codeName, setCodeName] = useState('');
+  const [version, setVersion] = useState('');
+  const [category, setCategory] = useState<
+    'ORDER_FLOW_SCALPING' | 'MOMENTUM_BREAKOUT' | 'MEAN_REVERSION'
+  >('ORDER_FLOW_SCALPING');
+  const [primaryInstrument, setPrimaryInstrument] = useState('');
+  const [supportedInstruments, setSupportedInstruments] = useState('');
+  const [winRatePercent, setWinRatePercent] = useState(70);
+  const [profitFactor, setProfitFactor] = useState(2.0);
+  const [maxDrawdownUsd, setMaxDrawdownUsd] = useState(1000);
+  const [avgDailyTrades, setAvgDailyTrades] = useState('');
+  const [recommendedAccountSizeUsd, setRecommendedAccountSizeUsd] = useState(50000);
+  const [propFirmReady, setPropFirmReady] = useState(true);
+  const [shortDescription, setShortDescription] = useState('');
+  const [fullDescription, setFullDescription] = useState('');
+  const [parameters, setParameters] = useState<
+    Array<{ name: string; defaultValue: string; description: string }>
+  >([]);
+
+  const [newParamName, setNewParamName] = useState('');
+  const [newParamDefault, setNewParamDefault] = useState('');
+  const [newParamDesc, setNewParamDesc] = useState('');
+
+  useEffect(() => {
+    if (bot) {
+      setName(bot.name);
+      setCodeName(bot.codeName);
+      setVersion(bot.version);
+      setCategory(bot.category);
+      setPrimaryInstrument(bot.primaryInstrument);
+      setSupportedInstruments(bot.supportedInstruments.join(', '));
+      setWinRatePercent(bot.winRatePercent);
+      setProfitFactor(bot.profitFactor);
+      setMaxDrawdownUsd(bot.maxDrawdownUsd);
+      setAvgDailyTrades(bot.avgDailyTrades);
+      setRecommendedAccountSizeUsd(bot.recommendedAccountSizeUsd);
+      setPropFirmReady(bot.propFirmReady);
+      setShortDescription(bot.shortDescription);
+      setFullDescription(bot.fullDescription);
+      setParameters(bot.ninjaParameters || []);
+    }
+  }, [bot]);
+
+  if (!isOpen || !bot) return null;
+
+  const handleAddParameter = () => {
+    if (!newParamName.trim()) return;
+    setParameters((prev) => [
+      ...prev,
+      {
+        name: newParamName.trim(),
+        defaultValue: newParamDefault.trim() || '10',
+        description: newParamDesc.trim() || 'Parámetro de configuración',
+      },
+    ]);
+    setNewParamName('');
+    setNewParamDefault('');
+    setNewParamDesc('');
+  };
+
+  const handleRemoveParameter = (index: number) => {
+    setParameters((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.danger('Campo requerido', 'El nombre comercial del bot es obligatorio.');
+      return;
+    }
+
+    try {
+      await updateMutation.mutateAsync({
+        id: bot.id,
+        input: {
+          name: name.trim(),
+          codeName: codeName.trim(),
+          version: version.trim() || bot.version,
+          category,
+          primaryInstrument: primaryInstrument.trim() || bot.primaryInstrument,
+          supportedInstruments: supportedInstruments
+            .split(',')
+            .map((s) => s.trim().toUpperCase())
+            .filter(Boolean),
+          winRatePercent: Number(winRatePercent) || bot.winRatePercent,
+          profitFactor: Number(profitFactor) || bot.profitFactor,
+          maxDrawdownUsd: Number(maxDrawdownUsd) || bot.maxDrawdownUsd,
+          avgDailyTrades: avgDailyTrades.trim() || bot.avgDailyTrades,
+          propFirmReady,
+          shortDescription: shortDescription.trim() || bot.shortDescription,
+          fullDescription: fullDescription.trim() || bot.fullDescription,
+          recommendedAccountSizeUsd:
+            Number(recommendedAccountSizeUsd) || bot.recommendedAccountSizeUsd,
+          ninjaParameters: parameters,
+        },
+      });
+
+      toast.success(
+        'Estrategia Actualizada',
+        `Los cambios en "${name}" han sido guardados exitosamente.`
+      );
+      onClose();
+    } catch (err) {
+      toast.danger(
+        'Error al actualizar el bot',
+        err instanceof Error ? err.message : 'No se pudo guardar la estrategia.'
+      );
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/60 overflow-hidden">
+        {/* Cabecera del Modal */}
+        <div className="flex items-center justify-between border-b border-slate-800/80 px-6 py-4 bg-slate-950/50">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+              <Sliders className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                Editar Estrategia: {bot.name}
+              </h2>
+              <p className="text-xs text-slate-400">
+                Ajuste administrativo de especificaciones técnicas y parámetros NinjaScript.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Formulario */}
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-6 flex-1">
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5" />
+              1. Identificación Comercial & Clase NinjaScript
+            </h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Nombre Comercial del Bot *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Nombre de Clase C# / NinjaScript *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={codeName}
+                  onChange={(e) => setCodeName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-mono text-emerald-300 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Versión del Algoritmo
+                </label>
+                <input
+                  type="text"
+                  value={version}
+                  onChange={(e) => setVersion(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Categoría de Trading
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) =>
+                    setCategory(
+                      e.target.value as
+                        | 'ORDER_FLOW_SCALPING'
+                        | 'MOMENTUM_BREAKOUT'
+                        | 'MEAN_REVERSION'
+                    )
+                  }
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-amber-500 focus:outline-none cursor-pointer"
+                >
+                  <option value="ORDER_FLOW_SCALPING">Order Flow & Scalping</option>
+                  <option value="MOMENTUM_BREAKOUT">Momentum & Rupturas</option>
+                  <option value="MEAN_REVERSION">Reversión a la Media</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t border-slate-800 pt-5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-2">
+              <Cpu className="h-3.5 w-3.5" />
+              2. Mercados & Operativa
+            </h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Instrumento Principal *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={primaryInstrument}
+                  onChange={(e) => setPrimaryInstrument(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Mercados Soportados (Comas)
+                </label>
+                <input
+                  type="text"
+                  value={supportedInstruments}
+                  onChange={(e) => setSupportedInstruments(e.target.value)}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t border-slate-800 pt-5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+              <TrendingUp className="h-3.5 w-3.5" />
+              3. Métricas de Rendimiento Auditadas
+            </h3>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Win Rate %
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={winRatePercent}
+                  onChange={(e) => setWinRatePercent(Number(e.target.value))}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-mono font-bold text-emerald-400 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Profit Factor
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.05"
+                  value={profitFactor}
+                  onChange={(e) => setProfitFactor(Number(e.target.value))}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-mono font-bold text-sky-400 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Max Drawdown (USD)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="50"
+                  value={maxDrawdownUsd}
+                  onChange={(e) => setMaxDrawdownUsd(Number(e.target.value))}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-mono font-bold text-rose-400 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t border-slate-800 pt-5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <Sliders className="h-3.5 w-3.5" />
+              4. Pitch y Descripción
+            </h3>
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                Descripción Corta (Tarjeta) *
+              </label>
+              <textarea
+                rows={2}
+                required
+                value={shortDescription}
+                onChange={(e) => setShortDescription(e.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 p-2.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                Descripción Técnica Completa *
+              </label>
+              <textarea
+                rows={3}
+                required
+                value={fullDescription}
+                onChange={(e) => setFullDescription(e.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 p-2.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t border-slate-800 pt-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                <Sliders className="h-3.5 w-3.5" />
+                5. Parámetros NinjaScript ({parameters.length})
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {parameters.map((param, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/80 p-2.5 text-xs"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono font-bold text-emerald-300">
+                      {param.name}:
+                    </span>
+                    <Badge variant="slate">{param.defaultValue}</Badge>
+                    <span className="truncate text-slate-400">
+                      {param.description}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveParameter(index)}
+                    className="text-slate-500 hover:text-rose-400 p-1 cursor-pointer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 rounded-xl border border-slate-800/80 bg-slate-950/40 p-3">
+              <input
+                type="text"
+                placeholder="Nombre"
+                value={newParamName}
+                onChange={(e) => setNewParamName(e.target.value)}
+                className="rounded border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none"
+              />
+              <input
+                type="text"
+                placeholder="Valor por Defecto"
+                value={newParamDefault}
+                onChange={(e) => setNewParamDefault(e.target.value)}
+                className="rounded border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Descripción"
+                  value={newParamDesc}
+                  onChange={(e) => setNewParamDesc(e.target.value)}
+                  className="flex-1 rounded border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddParameter}
+                  className="rounded bg-slate-800 hover:bg-slate-700 px-3 py-1 text-xs font-semibold text-white cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 border-t border-slate-800 bg-slate-950 px-6 py-4 flex items-center justify-end gap-3">
+          <Button variant="secondary" size="md" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            isLoading={updateMutation.isPending}
+            onClick={handleSubmit}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Guardar Cambios
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface DeleteBotModalProps {
+  bot: TradingBot | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccessDeleted?: () => void;
+}
+
+const DeleteBotModal: React.FC<DeleteBotModalProps> = ({
+  bot,
+  isOpen,
+  onClose,
+  onSuccessDeleted,
+}) => {
+  const deleteMutation = useDeleteBotMutation();
+
+  if (!isOpen || !bot) return null;
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteMutation.mutateAsync(bot.id);
+      toast.success(
+        'Bot Eliminado',
+        `"${bot.name}" (${bot.codeName}) ha sido eliminado del catálogo.`
+      );
+      onSuccessDeleted?.();
+      onClose();
+    } catch (err) {
+      toast.danger(
+        'Error al eliminar',
+        err instanceof Error ? err.message : 'No se pudo eliminar la estrategia.'
+      );
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-md rounded-2xl border border-rose-500/30 bg-slate-900 p-6 shadow-2xl shadow-rose-950/40 space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 shrink-0">
+            <Trash2 className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white">
+              Eliminar Estrategia del Catálogo
+            </h3>
+            <p className="text-xs text-slate-400">
+              Acción exclusiva de Administrador
+            </p>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-300 leading-relaxed">
+          ¿Estás seguro de que deseas eliminar permanentemente{' '}
+          <strong className="text-white">"{bot.name}"</strong> (
+          <code className="text-amber-300 font-mono">{bot.codeName}</code>)? Esta acción no se
+          puede deshacer y quitará la estrategia del catálogo.
+        </p>
+
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button variant="ghost" size="md" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            variant="danger"
+            size="md"
+            isLoading={deleteMutation.isPending}
+            onClick={handleConfirmDelete}
+            className="gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Eliminar Definitivamente
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const BotsCatalogPage: React.FC = () => {
   const { t } = useI18n();
   const { isAuthenticated, user } = useAuthStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [botForEdit, setBotForEdit] = useState<TradingBot | null>(null);
+  const [botForDelete, setBotForDelete] = useState<TradingBot | null>(null);
   const [botForPurchase, setBotForPurchase] = useState<TradingBot | null>(null);
   const { data: bots = [], isLoading } = useBotsQuery();
+  const isAdmin = isAuthenticated && user.role === 'ADMIN';
 
   return (
     <div className="space-y-6">
@@ -969,13 +1472,16 @@ export const BotsCatalogPage: React.FC = () => {
             {!isAuthenticated && (
               <Badge variant="amber">Exploración Pública • Sin Login</Badge>
             )}
+            {isAdmin && (
+              <Badge variant="emerald">Modo Administrador • Gestión de Catálogo</Badge>
+            )}
           </div>
           <p className="mt-1 text-sm text-slate-400">
             {t.catalog.subtitle}
           </p>
         </div>
 
-        {isAuthenticated && user.role === 'ADMIN' && (
+        {isAdmin && (
           <Button
             variant="primary"
             size="md"
@@ -1082,14 +1588,40 @@ export const BotsCatalogPage: React.FC = () => {
                       <ArrowUpRight className="h-4 w-4" />
                     </Button>
                   </Link>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={() => setBotForPurchase(bot)}
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    Suscribirme
-                  </Button>
+
+                  {isAdmin ? (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={() => setBotForEdit(bot)}
+                        className="gap-1.5 text-amber-300 hover:text-amber-200 border-amber-500/30 hover:bg-amber-500/10 cursor-pointer"
+                        title="Editar estrategia"
+                      >
+                        <Sliders className="h-4 w-4" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="md"
+                        onClick={() => setBotForDelete(bot)}
+                        className="gap-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 cursor-pointer"
+                        title="Eliminar del catálogo"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Eliminar
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={() => setBotForPurchase(bot)}
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      Suscribirme
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
@@ -1101,6 +1633,20 @@ export const BotsCatalogPage: React.FC = () => {
       <CreateBotModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+      />
+
+      {/* Modal Interactivo para Editar Bot (Solo Admin) */}
+      <EditBotModal
+        bot={botForEdit}
+        isOpen={Boolean(botForEdit)}
+        onClose={() => setBotForEdit(null)}
+      />
+
+      {/* Modal de Confirmación para Eliminar Bot (Solo Admin) */}
+      <DeleteBotModal
+        bot={botForDelete}
+        isOpen={Boolean(botForDelete)}
+        onClose={() => setBotForDelete(null)}
       />
 
       {/* Modal de Compra / Gate de Autenticación */}
@@ -1119,8 +1665,11 @@ export const BotDetailPage: React.FC = () => {
   const { isAuthenticated, user } = useAuthStore();
   const [activatedBanner, setActivatedBanner] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const { data: bot, isLoading } = useBotDetailQuery(botId);
+  const isAdmin = isAuthenticated && user.role === 'ADMIN';
 
   // Si el usuario vuelve del Login con ?intent=buy, abrimos el modal de compra automáticamente
   useEffect(() => {
@@ -1226,37 +1775,60 @@ export const BotDetailPage: React.FC = () => {
             <div className="text-[11px] text-emerald-400 font-medium text-left lg:text-right max-w-[240px]">
               ✓ Desbloquea Proton, Nova y Pulsar con perfiles para Lucid, MFFU, Tradeify y Cuentas Reales
             </div>
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button
-                variant="primary"
-                size="md"
-                onClick={() => setIsPurchaseModalOpen(true)}
-              >
-                <ShoppingCart className="h-4 w-4" />
-                {isAuthenticated
-                  ? 'Obtener Membresía / Desbloquear Todo'
-                  : 'Suscribirme (Requiere Login)'}
-              </Button>
-              {isAuthenticated ? (
+            {isAdmin ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="gap-2 cursor-pointer shadow-md shadow-amber-500/20"
+                >
+                  <Sliders className="h-4 w-4" />
+                  Editar Bot (Admin)
+                </Button>
                 <Button
                   variant="secondary"
                   size="md"
-                  onClick={() => navigate('/my-bots')}
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border-rose-500/30 gap-2 cursor-pointer"
                 >
-                  <Bot className="h-4 w-4" />
-                  Mis Bots
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar Bot
                 </Button>
-              ) : (
-                <Link
-                  to={`/auth/login?redirect=${encodeURIComponent(`/catalog/${bot.id}?intent=buy`)}`}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => setIsPurchaseModalOpen(true)}
                 >
-                  <Button variant="secondary" size="md">
-                    <LogIn className="h-4 w-4" />
-                    Iniciar Sesión
+                  <ShoppingCart className="h-4 w-4" />
+                  {isAuthenticated
+                    ? 'Obtener Membresía / Desbloquear Todo'
+                    : 'Suscribirme (Requiere Login)'}
+                </Button>
+                {isAuthenticated ? (
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => navigate('/my-bots')}
+                  >
+                    <Bot className="h-4 w-4" />
+                    Mis Bots
                   </Button>
-                </Link>
-              )}
-            </div>
+                ) : (
+                  <Link
+                    to={`/auth/login?redirect=${encodeURIComponent(`/catalog/${bot.id}?intent=buy`)}`}
+                  >
+                    <Button variant="secondary" size="md">
+                      <LogIn className="h-4 w-4" />
+                      Iniciar Sesión
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1344,6 +1916,21 @@ export const BotDetailPage: React.FC = () => {
         bot={isPurchaseModalOpen ? bot : null}
         onClose={() => setIsPurchaseModalOpen(false)}
         onSuccessActivated={() => setActivatedBanner(true)}
+      />
+
+      {/* Modal Interactivo para Editar Bot (Solo Admin) */}
+      <EditBotModal
+        bot={bot}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
+
+      {/* Modal de Confirmación para Eliminar Bot (Solo Admin) */}
+      <DeleteBotModal
+        bot={bot}
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onSuccessDeleted={() => navigate('/catalog')}
       />
     </div>
   );

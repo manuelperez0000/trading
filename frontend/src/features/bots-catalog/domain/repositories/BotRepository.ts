@@ -7,6 +7,8 @@ export interface IBotRepository {
   getAllBots(): Promise<TradingBot[]>;
   getBotById(id: string): Promise<TradingBot | null>;
   createBot(input: CreateTradingBotInput): Promise<TradingBot>;
+  updateBot(id: string, input: Partial<CreateTradingBotInput>): Promise<TradingBot>;
+  deleteBot(id: string): Promise<boolean>;
   linkBotToLicense(params: {
     botId: string;
     licenseKey: string;

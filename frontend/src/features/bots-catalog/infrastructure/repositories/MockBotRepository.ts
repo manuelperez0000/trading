@@ -49,6 +49,36 @@ export class MockBotRepository implements IBotRepository {
     return structuredClone(newBot);
   }
 
+  public async updateBot(id: string, input: Partial<CreateTradingBotInput>): Promise<TradingBot> {
+    const index = this.bots.findIndex((b) => b.id === id);
+    if (index === -1) {
+      throw new Error(`Bot ${id} no encontrado.`);
+    }
+    const current = this.bots[index];
+    const updated: TradingBot = {
+      ...current,
+      ...input,
+      name: input.name ?? current.name,
+      codeName: input.codeName ?? current.codeName,
+      winRatePercent: input.winRatePercent ?? current.winRatePercent,
+      profitFactor: input.profitFactor ?? current.profitFactor,
+      maxDrawdownUsd: input.maxDrawdownUsd ?? current.maxDrawdownUsd,
+      shortDescription: input.shortDescription ?? current.shortDescription,
+      fullDescription: input.fullDescription ?? current.fullDescription,
+      ninjaParameters: input.ninjaParameters ?? current.ninjaParameters,
+    };
+    this.bots[index] = updated;
+    return structuredClone(updated);
+  }
+
+  public async deleteBot(id: string): Promise<boolean> {
+    const index = this.bots.findIndex((b) => b.id === id);
+    if (index !== -1) {
+      this.bots.splice(index, 1);
+    }
+    return true;
+  }
+
   public async linkBotToLicense(params: {
     botId: string;
     licenseKey: string;

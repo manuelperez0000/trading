@@ -32,6 +32,29 @@ export function useCreateBotMutation() {
   });
 }
 
+export function useUpdateBotMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: { id: string; input: Partial<CreateTradingBotInput> }) =>
+      container.updateBotUseCase.execute(params.id, params.input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BOTS_QUERY_KEY });
+    },
+  });
+}
+
+export function useDeleteBotMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => container.deleteBotUseCase.execute(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BOTS_QUERY_KEY });
+    },
+  });
+}
+
 export function useLinkBotToLicenseMutation() {
   const queryClient = useQueryClient();
 

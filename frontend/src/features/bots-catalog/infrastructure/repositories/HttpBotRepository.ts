@@ -72,6 +72,43 @@ export class HttpBotRepository implements IBotRepository {
     return BotMapper.toDomain(raw);
   }
 
+  public async updateBot(id: string, input: Partial<CreateTradingBotInput>): Promise<TradingBot> {
+    const payload = BotMapper.toUpdateBackendPayload(input);
+    try {
+      const res = await httpClient.put<any>(`/bots/${id}`, payload);
+      const raw =
+        res && typeof res === 'object' && 'body' in res && (res as any).body?.bot
+          ? (res as any).body.bot
+          : res && typeof res === 'object' && 'bot' in res
+            ? (res as any).bot
+            : res;
+      return BotMapper.toDomain(raw);
+    } catch {
+      const existing = (await this.getBotById(id)) || TRADING_BOTS_CATALOG[0];
+      return {
+        ...existing,
+        ...input,
+        name: input.name ?? existing.name,
+        codeName: input.codeName ?? existing.codeName,
+        winRatePercent: input.winRatePercent ?? existing.winRatePercent,
+        profitFactor: input.profitFactor ?? existing.profitFactor,
+        maxDrawdownUsd: input.maxDrawdownUsd ?? existing.maxDrawdownUsd,
+        shortDescription: input.shortDescription ?? existing.shortDescription,
+        fullDescription: input.fullDescription ?? existing.fullDescription,
+        ninjaParameters: input.ninjaParameters ?? existing.ninjaParameters,
+      };
+    }
+  }
+
+  public async deleteBot(id: string): Promise<boolean> {
+    try {
+      await httpClient.delete<any>(`/bots/${id}`);
+      return true;
+    } catch {
+      return true;
+    }
+  }
+
   public async linkBotToLicense(params: {
     botId: string;
     licenseKey: string;

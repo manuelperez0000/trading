@@ -157,4 +157,18 @@ export class BotMapper {
     };
     return CreateBackendBotDtoSchema.parse(raw);
   }
+
+  public static toUpdateBackendPayload(input: Partial<CreateTradingBotInput>): Partial<CreateBackendBotDto> {
+    const payload: Partial<CreateBackendBotDto> = {};
+    if (input.name !== undefined) payload.nombre = input.name;
+    if (input.profitFactor !== undefined) payload.profit_factor = Number(input.profitFactor);
+    if (input.winRatePercent !== undefined) payload.win_rate = Number(input.winRatePercent);
+    if (input.monthlyPriceUsd !== undefined) payload.profit_1_year = Math.round(Number(input.monthlyPriceUsd) * 25);
+    if (input.maxDrawdownUsd !== undefined) payload.drawdown = Number(input.maxDrawdownUsd);
+    if (input.shortDescription !== undefined || input.fullDescription !== undefined) {
+      payload.descripcion = input.shortDescription || input.fullDescription || 'Estrategia algorítmica para NinjaTrader 8.';
+    }
+    payload.imagen = 'https://tradinglifeacademy.com/assets/bot-default.jpg';
+    return payload;
+  }
 }

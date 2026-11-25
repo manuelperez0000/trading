@@ -33,6 +33,27 @@ export class GetBotDetailUseCase {
   }
 }
 
+export class UpdateBotUseCase {
+  constructor(private readonly repository: IBotRepository) {}
+
+  public async execute(
+    id: string,
+    input: Partial<CreateTradingBotInput>
+  ): Promise<TradingBot> {
+    if (!id.trim()) throw new Error('ID de bot inválido.');
+    return this.repository.updateBot(id, input);
+  }
+}
+
+export class DeleteBotUseCase {
+  constructor(private readonly repository: IBotRepository) {}
+
+  public async execute(id: string): Promise<boolean> {
+    if (!id.trim()) throw new Error('ID de bot inválido.');
+    return this.repository.deleteBot(id);
+  }
+}
+
 export class LinkBotToLicenseUseCase {
   constructor(private readonly repository: IBotRepository) {}
 

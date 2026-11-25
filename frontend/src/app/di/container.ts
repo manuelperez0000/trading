@@ -34,9 +34,11 @@ import type { IBotRepository } from '@features/bots-catalog/domain/repositories/
 import { HttpBotRepository } from '@features/bots-catalog/infrastructure/repositories/HttpBotRepository';
 import {
   CreateBotUseCase,
+  DeleteBotUseCase,
   GetBotDetailUseCase,
   GetBotsUseCase,
   LinkBotToLicenseUseCase,
+  UpdateBotUseCase,
 } from '@features/bots-catalog/application/use-cases/botUseCases';
 
 // Facturación y Cuenta de Usuario
@@ -85,6 +87,8 @@ class AppDependencyContainer {
   // Casos de Uso: Catálogo de Bots
   public getBotsUseCase: GetBotsUseCase;
   public createBotUseCase: CreateBotUseCase;
+  public updateBotUseCase: UpdateBotUseCase;
+  public deleteBotUseCase: DeleteBotUseCase;
   public getBotDetailUseCase: GetBotDetailUseCase;
   public linkBotToLicenseUseCase: LinkBotToLicenseUseCase;
 
@@ -134,6 +138,8 @@ class AppDependencyContainer {
 
     this.getBotsUseCase = new GetBotsUseCase(this.botRepository);
     this.createBotUseCase = new CreateBotUseCase(this.botRepository);
+    this.updateBotUseCase = new UpdateBotUseCase(this.botRepository);
+    this.deleteBotUseCase = new DeleteBotUseCase(this.botRepository);
     this.getBotDetailUseCase = new GetBotDetailUseCase(this.botRepository);
     this.linkBotToLicenseUseCase = new LinkBotToLicenseUseCase(this.botRepository);
 
