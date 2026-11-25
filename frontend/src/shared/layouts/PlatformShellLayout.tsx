@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Terminal,
   User,
+  Users,
   X,
 } from 'lucide-react';
 import { useI18n } from '@core/i18n/useLanguageStore';
@@ -107,7 +108,7 @@ export const PlatformShellLayout: React.FC = () => {
         {
           to: '/admin/subscriptions',
           label: t.nav.controlSubscriptions,
-          icon: <KeyRound className="h-4 w-4 shrink-0 text-amber-400" />,
+          icon: <Users className="h-4 w-4 shrink-0 text-amber-400" />,
           badgeCount: pendingSyncCount > 0 ? pendingSyncCount : undefined,
           adminOnly: true,
         },

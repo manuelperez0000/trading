@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   Calendar,
@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Terminal,
   Trash2,
+  Users,
   Zap,
 } from 'lucide-react';
 import { Badge } from '@shared/ui/Badge';
@@ -24,6 +25,8 @@ import { ConfirmDialog } from '@shared/ui/ConfirmDialog';
 import { toast } from '@shared/ui/toast/toastStore';
 import { useI18n } from '@core/i18n/useLanguageStore';
 import { formatRelativeTime, formatUsd } from '@shared/utils/formatters';
+import { container } from '@app/di/container';
+import type { User as UserEntity } from '@features/auth/domain/entities/User';
 import {
   useAuditLogsPolling,
   useCreateSubscriptionMutation,
@@ -67,6 +70,19 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
   const [statusFilter, setStatusFilter] = useState<
     'ALL' | 'ENABLED' | 'DISABLED' | 'PENDING_ACK'
   >('ALL');
+
+  const [activeMainTab, setActiveMainTab] = useState<'SUBSCRIPTIONS' | 'USERS'>('SUBSCRIPTIONS');
+  const [registeredUsers, setRegisteredUsers] = useState<UserEntity[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    setIsLoadingUsers(true);
+    container.listUsersUseCase
+      .execute()
+      .then((users) => setRegisteredUsers(users))
+      .catch(() => setRegisteredUsers([]))
+      .finally(() => setIsLoadingUsers(false));
+  }, []);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] =
@@ -288,7 +304,157 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
         </div>
       </div>
 
-      {/* Tarjetas de Métricas Ejecutivas */}
+      {/* Selector de Vista Principal: Suscripciones vs Directorio de Clientes */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('SUBSCRIPTIONS')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-all cursor-pointer ${
+            activeMainTab === 'SUBSCRIPTIONS'
+              ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40 shadow-xs'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
+          }`}
+        >
+          <KeyRound className="h-4 w-4 text-amber-400" />
+          <span>Suscripciones & Licencias de Clientes</span>
+          <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300 font-mono">
+            {subscriptions.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('USERS')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-all cursor-pointer ${
+            activeMainTab === 'USERS'
+              ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40 shadow-xs'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
+          }`}
+        >
+          <Users className="h-4 w-4 text-sky-400" />
+          <span>Directorio de Clientes Registrados</span>
+          {registeredUsers.length > 0 && (
+            <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300 font-mono">
+              {registeredUsers.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeMainTab === 'USERS' ? (
+        <Card className="p-4 overflow-hidden">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Users className="h-4 w-4 text-sky-400" />
+                Clientes y Usuarios Registrados
+              </h2>
+              <p className="text-xs text-slate-400">
+                Lista de cuentas creadas en el sistema. Puedes otorgarles o vincularles una suscripción directamente.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="gap-2 shrink-0"
+            >
+              <Plus className="h-4 w-4" />
+              Nueva Suscripción
+            </Button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-950/60 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  <th className="py-3 px-4">Usuario / Cliente</th>
+                  <th className="py-3 px-4">Correo Electrónico</th>
+                  <th className="py-3 px-4">Contacto</th>
+                  <th className="py-3 px-4">Rol</th>
+                  <th className="py-3 px-4">Estado</th>
+                  <th className="py-3 px-4 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/70 text-sm">
+                {isLoadingUsers ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      Cargando directorio de clientes...
+                    </td>
+                  </tr>
+                ) : registeredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      No se encontraron usuarios registrados en la base de datos.
+                    </td>
+                  </tr>
+                ) : (
+                  registeredUsers.map((u) => {
+                    const hasSub = subscriptions.find(
+                      (s) => s.email.toLowerCase() === u.email.toLowerCase()
+                    );
+                    return (
+                      <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="py-3 px-4 font-semibold text-white">
+                          <div>{u.fullName}</div>
+                          <div className="text-[11px] text-slate-400 font-normal">{u.handle}</div>
+                        </td>
+                        <td className="py-3 px-4 text-xs text-slate-300 font-mono">
+                          {u.email}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-slate-400">
+                          {u.telefono || u.whatsapp || 'No especificado'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant={u.role === 'ADMIN' ? 'amber' : 'sky'}>
+                            {u.role}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant="emerald">
+                            {u.estado || 'Activo'}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {hasSub ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => {
+                                setActiveMainTab('SUBSCRIPTIONS');
+                                setSearchQuery(u.email);
+                              }}
+                              className="text-xs text-emerald-400 border-emerald-500/30 gap-1.5"
+                            >
+                              <KeyRound className="h-3.5 w-3.5" />
+                              Ver Licencia ({hasSub.licenseKey})
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => {
+                                setIsCreateModalOpen(true);
+                              }}
+                              className="text-xs gap-1.5"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              Crear Suscripción
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ) : (
+        <>
+          {/* Tarjetas de Métricas Ejecutivas */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title={t.adminSubs.kpiAuthorizedTitle}
@@ -616,6 +782,8 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
           ))}
         </div>
       </Card>
+      </>
+      )}
 
       {/* Modal de confirmación del Kill-Switch Global (acción crítica) */}
       <ConfirmDialog

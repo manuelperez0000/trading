@@ -25,8 +25,8 @@ export const translations = {
       all: 'Todas',
     },
     nav: {
-      groupAdmin: 'Gestión de Clientes & Licencias',
-      controlSubscriptions: 'Suscripciones y Licencias',
+      groupAdmin: 'Panel de Administración',
+      controlSubscriptions: 'Gestión de Clientes',
       ninjaLab: 'Laboratorio API NinjaTrader',
       groupSocial: 'Comunidad & Social',
       socialWall: 'Red Social de Ganancias',
@@ -42,10 +42,10 @@ export const translations = {
       recoverPassword: 'Recuperar Contraseña',
     },
     adminSubs: {
-      title: 'Gestión de Suscripciones y Licencias de Clientes',
+      title: 'Gestión de Clientes & Suscripciones',
       badgePolling: 'Polling HTTP Activo',
       subtitle:
-        'Supervisa, crea, edita y administra las licencias vendidas a los clientes con control de acceso a NinjaTrader 8 y vigencia de membresía.',
+        'Supervisa los clientes registrados, crea y edita sus suscripciones y administra sus licencias de NinjaTrader 8.',
       globalKillSwitch: 'Kill-Switch Global (Apagar Todas)',
       enableAll: 'Habilitar Todas las Instancias',
       kpiAuthorizedTitle: 'Suscripciones Autorizadas',
@@ -258,8 +258,8 @@ export const translations = {
       all: 'All',
     },
     nav: {
-      groupAdmin: 'Client Management & Licenses',
-      controlSubscriptions: 'Subscriptions & Licenses',
+      groupAdmin: 'Administration Panel',
+      controlSubscriptions: 'Client Management',
       ninjaLab: 'NinjaTrader API Lab',
       groupSocial: 'Community & Social',
       socialWall: 'Verified Profits Wall',
@@ -275,10 +275,10 @@ export const translations = {
       recoverPassword: 'Password Recovery',
     },
     adminSubs: {
-      title: 'Customer Subscriptions & Licenses Management',
+      title: 'Client Management & Subscriptions',
       badgePolling: 'HTTP Polling Active',
       subtitle:
-        'Monitor, create, edit, and manage client licenses with NinjaTrader 8 access control and membership terms.',
+        'Monitor registered clients, create and edit their subscriptions, and manage NinjaTrader 8 licenses.',
       globalKillSwitch: 'Global Kill-Switch (Disable All)',
       enableAll: 'Enable All Instances',
       kpiAuthorizedTitle: 'Authorized Subscriptions',
