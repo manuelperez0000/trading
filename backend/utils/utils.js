@@ -223,6 +223,111 @@ export function validateRegistrationData(body) {
   };
 }
 
+export function validateProfileUpdateData(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return {
+      errors: [
+        {
+          field: "body",
+          message: "El cuerpo de la solicitud debe ser un objeto JSON.",
+        },
+      ],
+    };
+  }
+
+  const errors = [];
+  const userData = {};
+
+  const nameInput = firstProvidedValue(body, [
+    "nombreCompleto",
+    "name",
+    "full_name",
+  ]);
+  if (nameInput !== undefined) {
+    if (typeof nameInput !== "string") {
+      errors.push({
+        field: "nombreCompleto",
+        message: "El nombre completo debe ser texto.",
+      });
+    } else if (nameInput.trim().length === 0) {
+      errors.push({
+        field: "nombreCompleto",
+        message: "El nombre completo no puede estar vacío.",
+      });
+    } else if (nameInput.trim().length > 120) {
+      errors.push({
+        field: "nombreCompleto",
+        message: "El nombre completo no puede superar 120 caracteres.",
+      });
+    } else {
+      userData.nombreCompleto = nameInput.trim();
+    }
+  }
+
+  const textFields = [
+    ["direccion", "La dirección", 500],
+    ["urlDocumentoIdentidad", "La URL del documento de identidad", 2048],
+    ["urlReciboServicio", "La URL del recibo de servicio", 2048],
+    ["urlContratoDisclaimer", "La URL del contrato o disclaimer", 2048],
+    ["urlComprobanteAceptacion", "La URL del comprobante de aceptación", 2048],
+  ];
+  for (const [field, label, maxLength] of textFields) {
+    if (body[field] === undefined) {
+      continue;
+    }
+    if (typeof body[field] !== "string") {
+      errors.push({ field, message: `${label} debe ser texto.` });
+    } else if (body[field].trim().length > maxLength) {
+      errors.push({
+        field,
+        message: `${label} no puede superar ${maxLength} caracteres.`,
+      });
+    } else {
+      userData[field] = body[field].trim();
+    }
+  }
+
+  for (const [field, label] of [
+    ["telefono", "El teléfono"],
+    ["whatsapp", "El WhatsApp"],
+  ]) {
+    if (body[field] === undefined) {
+      continue;
+    }
+    if (typeof body[field] !== "string") {
+      errors.push({ field, message: `${label} debe ser texto.` });
+      continue;
+    }
+    const value = body[field].trim();
+    if (value.length > 40) {
+      errors.push({
+        field,
+        message: `${label} no puede superar 40 caracteres.`,
+      });
+    } else if (value.length > 0 && !isValidInternationalPhoneNumber(value)) {
+      errors.push({
+        field,
+        message: `${label} debe ser un número internacional válido, con código de país y sin letras.`,
+      });
+    } else {
+      userData[field] = value;
+    }
+  }
+
+  if (errors.length === 0 && Object.keys(userData).length === 0) {
+    errors.push({
+      field: "body",
+      message: "No se envió ningún campo de perfil para actualizar.",
+    });
+  }
+
+  if (errors.length > 0) {
+    return { errors };
+  }
+
+  return { errors, userData };
+}
+
 export function validateBotData(body) {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return {

@@ -98,6 +98,42 @@ export async function findUserById(id) {
   return rows[0] ?? null;
 }
 
+const updatableUserColumns = {
+  nombreCompleto: "name",
+  direccion: "direccion",
+  telefono: "telefono",
+  whatsapp: "whatsapp",
+  urlDocumentoIdentidad: "url_documento_identidad",
+  urlReciboServicio: "url_recibo_servicio",
+  urlContratoDisclaimer: "url_contrato_disclaimer",
+  urlComprobanteAceptacion: "url_comprobante_aceptacion",
+};
+
+export async function updateUser(id, userData) {
+  const assignments = [];
+  const values = [id];
+
+  for (const [field, column] of Object.entries(updatableUserColumns)) {
+    if (userData[field] !== undefined) {
+      values.push(userData[field]);
+      assignments.push(`${column} = $${values.length}`);
+    }
+  }
+
+  if (assignments.length === 0) {
+    return findUserById(id);
+  }
+
+  const { rows } = await pool.query(
+    `UPDATE users
+     SET ${assignments.join(", ")}, updated_at = NOW()
+     WHERE id = $1
+     RETURNING ${publicUserColumns}`,
+    values,
+  );
+  return rows[0] ?? null;
+}
+
 export async function listUsers() {
   const { rows } = await pool.query(
     `SELECT ${publicUserColumns}

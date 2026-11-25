@@ -9,7 +9,6 @@ import {
   Lock,
   Mail,
   MapPin,
-  Phone,
   ShieldCheck,
   User,
 } from 'lucide-react';
@@ -19,6 +18,8 @@ import { Badge } from '@shared/ui/Badge';
 import { ThemeToggleButton } from '@shared/ui/ThemeToggleButton';
 import { LanguageSwitcherButton } from '@shared/ui/LanguageSwitcherButton';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
+import { isUserProfileComplete } from '@features/auth/domain/entities/User';
+import { InternationalPhoneInput } from '@shared/ui/InternationalPhoneInput';
 import { container } from '@app/di/container';
 import { toast } from '@shared/ui/toast/toastStore';
 
@@ -89,7 +90,11 @@ export const LoginPage: React.FC = () => {
         'Inicio de sesión exitoso',
         `Bienvenido ${loggedUser.fullName} (${loggedUser.role === 'ADMIN' ? 'Administrador' : 'Cliente / Estudiante'}).`
       );
-      navigate(redirectTo);
+      if (!isUserProfileComplete(loggedUser)) {
+        navigate('/profile?onboarding=1');
+      } else {
+        navigate(redirectTo);
+      }
     } catch (err) {
       toast.danger(
         'Error al iniciar sesión',
@@ -118,7 +123,7 @@ export const LoginPage: React.FC = () => {
 
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Correo Electrónico (<code className="text-amber-300">correoElectronico</code>)
+            Correo Electrónico
           </label>
           <div className="relative">
             <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -136,7 +141,7 @@ export const LoginPage: React.FC = () => {
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-medium text-slate-400">
-              Contraseña del Portal (<code className="text-amber-300">password</code>)
+              Contraseña del Portal
             </label>
             <Link
               to="/auth/recover-password"
@@ -216,10 +221,10 @@ export const RegisterPage: React.FC = () => {
         whatsapp,
       });
       toast.success(
-        'Usuario registrado (201 Created)',
-        `Cuenta creada para ${createdUser.fullName} (ID #${createdUser.id}).`
+        'Cuenta creada exitosamente',
+        `Bienvenido ${createdUser.fullName}. Por favor completa los datos de tu perfil.`
       );
-      navigate(redirectTo);
+      navigate('/profile?onboarding=1');
     } catch (err) {
       toast.danger(
         'Error en el registro',
@@ -247,7 +252,7 @@ export const RegisterPage: React.FC = () => {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-slate-400 mb-1">
-              Nombre Completo * (<code className="text-amber-300">nombreCompleto</code>, máx 120)
+              Nombre Completo *
             </label>
             <div className="relative">
               <User className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -265,7 +270,7 @@ export const RegisterPage: React.FC = () => {
 
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1">
-              Correo Electrónico * (<code className="text-amber-300">correoElectronico</code>)
+              Correo Electrónico *
             </label>
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -283,7 +288,7 @@ export const RegisterPage: React.FC = () => {
 
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1">
-              Contraseña Nueva * (<code className="text-amber-300">password</code>, 8 a 72 bytes)
+              Contraseña Nueva *
             </label>
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -320,7 +325,7 @@ export const RegisterPage: React.FC = () => {
             <div className="border-t border-slate-800 p-4 space-y-3">
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Dirección (<code className="text-slate-300">direccion</code>)
+                  Dirección
                 </label>
                 <div className="relative">
                   <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -337,38 +342,19 @@ export const RegisterPage: React.FC = () => {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Teléfono Internacional (<code className="text-slate-300">telefono</code>)
+                    Teléfono Internacional
                   </label>
-                  <div className="relative">
-                    <Phone className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                    <input
-                      type="text"
-                      value={telefono}
-                      onChange={(e) => setTelefono(e.target.value)}
-                      placeholder="+1 213-373-4253"
-                      className={inputClass}
-                    />
-                  </div>
+                  <InternationalPhoneInput value={telefono} onChange={setTelefono} />
                 </div>
-
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">
-                    WhatsApp Internacional (<code className="text-slate-300">whatsapp</code>)
+                    WhatsApp Internacional
                   </label>
-                  <div className="relative">
-                    <Phone className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500" />
-                    <input
-                      type="text"
-                      value={whatsapp}
-                      onChange={(e) => setWhatsapp(e.target.value)}
-                      placeholder="+44 20 8366 1177"
-                      className={inputClass}
-                    />
-                  </div>
+                  <InternationalPhoneInput value={whatsapp} onChange={setWhatsapp} accent="emerald" />
                 </div>
               </div>
               <p className="text-[11px] text-slate-500">
-                Nota: Si ingresas teléfono o WhatsApp, incluye el código de país con prefijo <code>+</code> o <code>00</code>.
+                Selecciona tu país de la lista para añadir automáticamente el prefijo internacional correspondiente.
               </p>
             </div>
           )}
@@ -425,7 +411,7 @@ export const PasswordRecoveryPage: React.FC = () => {
       const res = await container.recoverPasswordUseCase.execute(email);
       setServerNotice(res.message);
       setStep('RESET_PASSWORD');
-      toast.info('Solicitud procesada (202 Accepted)', res.message);
+      toast.info('Solicitud procesada', res.message);
     } catch (err) {
       toast.danger(
         'Error al solicitar recuperación',

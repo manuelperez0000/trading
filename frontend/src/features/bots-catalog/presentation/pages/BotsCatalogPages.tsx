@@ -36,6 +36,59 @@ import type { TradingBot } from '@features/bots-catalog/domain/entities/TradingB
 import { useAuthStore } from '@features/auth/application/useAuthStore';
 import { toast } from '@shared/ui/toast/toastStore';
 
+export interface PurchasedBotItem {
+  id: string;
+  botId: string;
+  botName: string;
+  codeName: string;
+  instrument: string;
+  billingCycle: 'MONTHLY' | 'ANNUAL' | 'LIFETIME';
+  riskProfile: 'LUCID' | 'MFFU' | 'TRADEIFY' | 'LIVE';
+  licenseKey: string;
+  machineId: string;
+  status: 'ACTIVE' | 'PENDING_BIND' | 'EXPIRED';
+  purchasedAt: string;
+}
+
+const STORAGE_KEY_PURCHASED_BOTS = 'tla_purchased_bots_v1';
+
+const INITIAL_PURCHASED_BOTS: PurchasedBotItem[] = [
+  {
+    id: 'pb-pulsar-01',
+    botId: 'bot-pulsar',
+    botName: 'Pulsar (El Más Eficiente)',
+    codeName: 'TLA_PULSAR_V2',
+    instrument: 'NQ (E-mini Nasdaq)',
+    billingCycle: 'MONTHLY',
+    riskProfile: 'LUCID',
+    licenseKey: 'NT8-QTM-9921-ALPHA',
+    machineId: 'WIN11-TRD-9F82A1C0',
+    status: 'ACTIVE',
+    purchasedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+  },
+];
+
+export function getStoredPurchasedBots(): PurchasedBotItem[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PURCHASED_BOTS);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY_PURCHASED_BOTS, JSON.stringify(INITIAL_PURCHASED_BOTS));
+      return INITIAL_PURCHASED_BOTS;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return INITIAL_PURCHASED_BOTS;
+  }
+}
+
+export function saveStoredPurchasedBots(items: PurchasedBotItem[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_PURCHASED_BOTS, JSON.stringify(items));
+  } catch {
+    // ignore
+  }
+}
+
 interface PurchaseGateModalProps {
   bot: TradingBot | null;
   onClose: () => void;
@@ -72,12 +125,28 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
       { botId: bot.id, licenseKey: 'NT8-QTM-9921-ALPHA' },
       {
         onSuccess: () => {
+          const current = getStoredPurchasedBots();
+          const newItem: PurchasedBotItem = {
+            id: `pb-${Date.now()}`,
+            botId: bot.id,
+            botName: bot.name,
+            codeName: bot.codeName,
+            instrument: bot.primaryInstrument,
+            billingCycle,
+            riskProfile,
+            licenseKey: 'NT8-QTM-9921-ALPHA',
+            machineId: 'WIN11-TRD-9F82A1C0',
+            status: 'ACTIVE',
+            purchasedAt: new Date().toISOString(),
+          };
+          saveStoredPurchasedBots([newItem, ...current.filter((b) => b.botId !== bot.id)]);
           toast.success(
             '¡Suscripción Activada con Éxito!',
             `${bot.name} (${riskProfile}) vinculado a tu LicenseKey de NinjaTrader 8.`
           );
           onSuccessActivated?.();
           onClose();
+          navigate('/my-bots');
         },
         onError: () => {
           toast.danger('Error al procesar la suscripción');
@@ -1222,3 +1291,244 @@ export const BotDetailPage: React.FC = () => {
     </div>
   );
 };
+
+export const MyBotsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const [bots, setBots] = useState<PurchasedBotItem[]>([]);
+
+  useEffect(() => {
+    setBots(getStoredPurchasedBots());
+  }, []);
+
+  const handleDownloadStrategy = (botItem: PurchasedBotItem) => {
+    const csContent = `// =====================================================================
+// Trading Life Academy - NinjaScript Strategy Export
+// Bot: ${botItem.botName} (${botItem.codeName})
+// Instrumento: ${botItem.instrument}
+// Perfil de Riesgo: ${botItem.riskProfile}
+// LicenseKey: ${botItem.licenseKey}
+// Machine ID: ${botItem.machineId}
+// Licenciatario: ${user.fullName} (${user.email})
+// =====================================================================
+
+#region Using declarations
+using System;
+using System.ComponentModel;
+using NinjaTrader.Cbi;
+using NinjaTrader.Gui;
+using NinjaTrader.NinjaScript;
+using NinjaTrader.NinjaScript.Strategies;
+#endregion
+
+namespace NinjaTrader.NinjaScript.Strategies.TradingLifeAcademy
+{
+    public class ${botItem.codeName.replace(/[^a-zA-Z0-9]/g, '_')} : Strategy
+    {
+        [NinjaScriptProperty]
+        [Display(Name = "License Key", GroupName = "TLA Security", Order = 1)]
+        public string LicenseKey { get; set; } = "${botItem.licenseKey}";
+
+        [NinjaScriptProperty]
+        [Display(Name = "Risk Profile", GroupName = "TLA Parameters", Order = 2)]
+        public string RiskProfile { get; set; } = "${botItem.riskProfile}";
+
+        protected override void OnStateChange()
+        {
+            if (State == State.SetDefaults)
+            {
+                Description = "Algoritmo ${botItem.botName} provisto por Trading Life Academy.";
+                Name = "${botItem.codeName}";
+                Calculate = Calculate.OnBarClose;
+                EntriesPerDirection = 1;
+                EntryHandling = EntryHandling.AllEntries;
+                IsExitOnSessionCloseStrategy = true;
+                ExitOnSessionCloseSeconds = 30;
+                IsFillLimitOnTouch = false;
+                MaximumBarsLookBack = MaximumBarsLookBack.TwoHundredFiftySix;
+                OrderFillResolution = OrderFillResolution.Standard;
+                Slippage = 1;
+                StartBehavior = StartBehavior.WaitUntilFlat;
+                TimeInForce = TimeInForce.Gtc;
+                TraceOrders = false;
+                RealtimeErrorHandling = RealtimeErrorHandling.StopCancelClose;
+                StopTargetHandling = StopTargetHandling.PerEntryExecution;
+                BarsRequiredToTrade = 20;
+            }
+        }
+    }
+}
+`;
+    const blob = new Blob([csContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${botItem.codeName}.cs`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(
+      'Archivo NinjaScript generado',
+      `Descargando ${botItem.codeName}.cs para NinjaTrader 8.`
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Badge variant="amber">Trading Life Academy • Estudiante</Badge>
+            <Badge variant="emerald">NinjaTrader 8</Badge>
+          </div>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+            <Bot className="h-7 w-7 text-emerald-400" />
+            Mis Bots Adquiridos
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Administra los algoritmos algorítmicos vinculados a tu cuenta y descarga tus archivos NinjaScript (.cs) compilables.
+          </p>
+        </div>
+
+        <Button
+          variant="secondary"
+          onClick={() => navigate('/catalog')}
+          className="self-start sm:self-auto gap-2"
+        >
+          <Plus className="h-4 w-4 text-amber-400" />
+          Explorar Más Bots
+        </Button>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          title="Bots en mi Colección"
+          value={String(bots.length)}
+          subtitle="Algoritmos con licencia activa"
+          icon={<Bot className="h-5 w-5 text-emerald-400" />}
+          accent="emerald"
+        />
+        <StatCard
+          title="Terminal Vinculada"
+          value="WIN11-TRD-9F82A1C0"
+          subtitle="NinjaTrader 8.1.3.1 (64-bit)"
+          icon={<Cpu className="h-5 w-5 text-sky-400" />}
+          accent="sky"
+        />
+        <StatCard
+          title="LicenseKey Principal"
+          value="NT8-QTM-9921-ALPHA"
+          subtitle="Sincronización remota activa"
+          icon={<CheckCircle2 className="h-5 w-5 text-amber-400" />}
+          accent="amber"
+        />
+      </div>
+
+      {/* Grid de Bots Adquiridos */}
+      {bots.length === 0 ? (
+        <Card className="p-12 text-center border-slate-800 bg-slate-900/60 space-y-4">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+            <Bot className="h-7 w-7" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white">Aún no tienes bots adquiridos</h3>
+            <p className="mt-1 text-xs text-slate-400 max-w-md mx-auto">
+              Explora nuestro catálogo de algoritmos para futuros (Proton, Nova, Pulsar) y adquiere tu primera licencia.
+            </p>
+          </div>
+          <Button variant="primary" onClick={() => navigate('/catalog')}>
+            Ir al Catálogo de Bots
+          </Button>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {bots.map((botItem) => (
+            <Card
+              key={botItem.id}
+              className="p-5 border-slate-800 bg-slate-900/80 hover:border-emerald-500/40 transition-all flex flex-col justify-between"
+            >
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                      <Bot className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">{botItem.botName}</h3>
+                      <span className="font-mono text-xs text-slate-400">{botItem.codeName}</span>
+                    </div>
+                  </div>
+                  <Badge variant="emerald">Activo en NT8</Badge>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-400">Instrumento:</span>
+                    <span className="font-semibold text-slate-200">{botItem.instrument}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-400">Prop Firm / Regla:</span>
+                    <Badge variant="amber">{botItem.riskProfile}</Badge>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-400">Ciclo:</span>
+                    <span className="text-slate-300">
+                      {botItem.billingCycle === 'MONTHLY'
+                        ? 'Mensual'
+                        : botItem.billingCycle === 'ANNUAL'
+                        ? 'Anual'
+                        : 'Vitalicio'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-800">
+                    <span className="text-slate-400">LicenseKey:</span>
+                    <span className="font-mono text-amber-300 font-semibold">{botItem.licenseKey}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-slate-400">Machine ID:</span>
+                    <span className="font-mono text-slate-300">{botItem.machineId}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 pt-4 border-t border-slate-800 space-y-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => handleDownloadStrategy(botItem)}
+                  className="w-full gap-2 justify-center"
+                >
+                  <Download className="h-4 w-4" />
+                  Descargar AddOn (.cs)
+                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/catalog/${botItem.botId}`)}
+                    className="w-full text-xs"
+                  >
+                    Ver Parámetros
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate('/my-subscriptions')}
+                    className="w-full text-xs"
+                  >
+                    Licencia NT8
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+

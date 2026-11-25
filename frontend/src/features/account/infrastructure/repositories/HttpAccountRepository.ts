@@ -44,11 +44,19 @@ export class HttpAccountRepository implements IAccountRepository {
   }
 
   public async updateUserProfile(data: Partial<UserProfileData>): Promise<User> {
-    const raw = await httpClient.patch<unknown>('/account/profile', {
-      full_name: data.fullName,
-      email: data.email,
-      handle: data.handle,
-      default_machine_id: data.defaultMachineId,
+    const raw = await httpClient.request<unknown>('/users/me', {
+      method: 'PUT',
+      body: {
+        nombreCompleto: data.fullName,
+        correoElectronico: data.email,
+        direccion: data.direccion ?? '',
+        telefono: data.telefono ?? '',
+        whatsapp: data.whatsapp ?? '',
+        urlDocumentoIdentidad: data.urlDocumentoIdentidad ?? '',
+        urlReciboServicio: data.urlReciboServicio ?? '',
+        urlContratoDisclaimer: data.urlContratoDisclaimer ?? '',
+        urlComprobanteAceptacion: data.urlComprobanteAceptacion ?? '',
+      },
     });
     return AuthMapper.userToDomain(raw);
   }

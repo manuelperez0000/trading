@@ -21,4 +21,11 @@ export interface UserProfileData {
   email: string;
   handle: string;
   defaultMachineId: string;
+  direccion?: string;
+  telefono?: string;
+  whatsapp?: string;
+  urlDocumentoIdentidad?: string;
+  urlReciboServicio?: string;
+  urlContratoDisclaimer?: string;
+  urlComprobanteAceptacion?: string;
 }
