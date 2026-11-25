@@ -240,7 +240,6 @@ export function validateBotData(body) {
   const stringFields = [
     ["nombre", "El nombre", 200],
     ["imagen", "La imagen", 2048],
-    ["moneda", "La moneda", null],
     ["descripcion", "La descripción", null],
   ];
 
@@ -274,8 +273,7 @@ export function validateBotData(body) {
     ["profit_factor", "Profit Factor", 0, null],
     ["win_rate", "Win rate", 0, 100],
     ["profit_1_year", "Profit de 1 año", null, null],
-    ["drawdown", "Drawdown", 0, null],
-    ["precio_mensual", "El precio mensual", 0, null],
+    ["drawdown", "Drawdown", 0, null]
   ];
 
   for (const [field, label, minimum, maximum] of numberFields) {

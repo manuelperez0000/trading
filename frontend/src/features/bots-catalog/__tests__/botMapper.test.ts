@@ -11,9 +11,7 @@ describe('BotMapper & AuthMapper - Backend Compatibility', () => {
       win_rate: 74.8,
       profit_1_year: 4200,
       drawdown: 1150,
-      precio_mensual: 199,
       imagen: 'https://example.com/bot.jpg',
-      moneda: 'USD',
       descripcion: 'Estrategia algorítmica para NinjaTrader 8 con absorciones de Footprint.',
       created_at: '2026-11-20T20:00:00.000Z',
       updated_at: '2026-11-20T20:00:00.000Z',
@@ -50,11 +48,9 @@ describe('BotMapper & AuthMapper - Backend Compatibility', () => {
     });
 
     expect(payload.nombre).toBe('Delta Momentum Breakout');
-    expect(payload.precio_mensual).toBe(179);
     expect(payload.win_rate).toBe(71.2);
     expect(payload.profit_factor).toBe(2.35);
     expect(payload.drawdown).toBe(1200);
-    expect(payload.moneda).toBe('USD');
     expect(payload.imagen).toBeDefined();
   });
 

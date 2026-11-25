@@ -2,7 +2,7 @@ import pool from "../config/database.js";
 
 const botFields = `
   id, nombre, profit_factor, win_rate, profit_1_year, drawdown,
-  precio_mensual, imagen, moneda, descripcion, created_at, updated_at
+   imagen, descripcion, created_at, updated_at
 `;
 
 function toBot(bot) {
@@ -11,8 +11,7 @@ function toBot(bot) {
     profit_factor: Number(bot.profit_factor),
     win_rate: Number(bot.win_rate),
     profit_1_year: Number(bot.profit_1_year),
-    drawdown: Number(bot.drawdown),
-    precio_mensual: Number(bot.precio_mensual),
+    drawdown: Number(bot.drawdown)
   };
 }
 
@@ -25,13 +24,16 @@ export async function initializeBotTable() {
       win_rate NUMERIC NOT NULL CHECK (win_rate BETWEEN 0 AND 100),
       profit_1_year NUMERIC NOT NULL,
       drawdown NUMERIC NOT NULL CHECK (drawdown >= 0),
-      precio_mensual NUMERIC NOT NULL CHECK (precio_mensual >= 0),
       imagen TEXT NOT NULL,
-      moneda TEXT NOT NULL,
       descripcion TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+  await pool.query(`
+    ALTER TABLE bots
+    DROP COLUMN IF EXISTS precio_mensual,
+    DROP COLUMN IF EXISTS moneda
   `);
 }
 
@@ -39,9 +41,9 @@ export async function createBot(botData) {
   const { rows } = await pool.query(
     `INSERT INTO bots (
        nombre, profit_factor, win_rate, profit_1_year, drawdown,
-       precio_mensual, imagen, moneda, descripcion
+       imagen, descripcion
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING ${botFields}`,
     [
       botData.nombre,
@@ -49,9 +51,7 @@ export async function createBot(botData) {
       botData.win_rate,
       botData.profit_1_year,
       botData.drawdown,
-      botData.precio_mensual,
       botData.imagen,
-      botData.moneda,
       botData.descripcion,
     ],
   );
@@ -85,10 +85,8 @@ export async function updateBot(id, botData) {
          win_rate = $4,
          profit_1_year = $5,
          drawdown = $6,
-         precio_mensual = $7,
-         imagen = $8,
-         moneda = $9,
-         descripcion = $10,
+         imagen = $7,
+         descripcion = $8,
          updated_at = NOW()
      WHERE id = $1
      RETURNING ${botFields}`,
@@ -99,9 +97,7 @@ export async function updateBot(id, botData) {
       botData.win_rate,
       botData.profit_1_year,
       botData.drawdown,
-      botData.precio_mensual,
       botData.imagen,
-      botData.moneda,
       botData.descripcion,
     ],
   );

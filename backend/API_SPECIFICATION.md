@@ -239,15 +239,12 @@ El cuerpo de `POST` y `PUT` contiene:
   "win_rate": 72.5,
   "profit_1_year": 4200,
   "drawdown": 800,
-  "precio_mensual": 199,
   "imagen": "https://example.com/bot.jpg",
-  "moneda": "USD",
   "descripcion": "Descripción del bot."
 }
 ```
 
-`win_rate` debe estar entre 0 y 100. `profit_factor`, `drawdown` y
-`precio_mensual` no pueden ser negativos; `profit_1_year` sí puede ser
+`win_rate` debe estar entre 0 y 100. `profit_factor`, `drawdown` no pueden ser negativos; `profit_1_year` sí puede ser
 negativo. Las respuestas usan el sobre común `{ "body": ..., "message": "...",
 "status": <código HTTP> }`.
 
