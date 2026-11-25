@@ -90,7 +90,7 @@ export const LoginPage: React.FC = () => {
         'Inicio de sesión exitoso',
         `Bienvenido ${loggedUser.fullName} (${loggedUser.role === 'ADMIN' ? 'Administrador' : 'Cliente / Estudiante'}).`
       );
-      if (!isUserProfileComplete(loggedUser)) {
+      if (loggedUser.role !== 'ADMIN' && !isUserProfileComplete(loggedUser)) {
         navigate('/profile?onboarding=1');
       } else {
         navigate(redirectTo);

@@ -788,6 +788,8 @@ export const UserProfilePage: React.FC = () => {
     user.urlContratoDisclaimer,
   ]);
 
+  const isAdmin = user.role === 'ADMIN';
+
   const requiredFieldsList = [
     { label: 'Dirección', value: direccion },
     { label: 'Teléfono Internacional', value: telefono },
@@ -800,7 +802,7 @@ export const UserProfilePage: React.FC = () => {
   const completedRequiredCount = requiredFieldsList.filter(
     (item) => item.value.trim().length > 0
   ).length;
-  const isProfileCurrentlyComplete = isUserProfileComplete(user);
+  const isProfileCurrentlyComplete = isAdmin || isUserProfileComplete(user);
 
   const handleSyncMe = async () => {
     setIsSyncingMe(true);
@@ -890,15 +892,17 @@ export const UserProfilePage: React.FC = () => {
     e.preventDefault();
     setValidationError(null);
 
-    const missingFields = requiredFieldsList
-      .filter((f) => f.value.trim().length === 0)
-      .map((f) => f.label);
+    if (!isAdmin) {
+      const missingFields = requiredFieldsList
+        .filter((f) => f.value.trim().length === 0)
+        .map((f) => f.label);
 
-    if (user.role !== 'ADMIN' && missingFields.length > 0) {
-      const errorMsg = `Para activar y guardar tu perfil debes completar todos los campos obligatorios. Faltan: ${missingFields.join(', ')}.`;
-      setValidationError(errorMsg);
-      toast.danger('Datos obligatorios incompletos', errorMsg);
-      return;
+      if (missingFields.length > 0) {
+        const errorMsg = `Para activar y guardar tu perfil debes completar todos los campos obligatorios. Faltan: ${missingFields.join(', ')}.`;
+        setValidationError(errorMsg);
+        toast.danger('Datos obligatorios incompletos', errorMsg);
+        return;
+      }
     }
 
     const updatedFields = {
@@ -906,12 +910,12 @@ export const UserProfilePage: React.FC = () => {
       email: email.trim(),
       handle: handle.trim(),
       defaultMachineId: defaultMachineId.trim(),
-      direccion: direccion.trim(),
-      telefono: telefono.trim(),
-      whatsapp: whatsapp.trim(),
-      urlDocumentoIdentidad: urlDocumentoIdentidad.trim(),
-      urlReciboServicio: urlReciboServicio.trim(),
-      urlContratoDisclaimer: urlContratoDisclaimer.trim(),
+      direccion: isAdmin ? (user.direccion || '') : direccion.trim(),
+      telefono: isAdmin ? (user.telefono || '') : telefono.trim(),
+      whatsapp: isAdmin ? (user.whatsapp || '') : whatsapp.trim(),
+      urlDocumentoIdentidad: isAdmin ? (user.urlDocumentoIdentidad || '') : urlDocumentoIdentidad.trim(),
+      urlReciboServicio: isAdmin ? (user.urlReciboServicio || '') : urlReciboServicio.trim(),
+      urlContratoDisclaimer: isAdmin ? (user.urlContratoDisclaimer || '') : urlContratoDisclaimer.trim(),
       urlComprobanteAceptacion: '',
     };
 
@@ -920,8 +924,10 @@ export const UserProfilePage: React.FC = () => {
     updateMutation.mutate(updatedFields, {
       onSuccess: () => {
         toast.success(
-          '¡Perfil y documentación completados!',
-          'Tus datos de contacto y documentación han sido guardados correctamente.'
+          isAdmin ? 'Perfil actualizado' : '¡Perfil y documentación completados!',
+          isAdmin
+            ? 'Tus datos de administrador han sido guardados correctamente.'
+            : 'Tus datos de contacto y documentación han sido guardados correctamente.'
         );
         if (redirectAfterOnboarding) {
           navigate(redirectAfterOnboarding);
@@ -929,8 +935,10 @@ export const UserProfilePage: React.FC = () => {
       },
       onError: () => {
         toast.success(
-          '¡Perfil y documentación completados!',
-          'Tus datos de contacto y documentación han sido guardados en tu cuenta.'
+          isAdmin ? 'Perfil actualizado' : '¡Perfil y documentación completados!',
+          isAdmin
+            ? 'Tus datos de administrador han sido guardados en tu cuenta.'
+            : 'Tus datos de contacto y documentación han sido guardados en tu cuenta.'
         );
         if (redirectAfterOnboarding) {
           navigate(redirectAfterOnboarding);
@@ -1099,7 +1107,12 @@ export const UserProfilePage: React.FC = () => {
                   <h2 className="text-lg font-bold text-white">{user.fullName}</h2>
                   <Badge variant="emerald">{user.role}</Badge>
                   <Badge variant="sky">{user.estado || 'activo'}</Badge>
-                  {isProfileCurrentlyComplete ? (
+                  {isAdmin ? (
+                    <Badge variant="emerald">
+                      <ShieldCheck className="h-3 w-3 mr-1" />
+                      Cuenta Administrador
+                    </Badge>
+                  ) : isProfileCurrentlyComplete ? (
                     <Badge variant="emerald">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       Perfil Verificado
@@ -1174,243 +1187,263 @@ export const UserProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Datos de Contacto y Documentación Obligatorios */}
-          <div className="border-t border-slate-800/80 pt-5 space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                  Datos de Contacto y Documentación (Obligatorios *)
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Completa tus datos de contacto y adjunta los 3 documentos requeridos para activar tu cuenta.
-                </p>
+          {/* Datos de Contacto y Documentación Obligatorios (Solo para Clientes, Administrador Exento) */}
+          {isAdmin ? (
+            <div className="border-t border-slate-800/80 pt-5">
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 mt-0.5">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Cuenta de Tipo Administrador
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                    Como usuario administrador tienes acceso irrestricto de gestión. No requieres suministrar datos de contacto (dirección, teléfono o WhatsApp) ni adjuntar documentación (documento de identidad, recibo de servicio o contratos de cliente).
+                  </p>
+                </div>
               </div>
-              <Badge variant={completedRequiredCount === 6 ? 'emerald' : 'amber'}>
-                {completedRequiredCount} de 6 completados
-              </Badge>
             </div>
+          ) : (
+            <div className="border-t border-slate-800/80 pt-5 space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                    Datos de Contacto y Documentación (Obligatorios *)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Completa tus datos de contacto y adjunta los 3 documentos requeridos para activar tu cuenta.
+                  </p>
+                </div>
+                <Badge variant={completedRequiredCount === 6 ? 'emerald' : 'amber'}>
+                  {completedRequiredCount} de 6 completados
+                </Badge>
+              </div>
 
-            {/* 3 Campos de Contacto Editables con Selector de País */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Dirección *
-                </label>
-                <div className="relative">
-                  <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input
-                    type="text"
-                    value={direccion}
-                    onChange={(e) => {
-                      setDireccion(e.target.value);
+              {/* 3 Campos de Contacto Editables con Selector de País */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    Dirección *
+                  </label>
+                  <div className="relative">
+                    <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <input
+                      type="text"
+                      value={direccion}
+                      onChange={(e) => {
+                        setDireccion(e.target.value);
+                        setValidationError(null);
+                      }}
+                      placeholder="Calle, Av., Ciudad y País"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pl-9 pr-3 text-sm text-white focus:border-amber-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    Teléfono Internacional *
+                  </label>
+                  <InternationalPhoneInput
+                    value={telefono}
+                    onChange={(fullPhone) => {
+                      setTelefono(fullPhone);
                       setValidationError(null);
                     }}
-                    placeholder="Calle, Av., Ciudad y País"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pl-9 pr-3 text-sm text-white focus:border-amber-500 focus:outline-none"
                     required
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-slate-300">
+                      WhatsApp Internacional *
+                    </label>
+                    {telefono.trim().length > 0 && whatsapp !== telefono && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWhatsapp(telefono);
+                          setValidationError(null);
+                        }}
+                        className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
+                      >
+                        Usar mismo teléfono
+                      </button>
+                    )}
+                  </div>
+                  <InternationalPhoneInput
+                    value={whatsapp}
+                    onChange={(fullPhone) => {
+                      setWhatsapp(fullPhone);
+                      setValidationError(null);
+                    }}
+                    required
+                    accent="emerald"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Teléfono Internacional *
-                </label>
-                <InternationalPhoneInput
-                  value={telefono}
-                  onChange={(fullPhone) => {
-                    setTelefono(fullPhone);
-                    setValidationError(null);
-                  }}
-                  required
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-medium text-slate-300">
-                    WhatsApp Internacional *
-                  </label>
-                  {telefono.trim().length > 0 && whatsapp !== telefono && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setWhatsapp(telefono);
-                        setValidationError(null);
-                      }}
-                      className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
+              {/* 3 Documentos Obligatorios: 2 Subidas + 1 Contrato y Disclaimer con Firma Digital en Modal y Descarga PDF */}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                {uploadableDocs.map((doc) => {
+                  const isFilled = doc.value.trim().length > 0;
+                  return (
+                    <div
+                      key={doc.key}
+                      className={`rounded-xl border p-4 space-y-3 transition-colors flex flex-col justify-between ${
+                        isFilled
+                          ? 'border-emerald-500/40 bg-slate-950/90'
+                          : 'border-amber-500/40 bg-slate-950/70'
+                      }`}
                     >
-                      Usar mismo teléfono
-                    </button>
-                  )}
-                </div>
-                <InternationalPhoneInput
-                  value={whatsapp}
-                  onChange={(fullPhone) => {
-                    setWhatsapp(fullPhone);
-                    setValidationError(null);
-                  }}
-                  required
-                  accent="emerald"
-                />
-              </div>
-            </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-white">
+                            {doc.label}
+                          </span>
+                          {isFilled ? (
+                            <Badge variant="emerald">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Completado
+                            </Badge>
+                          ) : (
+                            <Badge variant="amber">Obligatorio *</Badge>
+                          )}
+                        </div>
 
-            {/* 3 Documentos Obligatorios: 2 Subidas + 1 Contrato y Disclaimer con Firma Digital en Modal y Descarga PDF */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              {uploadableDocs.map((doc) => {
-                const isFilled = doc.value.trim().length > 0;
-                return (
-                  <div
-                    key={doc.key}
-                    className={`rounded-xl border p-4 space-y-3 transition-colors flex flex-col justify-between ${
-                      isFilled
-                        ? 'border-emerald-500/40 bg-slate-950/90'
-                        : 'border-amber-500/40 bg-slate-950/70'
-                    }`}
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-white">
-                          {doc.label}
-                        </span>
-                        {isFilled ? (
-                          <Badge variant="emerald">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Completado
-                          </Badge>
-                        ) : (
-                          <Badge variant="amber">Obligatorio *</Badge>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <input
-                          type="text"
-                          value={doc.value}
-                          onChange={(e) => {
-                            doc.setter(e.target.value);
-                            setValidationError(null);
-                          }}
-                          placeholder={doc.placeholder}
-                          className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
-                          required
-                        />
-
-                        <label className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/25 cursor-pointer shrink-0 transition-colors">
-                          <Upload className="h-3.5 w-3.5" />
-                          <span>Subir Archivo</span>
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <input
-                            type="file"
-                            accept="image/png,image/jpeg,image/gif,image/webp"
-                            className="hidden"
-                            onChange={(e) =>
-                              handleFileUploadSelect(
-                                e.target.files?.[0],
-                                doc.setter,
-                                doc.label
-                              )
-                            }
+                            type="text"
+                            value={doc.value}
+                            onChange={(e) => {
+                              doc.setter(e.target.value);
+                              setValidationError(null);
+                            }}
+                            placeholder={doc.placeholder}
+                            className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+                            required
                           />
-                        </label>
-                      </div>
-                    </div>
 
-                    {isFilled && (
-                      <div className="flex items-center justify-between text-[11px] text-emerald-300 pt-1">
-                        <span className="truncate max-w-[75%] font-mono">
-                          {doc.value}
-                        </span>
-                        <a
-                          href={doc.value}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 font-semibold underline hover:text-emerald-200 shrink-0"
-                        >
-                          Ver <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Tarjeta 3: Contrato / Disclaimer con Lectura en Modal, Firma Digital y Descarga en PDF */}
-              {(() => {
-                const isContractSigned = urlContratoDisclaimer.trim().length > 0;
-                return (
-                  <div
-                    className={`rounded-xl border p-4 space-y-3 transition-colors flex flex-col justify-between ${
-                      isContractSigned
-                        ? 'border-emerald-500/40 bg-slate-950/90'
-                        : 'border-amber-500/40 bg-slate-950/70'
-                    }`}
-                  >
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <FileSignature className="h-4 w-4 text-amber-400" />
-                          Contrato / Disclaimer *
-                        </span>
-                        {isContractSigned ? (
-                          <Badge variant="emerald">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Firmado
-                          </Badge>
-                        ) : (
-                          <Badge variant="amber">Firma Obligatoria *</Badge>
-                        )}
+                          <label className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/25 cursor-pointer shrink-0 transition-colors">
+                            <Upload className="h-3.5 w-3.5" />
+                            <span>Subir Archivo</span>
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/gif,image/webp"
+                              className="hidden"
+                              onChange={(e) =>
+                                handleFileUploadSelect(
+                                  e.target.files?.[0],
+                                  doc.setter,
+                                  doc.label
+                                )
+                              }
+                            />
+                          </label>
+                        </div>
                       </div>
 
-                      <p className="text-[11px] text-slate-400 leading-relaxed">
-                        {isContractSigned && signedContractRecord
-                          ? `Firmado por ${signedContractRecord.signerFullName} (ID: ${signedContractRecord.signerIdentification}).`
-                          : 'Abre el documento legal para leer los términos, ingresar tu identificación y nombre completo para firmarlo y descargar tu copia en PDF.'}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <Button
-                        type="button"
-                        variant={isContractSigned ? 'secondary' : 'primary'}
-                        size="sm"
-                        className="flex-1 justify-center text-xs"
-                        onClick={() => {
-                          if (!signerFullName.trim()) {
-                            setSignerFullName(fullName || user.fullName);
-                          }
-                          setIsContractModalOpen(true);
-                        }}
-                      >
-                        <FileSignature className="h-3.5 w-3.5" />
-                        {isContractSigned
-                          ? 'Ver Contrato Firmado'
-                          : 'Leer y Firmar Contrato'}
-                      </Button>
-
-                      {isContractSigned && (
-                        <Button
-                          type="button"
-                          variant="primary"
-                          size="sm"
-                          className="justify-center text-xs"
-                          onClick={handleDownloadContractPdf}
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          Descargar PDF
-                        </Button>
+                      {isFilled && (
+                        <div className="flex items-center justify-between text-[11px] text-emerald-300 pt-1">
+                          <span className="truncate max-w-[75%] font-mono">
+                            {doc.value}
+                          </span>
+                          <a
+                            href={doc.value}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 font-semibold underline hover:text-emerald-200 shrink-0"
+                          >
+                            Ver <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
                       )}
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })}
+
+                {/* Tarjeta 3: Contrato / Disclaimer con Lectura en Modal, Firma Digital y Descarga en PDF */}
+                {(() => {
+                  const isContractSigned = urlContratoDisclaimer.trim().length > 0;
+                  return (
+                    <div
+                      className={`rounded-xl border p-4 space-y-3 transition-colors flex flex-col justify-between ${
+                        isContractSigned
+                          ? 'border-emerald-500/40 bg-slate-950/90'
+                          : 'border-amber-500/40 bg-slate-950/70'
+                      }`}
+                    >
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                            <FileSignature className="h-4 w-4 text-amber-400" />
+                            Contrato / Disclaimer *
+                          </span>
+                          {isContractSigned ? (
+                            <Badge variant="emerald">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Firmado
+                            </Badge>
+                          ) : (
+                            <Badge variant="amber">Firma Obligatoria *</Badge>
+                          )}
+                        </div>
+
+                        <p className="text-[11px] text-slate-400 leading-relaxed">
+                          {isContractSigned && signedContractRecord
+                            ? `Firmado por ${signedContractRecord.signerFullName} (ID: ${signedContractRecord.signerIdentification}).`
+                            : 'Abre el documento legal para leer los términos, ingresar tu identificación y nombre completo para firmarlo y descargar tu copia en PDF.'}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <Button
+                          type="button"
+                          variant={isContractSigned ? 'secondary' : 'primary'}
+                          size="sm"
+                          className="flex-1 justify-center text-xs"
+                          onClick={() => {
+                            if (!signerFullName.trim()) {
+                              setSignerFullName(fullName || user.fullName);
+                            }
+                            setIsContractModalOpen(true);
+                          }}
+                        >
+                          <FileSignature className="h-3.5 w-3.5" />
+                          {isContractSigned
+                            ? 'Ver Contrato Firmado'
+                            : 'Leer y Firmar Contrato'}
+                        </Button>
+
+                        {isContractSigned && (
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            className="justify-center text-xs"
+                            onClick={handleDownloadContractPdf}
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            Descargar PDF
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex justify-end pt-2">
             <Button type="submit" variant="primary" size="lg">
               <CheckCircle2 className="h-4 w-4" />
-              {!isProfileCurrentlyComplete
+              {isAdmin
+                ? 'Guardar Perfil de Administrador'
+                : !isProfileCurrentlyComplete
                 ? 'Guardar Datos Obligatorios y Activar Cuenta'
                 : t.account.saveProfile}
             </Button>

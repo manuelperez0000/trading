@@ -427,7 +427,9 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                           {u.email}
                         </td>
                         <td className="py-3 px-4 text-xs text-slate-400">
-                          {u.telefono || u.whatsapp || 'No especificado'}
+                          {u.role === 'ADMIN'
+                            ? <span className="text-slate-500 italic">No requerido (Admin)</span>
+                            : (u.telefono || u.whatsapp || 'No especificado')}
                         </td>
                         <td className="py-3 px-4">
                           <Badge variant={u.role === 'ADMIN' ? 'amber' : 'sky'}>

@@ -380,9 +380,10 @@ export const PlatformShellLayout: React.FC = () => {
     return <Navigate to={`/auth/login?redirect=${redirectTarget}`} replace />;
   }
 
-  // Onboarding obligatorio: un usuario con perfil incompleto debe completar contacto y documentación
+  // Onboarding obligatorio: solo para clientes normales con perfil incompleto (los administradores no requieren contacto ni documentación)
   if (
     isAuthenticated &&
+    user?.role !== 'ADMIN' &&
     !isUserProfileComplete(user) &&
     location.pathname !== '/profile'
   ) {
