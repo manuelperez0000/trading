@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   ArrowUpRight,
-  Bot,
   CheckCircle2,
   Flame,
   ShieldCheck,
@@ -25,40 +24,105 @@ export const LandingBotsShowcase: React.FC = () => {
 
   const cardThemes = [
     {
-      topBar: 'from-sky-400 via-cyan-300 to-sky-500',
-      glow: 'from-sky-500/15 via-transparent to-transparent',
-      border: 'border-2 border-sky-500/35 hover:border-sky-400 shadow-xl',
+      botIdentifier: 'proton',
+      imageSrc: '/proton.jpg',
+      topBar: 'from-blue-600 via-sky-400 to-blue-500',
+      glow: 'from-blue-500/20 via-transparent to-transparent',
+      border: 'border-2 border-blue-500/45 hover:border-blue-400 shadow-xl shadow-blue-950/30',
+      cardBackground: 'bg-[#071b35]',
       bars: [35, 42, 49, 55, 60, 66, 70, 76, 80, 85],
-      barColor: 'bg-sky-400',
+      barColor: 'bg-blue-400',
       efficiencyLabelEs: '● NIVEL 1 • EFICIENCIA BASE',
       efficiencyLabelEn: '● TIER 1 • BASE EFFICIENCY',
       ribbonStyle:
-        'bg-gradient-to-l from-sky-500 via-cyan-400 to-sky-500 text-slate-950',
+        'bg-gradient-to-l from-blue-500 via-sky-400 to-blue-500 text-[#f8fafc]',
       isTopEfficiency: false,
+      imageFrame: 'border-blue-300/50 shadow-blue-500/20',
+      codeNameColor: 'text-[#fcd34d]',
+      nameHoverColor: 'group-hover:text-[#fcd34d]',
+      chipStyles: [
+        'bg-amber-500/15 border-amber-400/40 text-amber-200',
+        'bg-emerald-500/15 border-emerald-400/40 text-emerald-200',
+        'bg-blue-400/15 border-blue-300/40 text-blue-100',
+        'bg-white/10 border-white/25 text-white',
+      ],
+      chartBorder: 'border-blue-400/20',
+      chartBackground: 'bg-[#041329]',
+      chartIconColor: 'text-[#34d399]',
+      instrumentColor: 'text-[#6ee7b7]',
+      metricColors: ['text-[#6ee7b7]', 'text-[#f8fafc]', 'text-[#fcd34d]'],
+      checkColor: 'text-emerald-400',
+      shieldColor: 'text-[#fcd34d]',
+      detailButtonStyle: 'border-blue-300/40 bg-blue-950/70 text-blue-100 hover:bg-blue-900',
+      buyButtonStyle:
+        'bg-gradient-to-r from-blue-400 to-sky-300 text-[#020617] shadow-blue-500/20 hover:from-blue-300 hover:to-sky-200',
     },
     {
-      topBar: 'from-emerald-400 via-teal-300 to-emerald-500',
-      glow: 'from-emerald-500/15 via-transparent to-transparent',
-      border: 'border-2 border-emerald-500/35 hover:border-emerald-400 shadow-xl',
+      botIdentifier: 'nova',
+      imageSrc: '/nova.jpg',
+      topBar: 'from-orange-600 via-amber-400 to-orange-500',
+      glow: 'from-orange-500/20 via-transparent to-transparent',
+      border: 'border-2 border-orange-500/40 hover:border-orange-400 shadow-xl shadow-orange-950/30',
+      cardBackground: 'bg-[#24130b]',
       bars: [38, 48, 56, 60, 68, 74, 78, 85, 88, 92],
-      barColor: 'bg-emerald-400',
+      barColor: 'bg-orange-400',
       efficiencyLabelEs: '⚡ NIVEL 2 • ALTA EFICIENCIA',
       efficiencyLabelEn: '⚡ TIER 2 • HIGH EFFICIENCY',
       ribbonStyle:
-        'bg-gradient-to-l from-emerald-500 via-teal-400 to-emerald-500 text-slate-950',
+        'bg-gradient-to-l from-orange-500 via-amber-400 to-orange-500 text-[#020617]',
       isTopEfficiency: false,
+      imageFrame: 'border-orange-300/50 shadow-orange-500/20',
+      codeNameColor: 'text-orange-300',
+      nameHoverColor: 'group-hover:text-orange-300',
+      chipStyles: [
+        'bg-orange-500/15 border-orange-400/40 text-orange-200',
+        'bg-amber-500/15 border-amber-400/40 text-amber-200',
+        'bg-orange-300/10 border-orange-300/30 text-orange-100',
+        'bg-white/10 border-white/25 text-white',
+      ],
+      chartBorder: 'border-orange-400/20',
+      chartBackground: 'bg-[#170b06]',
+      chartIconColor: 'text-orange-300',
+      instrumentColor: 'text-orange-300',
+      metricColors: ['text-[#fdba74]', 'text-[#fde68a]', 'text-[#f8fafc]'],
+      checkColor: 'text-orange-300',
+      shieldColor: 'text-amber-300',
+      detailButtonStyle: 'border-orange-300/40 bg-orange-950/70 text-orange-100 hover:bg-orange-900',
+      buyButtonStyle:
+        'bg-gradient-to-r from-orange-500 to-amber-400 text-[#020617] shadow-orange-500/20 hover:from-orange-400 hover:to-amber-300',
     },
     {
-      topBar: 'from-amber-400 via-yellow-300 to-amber-500',
-      glow: 'from-amber-500/15 via-transparent to-transparent',
-      border: 'border-2 border-amber-500/60 shadow-2xl shadow-amber-500/15',
+      botIdentifier: 'pulsar',
+      imageSrc: '/pulsar.jpg',
+      topBar: 'from-white via-slate-300 to-white',
+      glow: 'from-white/10 via-transparent to-transparent',
+      border: 'border-2 border-white/45 hover:border-white shadow-2xl shadow-white/10',
+      cardBackground: 'bg-[#080808]',
       bars: [45, 58, 62, 74, 79, 86, 84, 93, 96, 100],
-      barColor: 'bg-amber-400',
+      barColor: 'bg-white',
       efficiencyLabelEs: '★ EL MÁS EFICIENTE • MÁXIMA EFICIENCIA',
       efficiencyLabelEn: '★ MOST EFFICIENT • TOP EFFICIENCY',
-      ribbonStyle:
-        'bg-gradient-to-l from-amber-500 via-yellow-400 to-amber-500 text-slate-950',
+      ribbonStyle: 'bg-gradient-to-l from-white via-slate-200 to-white text-black',
       isTopEfficiency: true,
+      imageFrame: 'border-white/45 shadow-white/10',
+      codeNameColor: 'text-slate-300',
+      nameHoverColor: 'group-hover:text-white',
+      chipStyles: [
+        'bg-white/10 border-white/30 text-white',
+        'bg-slate-300/10 border-slate-300/30 text-[#e2e8f0]',
+        'bg-white/5 border-white/20 text-[#e2e8f0]',
+        'bg-white/10 border-white/30 text-white',
+      ],
+      chartBorder: 'border-white/20',
+      chartBackground: 'bg-black',
+      chartIconColor: 'text-white',
+      instrumentColor: 'text-white',
+      metricColors: ['text-[#f8fafc]', 'text-[#e2e8f0]', 'text-[#f8fafc]'],
+      checkColor: 'text-white',
+      shieldColor: 'text-slate-200',
+      detailButtonStyle: 'border-white/30 bg-white/10 text-[#f8fafc] hover:bg-white/20',
+      buyButtonStyle:
+        'bg-gradient-to-r from-white to-slate-300 text-black shadow-white/10 hover:from-slate-100 hover:to-white',
     },
   ];
 
@@ -108,11 +172,14 @@ export const LandingBotsShowcase: React.FC = () => {
         {/* Grid de Tarjetas de Bots de Alto Impacto */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {featuredBots.map((bot, index) => {
-            const theme = cardThemes[index % cardThemes.length];
+            const botIdentity = `${bot.id} ${bot.name} ${bot.codeName}`.toLowerCase();
+            const theme =
+              cardThemes.find(({ botIdentifier }) => botIdentity.includes(botIdentifier)) ??
+              cardThemes[index % cardThemes.length];
             return (
               <Card
                 key={bot.id}
-                className={`group relative p-7 flex flex-col justify-between space-y-6 transition-all duration-300 hover:-translate-y-2 bg-slate-900/95 overflow-hidden ${theme.border}`}
+                className={`group relative p-7 flex flex-col justify-between space-y-6 transition-all duration-300 hover:-translate-y-2 ${theme.cardBackground} overflow-hidden ${theme.border}`}
               >
                 {/* Resplandor interno y barra superior metálica */}
                 <div
@@ -125,21 +192,31 @@ export const LandingBotsShowcase: React.FC = () => {
                 <div
                   className={`absolute top-1.5 right-0 ${theme.ribbonStyle} font-black text-[10px] tracking-wider uppercase px-3.5 py-1 rounded-bl-xl shadow-lg flex items-center gap-1`}
                 >
-                  {theme.isTopEfficiency && <Flame className="h-3 w-3 fill-slate-950" />}
+                  {theme.isTopEfficiency && <Flame className="h-3 w-3 fill-black" />}
                   {lang === 'es' ? theme.efficiencyLabelEs : theme.efficiencyLabelEn}
                 </div>
 
                 <div className="space-y-4 relative z-10">
                   <div className="flex items-start justify-between gap-2 pt-3">
                     <div className="flex items-center gap-3.5">
-                      <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-400 shadow-lg group-hover:scale-110 transition-transform">
-                        <Bot className="h-7 w-7" />
+                      <div
+                        className={`h-16 w-16 shrink-0 overflow-hidden rounded-2xl border shadow-lg group-hover:scale-105 transition-transform ${theme.imageFrame}`}
+                      >
+                        <img
+                          src={theme.imageSrc}
+                          alt={`Logo de ${bot.name}`}
+                          loading="lazy"
+                          decoding="async"
+                          className="h-full w-full object-cover"
+                        />
                       </div>
                       <div>
-                        <h3 className="text-2xl font-black text-white group-hover:text-amber-300 transition-colors">
+                        <h3
+                          className={`text-2xl font-black text-[#f8fafc] ${theme.nameHoverColor} transition-colors`}
+                        >
                           Bot {bot.name}
                         </h3>
-                        <div className="text-[11px] font-mono text-amber-400/90">
+                        <div className={`text-[11px] font-mono ${theme.codeNameColor}`}>
                           {bot.codeName}
                         </div>
                       </div>
@@ -148,32 +225,35 @@ export const LandingBotsShowcase: React.FC = () => {
 
                   {/* Chips de Compatibilidad (Lucid Trading, MFFU, Tradeify, Real) */}
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="rounded-md bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-300">
-                      Lucid Trading
-                    </span>
-                    <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                      MFFU
-                    </span>
-                    <span className="rounded-md bg-sky-500/15 border border-sky-500/30 px-2 py-0.5 text-[10px] font-bold text-sky-300">
-                      Tradeify
-                    </span>
-                    <span className="rounded-md bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 text-[10px] font-bold text-purple-300">
-                      {lang === 'es' ? 'Cuenta Real (Live)' : 'Live Account'}
-                    </span>
+                    {[
+                      'Lucid Trading',
+                      'MFFU',
+                      'Tradeify',
+                      lang === 'es' ? 'Cuenta Real (Live)' : 'Live Account',
+                    ].map((label, chipIndex) => (
+                      <span
+                        key={label}
+                        className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${theme.chipStyles[chipIndex]}`}
+                      >
+                        {label}
+                      </span>
+                    ))}
                   </div>
 
-                  <p className="text-xs text-slate-300 leading-relaxed min-h-[44px]">
+                  <p className="text-xs text-[#cbd5e1] leading-relaxed min-h-[44px]">
                     {bot.shortDescription}
                   </p>
 
                   {/* Mini Gráfico Visual de Curva de Backtesting */}
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 space-y-3">
+                  <div
+                    className={`rounded-2xl border ${theme.chartBorder} ${theme.chartBackground} p-4 space-y-3`}
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-slate-400 uppercase flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3 text-emerald-400" />
+                      <span className="text-[10px] font-mono text-[#94a3b8] uppercase flex items-center gap-1">
+                        <TrendingUp className={`h-3 w-3 ${theme.chartIconColor}`} />
                         {lang === 'es' ? 'Curva Backtesting Histórico*' : 'Historical Backtest Curve*'}
                       </span>
-                      <span className="text-[10px] font-mono font-bold text-emerald-400">
+                      <span className={`text-[10px] font-mono font-bold ${theme.instrumentColor}`}>
                         ● {bot.primaryInstrument}
                       </span>
                     </div>
@@ -189,22 +269,24 @@ export const LandingBotsShowcase: React.FC = () => {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/80 text-center">
+                    <div
+                      className={`grid grid-cols-3 gap-2 pt-2 border-t ${theme.chartBorder} text-center`}
+                    >
                       <div>
-                        <div className="text-[10px] uppercase text-slate-400">Win Rate (BT)</div>
-                        <div className="text-base font-black font-mono text-emerald-400">
+                        <div className="text-[10px] uppercase text-[#94a3b8]">Win Rate (BT)</div>
+                        <div className={`text-base font-black font-mono ${theme.metricColors[0]}`}>
                           {bot.winRatePercent}%
                         </div>
                       </div>
-                      <div className="border-x border-slate-800">
-                        <div className="text-[10px] uppercase text-slate-400">Profit Factor</div>
-                        <div className="text-base font-black font-mono text-sky-400">
+                      <div className={`border-x ${theme.chartBorder}`}>
+                        <div className="text-[10px] uppercase text-[#94a3b8]">Profit Factor</div>
+                        <div className={`text-base font-black font-mono ${theme.metricColors[1]}`}>
                           {bot.profitFactor}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] uppercase text-slate-400">Freno DD</div>
-                        <div className="text-base font-black font-mono text-amber-400">
+                        <div className="text-[10px] uppercase text-[#94a3b8]">Freno DD</div>
+                        <div className={`text-base font-black font-mono ${theme.metricColors[2]}`}>
                           {formatUsd(bot.maxDrawdownUsd)}
                         </div>
                       </div>
@@ -213,9 +295,9 @@ export const LandingBotsShowcase: React.FC = () => {
 
                   {/* Características para Fondeo y Real */}
                   <div className="space-y-1.5 pt-1">
-                    <ul className="text-xs text-slate-300 space-y-1.5">
+                    <ul className="text-xs text-[#cbd5e1] space-y-1.5">
                       <li className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <CheckCircle2 className={`h-4 w-4 shrink-0 ${theme.checkColor}`} />
                         <span>
                           {lang === 'es'
                             ? 'Perfiles preconfigurados para Lucid Trading, MFFU y Tradeify'
@@ -223,7 +305,7 @@ export const LandingBotsShowcase: React.FC = () => {
                         </span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <CheckCircle2 className={`h-4 w-4 shrink-0 ${theme.checkColor}`} />
                         <span>
                           {lang === 'es'
                             ? 'Apto para Cuentas Reales (Live) y Cuentas Fondeadas'
@@ -231,7 +313,7 @@ export const LandingBotsShowcase: React.FC = () => {
                         </span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4 text-amber-400 shrink-0" />
+                        <ShieldCheck className={`h-4 w-4 shrink-0 ${theme.shieldColor}`} />
                         <span>
                           {lang === 'es'
                             ? 'Freno automático de pérdida diaria + Pausa móvil'
@@ -245,14 +327,14 @@ export const LandingBotsShowcase: React.FC = () => {
                 {/* Precio de Suscripción y Botones CTA (Ver Detalles Público + Comprar con Gate de Login) */}
                 <div className="relative z-10 border-t border-slate-800/90 pt-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-[10px] uppercase font-bold text-slate-400">
+                    <div className="text-[10px] uppercase font-bold text-[#94a3b8]">
                       {lang === 'es' ? 'Suscripción Mensual' : 'Monthly Subscription'}
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-white font-mono">
+                      <span className="text-2xl font-black text-[#f8fafc] font-mono">
                         {formatUsd(bot.monthlyPriceUsd)}
                       </span>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-[#94a3b8]">
                         {lang === 'es' ? '/ mes' : '/ mo'}
                       </span>
                     </div>
@@ -260,7 +342,11 @@ export const LandingBotsShowcase: React.FC = () => {
 
                   <div className="flex items-center gap-2">
                     <Link to={`/catalog/${bot.id}`}>
-                      <Button variant="secondary" size="sm" className="text-xs font-semibold">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className={`text-xs font-semibold ${theme.detailButtonStyle}`}
+                      >
                         {lang === 'es' ? 'Ver Detalles' : 'View Details'}
                       </Button>
                     </Link>
@@ -268,7 +354,7 @@ export const LandingBotsShowcase: React.FC = () => {
                       <Button
                         variant="primary"
                         size="sm"
-                        className="text-xs font-bold shadow-lg shadow-amber-500/20"
+                        className={`text-xs font-bold shadow-lg ${theme.buyButtonStyle}`}
                       >
                         {lang === 'es' ? 'Comprar' : 'Buy Now'}
                         <ArrowUpRight className="h-3.5 w-3.5 ml-0.5" />

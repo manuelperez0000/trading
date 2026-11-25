@@ -133,36 +133,106 @@ entorno `ADMINS` (IDs separados por comas); en caso contrario es `"client"`.
 El token es JWT con vigencia de 10 días. Credenciales incorrectas responden
 `401 Unauthorized`.
 
-## Cargar imágenes
+## Manejo de imágenes
 
-`POST /images` — público. Envía una solicitud `multipart/form-data` con el
-archivo bajo el campo `image`. Se aceptan imágenes PNG, JPEG, GIF o WEBP de
-hasta 5 MB.
+Las rutas de imágenes son públicas y usan el prefijo `http://localhost:3000/api/v1`.
+No requieren token de autenticación. Para subir o reemplazar una imagen, envía
+una solicitud `multipart/form-data` con el archivo en el campo `image`. Se
+aceptan imágenes PNG, JPEG, GIF o WEBP de hasta 5 MB. No establezcas
+manualmente el encabezado `Content-Type` al usar `curl -F`; `curl` debe incluir
+el `boundary` del formulario.
 
-Responde `201 Created` cuando la imagen se guarda dentro de `backend/images`.
-El ID y el nombre del archivo se generan con el hash SHA-256 del contenido; si
-se vuelve a subir la misma imagen, se conserva un solo archivo.
+El servidor guarda los archivos en `backend/images`. El `id` es el hash SHA-256
+del contenido en hexadecimal minúsculo y `name` contiene ese hash y la
+extensión detectada a partir del contenido. Subir el mismo archivo más de una
+vez devuelve el mismo `id` y `name`, sin crear otra copia.
+
+### Subir una imagen
+
+`POST /images` — responde `201 Created`.
+
+```bash
+curl.exe -X POST http://localhost:3000/api/v1/images -F "image=@.\imagen.png"
+```
+
+Respuesta:
 
 ```json
 {
   "body": {
-    "id": "<sha256>",
-    "name": "<sha256>.png"
+    "id": "<hash-sha256-de-64-caracteres>",
+    "name": "<hash-sha256-de-64-caracteres>.png"
   },
   "message": "Imagen guardada correctamente.",
   "status": 201
 }
 ```
 
-`PUT /images/:id` reemplaza la imagen indicada por el ID. Envía la nueva imagen
-en el campo `image` con el mismo formato multipart. La imagen anterior se
-elimina y la respuesta incluye el ID y nombre generados para la nueva imagen.
-Si el ID no existe, responde `404 Not Found`.
+### Reemplazar una imagen
 
-`DELETE /images/:id` elimina la imagen indicada por el ID y responde con el ID
-y nombre del archivo eliminado. Si el ID no existe, responde `404 Not Found`.
-Ambas rutas responden `400 Bad Request` si el ID no tiene formato SHA-256
-válido.
+`PUT /images/:id` — reemplaza la imagen almacenada bajo el ID indicado. Si la
+nueva imagen tiene otro contenido, se guarda con su nuevo hash y se elimina el
+archivo anterior. La respuesta `200 OK` contiene el `id` y `name` nuevos.
+Sustituye `ID_DE_LA_IMAGEN` en los ejemplos por el `id` devuelto al subirla.
+
+```bash
+curl.exe -X PUT http://localhost:3000/api/v1/images/ID_DE_LA_IMAGEN -F "image=@.\imagen-nueva.webp"
+```
+
+```json
+{
+  "body": {
+    "id": "<nuevo-hash-sha256>",
+    "name": "<nuevo-hash-sha256>.webp"
+  },
+  "message": "Imagen reemplazada correctamente.",
+  "status": 200
+}
+```
+
+### Eliminar una imagen
+
+`DELETE /images/:id` — elimina el archivo almacenado y responde `200 OK` con el
+ID y nombre eliminados.
+
+```bash
+curl.exe -X DELETE http://localhost:3000/api/v1/images/ID_DE_LA_IMAGEN
+```
+
+```json
+{
+  "body": {
+    "id": "<hash-sha256-de-64-caracteres>",
+    "name": "<hash-sha256-de-64-caracteres>.png"
+  },
+  "message": "Imagen eliminada correctamente.",
+  "status": 200
+}
+```
+
+### Errores de imágenes
+
+- `400 Bad Request`: formato de solicitud incorrecto, falta el campo `image`,
+  la imagen no es PNG/JPEG/GIF/WEBP válida o el ID no contiene 64 caracteres
+  hexadecimales minúsculos.
+- `404 Not Found`: el ID es válido, pero no existe una imagen almacenada para
+  ese ID (al reemplazar o eliminar).
+- `413 Payload Too Large`: la imagen supera los 5 MB.
+- `500 Internal Server Error`: error inesperado al guardar, reemplazar o
+  eliminar el archivo.
+
+Las respuestas de error usan el formato común, por ejemplo:
+
+```json
+{
+  "body": {},
+  "message": "No se encontró la imagen.",
+  "status": 404
+}
+```
+
+Actualmente estas rutas permiten subir, reemplazar y eliminar imágenes; no
+existe un endpoint `GET` para consultar o descargar el archivo.
 
 ### Consultar el usuario autenticado
 
