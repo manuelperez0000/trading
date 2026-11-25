@@ -54,7 +54,7 @@ export interface PurchasedBotItem {
 
 const STORAGE_KEY_PURCHASED_BOTS = 'tla_purchased_bots_v1';
 
-export const ALL_ACCESS_CATALOG_BOTS: Array<{
+const ALL_ACCESS_CATALOG_BOTS: Array<{
   botId: string;
   botName: string;
   codeName: string;
@@ -122,7 +122,7 @@ const INITIAL_PURCHASED_BOTS: PurchasedBotItem[] = [
   },
 ];
 
-export function getStoredPurchasedBots(): PurchasedBotItem[] {
+function getStoredPurchasedBots(): PurchasedBotItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PURCHASED_BOTS);
     if (!raw) {
@@ -135,7 +135,7 @@ export function getStoredPurchasedBots(): PurchasedBotItem[] {
   }
 }
 
-export function saveStoredPurchasedBots(items: PurchasedBotItem[]): void {
+function saveStoredPurchasedBots(items: PurchasedBotItem[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_PURCHASED_BOTS, JSON.stringify(items));
   } catch {
