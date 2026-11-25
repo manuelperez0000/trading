@@ -8,7 +8,6 @@ import {
   CreditCard,
   Globe,
   KeyRound,
-  LogIn,
   LogOut,
   Menu,
   MessageSquareShare,
@@ -16,7 +15,6 @@ import {
   Sliders,
   Terminal,
   User,
-  UserPlus,
   X,
 } from 'lucide-react';
 import { useI18n } from '@core/i18n/useLanguageStore';
@@ -38,10 +36,13 @@ interface NavItemConfig {
   icon: React.ReactNode;
   badgeCount?: number;
   adminOnly?: boolean;
+  traderOnly?: boolean;
 }
 
 interface NavGroupConfig {
   groupTitle: string;
+  adminOnly?: boolean;
+  traderOnly?: boolean;
   items: NavItemConfig[];
 }
 
@@ -103,6 +104,7 @@ export const PlatformShellLayout: React.FC = () => {
     },
     {
       groupTitle: t.nav.groupAdmin,
+      adminOnly: true,
       items: [
         {
           to: '/admin/subscriptions',
@@ -130,7 +132,12 @@ export const PlatformShellLayout: React.FC = () => {
       ],
     },
     {
-      groupTitle: t.nav.groupTrader,
+      groupTitle:
+        user.role === 'ADMIN'
+          ? lang === 'es'
+            ? 'Catálogo del Sistema'
+            : 'System Catalog'
+          : t.nav.groupTrader,
       items: [
         {
           to: '/catalog',
@@ -146,44 +153,34 @@ export const PlatformShellLayout: React.FC = () => {
           to: '/my-bots',
           label: lang === 'es' ? 'Mis Bots' : 'My Bots',
           icon: <Bot className="h-4 w-4 shrink-0 text-emerald-400" />,
+          traderOnly: true,
         },
         {
           to: '/my-subscriptions',
           label: t.nav.myLicenses,
           icon: <KeyRound className="h-4 w-4 shrink-0" />,
+          traderOnly: true,
         },
         {
           to: '/billing',
           label: t.nav.billing,
           icon: <CreditCard className="h-4 w-4 shrink-0" />,
-        },
-        {
-          to: '/profile',
-          label: t.nav.profile,
-          icon: <User className="h-4 w-4 shrink-0" />,
+          traderOnly: true,
         },
       ],
     },
     {
-      groupTitle: t.nav.groupAuth,
+      groupTitle: lang === 'es' ? 'Mi Cuenta' : 'My Account',
       items: [
         {
-          to: '/auth/login',
-          label: t.nav.login,
-          icon: <LogIn className="h-4 w-4 shrink-0" />,
-          adminOnly: true,
-        },
-        {
-          to: '/auth/register',
-          label: t.nav.register,
-          icon: <UserPlus className="h-4 w-4 shrink-0" />,
-          adminOnly: true,
-        },
-        {
-          to: '/auth/recover-password',
-          label: t.nav.recoverPassword,
-          icon: <KeyRound className="h-4 w-4 shrink-0" />,
-          adminOnly: true,
+          to: '/profile',
+          label:
+            user.role === 'ADMIN'
+              ? lang === 'es'
+                ? 'Perfil de Administrador'
+                : 'Admin Profile'
+              : t.nav.profile,
+          icon: <User className="h-4 w-4 shrink-0" />,
         },
       ],
     },
@@ -260,9 +257,14 @@ export const PlatformShellLayout: React.FC = () => {
 
         <div className="space-y-5 px-3 py-4 overflow-y-auto max-h-[calc(100vh-170px)]">
           {navGroups.map((group) => {
-            const visibleItems = group.items.filter(
-              (item) => !item.adminOnly || user.role === 'ADMIN'
-            );
+            if (group.adminOnly && user.role !== 'ADMIN') return null;
+            if (group.traderOnly && user.role === 'ADMIN') return null;
+
+            const visibleItems = group.items.filter((item) => {
+              if (item.adminOnly && user.role !== 'ADMIN') return false;
+              if (item.traderOnly && user.role === 'ADMIN') return false;
+              return true;
+            });
             if (visibleItems.length === 0) return null;
 
             return (
