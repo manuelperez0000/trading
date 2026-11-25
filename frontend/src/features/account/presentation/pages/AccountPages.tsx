@@ -852,37 +852,38 @@ export const UserProfilePage: React.FC = () => {
     if (!file) return;
     setValidationError(null);
 
-    // Si es una imagen (PNG, JPEG, GIF, WEBP), intentar subirla al nuevo endpoint POST /api/v1/images del backend
-    if (file.type.startsWith('image/')) {
-      try {
-        const formData = new FormData();
-        formData.append('image', file);
-        const token = localStorage.getItem('nt_admin_jwt_token');
-        const response = await fetch(`${env.apiBaseUrl}/images`, {
-          method: 'POST',
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          body: formData,
-        });
-        if (response.ok) {
-          const json = await response.json();
-          const imageName = json?.body?.name;
-          if (imageName) {
-            const uploadedUrl = `${env.apiBaseUrl}/images/${imageName}`;
-            setter(uploadedUrl);
-            toast.success('Imagen subida al servidor', `${docLabel}: ${file.name}`);
-            return;
-          }
-        }
-      } catch {
-        // Respaldo local si el archivo es PDF o falla la subida multipart
-      }
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.danger('Formato no permitido', 'Sube una imagen PNG, JPG, GIF o WEBP.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.danger('Imagen demasiado grande', 'La imagen no puede superar los 5 MB.');
+      return;
     }
 
-    const generatedDocUrl = `https://www.tradinglifeacademy.com/documentos/${encodeURIComponent(
-      user.id
-    )}/${encodeURIComponent(file.name)}`;
-    setter(generatedDocUrl);
-    toast.success('Archivo cargado correctamente', `${docLabel}: ${file.name}`);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const token = localStorage.getItem('nt_admin_jwt_token');
+      const response = await fetch(`${env.apiBaseUrl}/images`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: formData,
+      });
+      const json = await response.json().catch(() => null);
+      const imageName: string | undefined = json?.body?.name;
+      if (!response.ok || !imageName) {
+        throw new Error(json?.message || 'No se pudo subir la imagen.');
+      }
+      setter(`${env.apiBaseUrl}/images/${imageName}`);
+      toast.success('Imagen subida al servidor', `${docLabel}: ${file.name}`);
+    } catch (err) {
+      toast.danger(
+        'Error al subir la imagen',
+        err instanceof Error ? err.message : 'No se pudo subir la imagen.'
+      );
+    }
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -1301,7 +1302,7 @@ export const UserProfilePage: React.FC = () => {
                           <span>Subir Archivo</span>
                           <input
                             type="file"
-                            accept=".pdf,image/*"
+                            accept="image/png,image/jpeg,image/gif,image/webp"
                             className="hidden"
                             onChange={(e) =>
                               handleFileUploadSelect(
