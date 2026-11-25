@@ -19,16 +19,32 @@ export class HttpBotRepository implements IBotRepository {
             ? (res as any).bots
             : [];
       const mapped = rawList.map((item: unknown) => BotMapper.toDomain(item));
-      return mapped.length > 0 ? mapped : TRADING_BOTS_CATALOG;
+      if (mapped.length === 0) {
+        return TRADING_BOTS_CATALOG;
+      }
+
+      // Preservar siempre los bots insignia del catálogo combinados con bots creados en la API
+      const combined = [...mapped];
+      for (const coreBot of TRADING_BOTS_CATALOG) {
+        if (
+          !combined.some(
+            (b) => b.id === coreBot.id || b.name.toLowerCase() === coreBot.name.toLowerCase()
+          )
+        ) {
+          combined.push(coreBot);
+        }
+      }
+      return combined;
     } catch {
-      // Si el servidor API no está levantado localmente, mostrar el catálogo base para exploración pública
+      // Si el servidor API no está disponible o responde con error, mostrar el catálogo base
       return TRADING_BOTS_CATALOG;
     }
   }
 
   public async getBotById(id: string): Promise<TradingBot | null> {
-    // 1. Verificar si corresponde a un bot del catálogo base por slug o ID
+    // 1. Si es un bot del catálogo insignia (Proton, Nova, Pulsar), retornar de inmediato
     const catalogMatch = TRADING_BOTS_CATALOG.find((b) => b.id === id);
+    if (catalogMatch) return catalogMatch;
 
     try {
       const res = await httpClient.get<any>(`/bots/${id}`);
@@ -40,7 +56,7 @@ export class HttpBotRepository implements IBotRepository {
             : res;
       return BotMapper.toDomain(raw);
     } catch {
-      return catalogMatch ?? null;
+      return null;
     }
   }
 
