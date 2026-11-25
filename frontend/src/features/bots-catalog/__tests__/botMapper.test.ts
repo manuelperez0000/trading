@@ -22,7 +22,7 @@ describe('BotMapper & AuthMapper - Backend Compatibility', () => {
     expect(domainBot).toBeDefined();
     expect(domainBot.id).toBe('42');
     expect(domainBot.name).toBe('Quantum OrderFlow Scalper V4');
-    expect(domainBot.monthlyPriceUsd).toBe(199);
+    expect(domainBot.monthlyPriceUsd).toBe(149);
     expect(domainBot.winRatePercent).toBe(74.8);
     expect(domainBot.profitFactor).toBe(2.64);
     expect(domainBot.maxDrawdownUsd).toBe(1150);

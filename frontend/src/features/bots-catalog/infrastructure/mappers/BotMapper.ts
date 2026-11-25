@@ -149,9 +149,7 @@ export class BotMapper {
       win_rate: Number(input.winRatePercent ?? 72.5),
       profit_1_year: Math.round((input.monthlyPriceUsd ?? 149) * 25),
       drawdown: Number(input.maxDrawdownUsd ?? 1000),
-      precio_mensual: Number(input.monthlyPriceUsd ?? 149),
       imagen: 'https://tradinglifeacademy.com/assets/bot-default.jpg',
-      moneda: 'USD',
       descripcion:
         input.shortDescription ||
         input.fullDescription ||

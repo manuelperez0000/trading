@@ -59,7 +59,7 @@ export const BackendBotDtoSchema = z.object({
   win_rate: z.coerce.number(),
   profit_1_year: z.coerce.number(),
   drawdown: z.coerce.number(),
-  precio_mensual: z.coerce.number(),
+  precio_mensual: z.coerce.number().optional().default(149),
   imagen: z.string().optional().default('https://tradinglifeacademy.com/assets/bot-default.jpg'),
   moneda: z.string().optional().default('USD'),
   descripcion: z.string(),
@@ -75,9 +75,9 @@ export const CreateBackendBotDtoSchema = z.object({
   win_rate: z.number().min(0).max(100),
   profit_1_year: z.number(),
   drawdown: z.number().min(0),
-  precio_mensual: z.number().min(0),
+  precio_mensual: z.number().min(0).optional(),
   imagen: z.string(),
-  moneda: z.string().default('USD'),
+  moneda: z.string().optional(),
   descripcion: z.string().min(1),
 });
 
