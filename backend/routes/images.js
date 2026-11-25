@@ -189,6 +189,33 @@ const parseImageBody = express.raw({
   limit: maxImageSize + 64 * 1024,
 });
 
+router.get("/:identifier", async (req, res, next) => {
+  const { identifier } = req.params;
+  const id = identifier.includes(".") ? identifier.split(".")[0] : identifier;
+  if (!/^[a-f0-9]{64}$/.test(id)) {
+    return responser.error({
+      res,
+      message: "El ID o nombre de la imagen no es válido.",
+      status: 400,
+    });
+  }
+
+  try {
+    const image = await findStoredImage(id);
+    if (!image) {
+      return responser.error({
+        res,
+        message: "No se encontró la imagen.",
+        status: 404,
+      });
+    }
+
+    return res.sendFile(image.path);
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.post("/", authenticate, parseImageBody, receiveImage, async (req, res, next) => {
   try {
     const image = await saveImage(req.image);
