@@ -144,4 +144,24 @@ describe('Clean Architecture — Apagado/Encendido Remoto NinjaTrader & Segurida
     expect(updatedList.every((s) => s.remoteEnabled === false)).toBe(true);
     expect(updatedList.every((s) => s.syncState === 'PENDING_ACK')).toBe(true);
   });
+
+  it('desactiva automáticamente todos los bots del usuario cuando la suscripción ha vencido', async () => {
+    const repo = new MockSimulatorSubscriptionRepository();
+    const heartbeatUseCase = new SimulateNinjaHeartbeatUseCase(repo);
+
+    // sub-008 (Sofía Alarcón) tiene fecha de vencimiento pasada (2025-10-15) pero remoteEnabled: true
+    const expiredResult = await heartbeatUseCase.execute({
+      licenseKey: 'NT8-TLA-6401-VEGA',
+      machineId: 'WIN11-SOF-5120E',
+      strategyName: 'LiquiditySweepBot',
+      accountName: 'Apex_Eval_88120',
+      instrument: 'GC 12-26',
+      currentSessionPnlUsd: 0,
+    });
+
+    expect(expiredResult.serverResponse.allowedToTrade).toBe(false);
+    expect(expiredResult.serverResponse.remoteCommand).toBe('FLATTEN_AND_DISABLE');
+    expect(expiredResult.serverResponse.subscriptionSnapshot?.remoteEnabled).toBe(false);
+    expect(expiredResult.serverResponse.subscriptionSnapshot?.syncState).toBe('CONFIRMED_OFF');
+  });
 });

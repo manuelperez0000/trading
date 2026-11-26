@@ -37,6 +37,7 @@ import { useAuthStore } from '@features/auth/application/useAuthStore';
 import {
   useResetMachineIdMutation,
   useSubscriptionsPolling,
+  useUpdateSubscriptionMutation,
 } from '@features/subscriptions/application/hooks/useSubscriptionsPolling';
 import {
   useBillingSummaryQuery,
@@ -45,7 +46,13 @@ import {
   useUpdateUserProfileMutation,
   useUserProfileQuery,
 } from '@features/account/application/hooks/useAccount';
-import type { Subscription } from '@features/subscriptions/domain/entities/Subscription';
+import {
+  getSubscriptionPlanLabel,
+  isSubscriptionAllowedToOperate,
+  isSubscriptionExpired,
+  type Subscription,
+} from '@features/subscriptions/domain/entities/Subscription';
+import { useBotsQuery } from '@features/bots-catalog/application/hooks/useBots';
 
 const useDateLocale = () => {
   const { lang } = useI18n();
@@ -317,14 +324,54 @@ const InstallGuideCard: React.FC<{ onDownload: () => void }> = ({
 
 export const MyLicensesPage: React.FC = () => {
   const { t } = useI18n();
+  const { user } = useAuthStore();
   const dateLocale = useDateLocale();
   const { data: subscriptions = [] } = useSubscriptionsPolling();
+  const { data: catalogBots = [] } = useBotsQuery();
   const resetHwidMutation = useResetMachineIdMutation();
+  const updateSubscriptionMutation = useUpdateSubscriptionMutation();
   const [unbindTarget, setUnbindTarget] = useState<Subscription | null>(null);
+  const [customMachineId, setCustomMachineId] = useState<string>(
+    user.defaultMachineId || 'WIN11-TRD-9F82A1C0'
+  );
+
+  // Filtrar a la membresía única del cliente autenticado (o respaldo a la primera disponible)
+  const clientSubscriptions = subscriptions.filter(
+    (s) => s.email.toLowerCase() === user.email.toLowerCase()
+  );
+  const myMembershipList =
+    clientSubscriptions.length > 0
+      ? [clientSubscriptions[0]]
+      : subscriptions.length > 0
+      ? [subscriptions[0]]
+      : [];
 
   const handleCopy = (licenseKey: string) => {
     navigator.clipboard?.writeText(licenseKey);
     toast.success(t.toast.licenseCopied, t.toast.licenseCopiedDesc);
+  };
+
+  const handleBindSingleComputer = (sub: Subscription) => {
+    const cleanId = customMachineId.trim().toUpperCase();
+    if (cleanId.length < 6) {
+      toast.danger('Machine ID inválido', 'Introduce un Machine ID válido de NinjaTrader 8.');
+      return;
+    }
+    updateSubscriptionMutation.mutate(
+      {
+        id: sub.id,
+        updates: { boundMachineId: cleanId },
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            'Computadora Única Vinculada',
+            `Tus bots quedaron bloqueados exclusivamente al equipo ${cleanId} (Regla: 1 sola PC por membresía).`
+          );
+        },
+        onError: () => toast.danger(t.toast.actionError),
+      }
+    );
   };
 
   const handleDownload = () => {
@@ -375,108 +422,264 @@ export const MyLicensesPage: React.FC = () => {
 
       <InstallGuideCard onDownload={handleDownload} />
 
-      {subscriptions.length === 0 ? (
+      {myMembershipList.length === 0 ? (
         <Card className="p-10 text-center text-slate-400 space-y-4 max-w-md mx-auto my-6">
           <KeyRound className="h-10 w-10 text-slate-600 mx-auto" />
-          <h2 className="text-base font-bold text-white">No tienes licencias activas</h2>
+          <h2 className="text-base font-bold text-white">No tienes una membresía activa</h2>
           <p className="text-xs text-slate-400">
-            Explora el catálogo de bots de NinjaTrader 8 para activar una estrategia algorítmica.
+            Activa tu membresía mensual o anual para obtener tu LicenseKey única con acceso a todo el catálogo de bots.
           </p>
           <div className="pt-2">
             <Link to="/catalog">
               <Button variant="primary" size="md">
-                Explorar Catálogo de Bots
+                Explorar Catálogo y Membresías
               </Button>
             </Link>
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
-          {subscriptions.map((sub) => (
-          <Card key={sub.id} className="p-6 space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-white">
-                  {sub.activeStrategyName}
-                </h2>
-                <p className="text-xs text-slate-400">
-                  {t.account.linkedAccount}: {sub.ninjaAccountName} •{' '}
-                  {t.account.market}: {sub.instrument}
-                </p>
-              </div>
+        <div className="grid grid-cols-1 gap-5">
+          {myMembershipList.map((sub) => {
+            const planInfo = getSubscriptionPlanLabel(sub);
+            const expired = isSubscriptionExpired(sub);
+            const allowedToOperate = isSubscriptionAllowedToOperate(sub);
 
-              {sub.remoteEnabled ? (
-                <Badge variant="emerald" pulse>
-                  {t.account.statusActive}
-                </Badge>
-              ) : (
-                <Badge variant="rose">{t.account.statusSuspended}</Badge>
-              )}
-            </div>
-
-            {/* Clave de licencia destacada con copiado en un clic */}
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                {t.account.licenseKeyLabel}
-              </div>
-              <div className="mt-1.5 flex items-center justify-between gap-3">
-                <code className="font-mono text-base font-bold tracking-wide text-emerald-300">
-                  {sub.licenseKey}
-                </code>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleCopy(sub.licenseKey)}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  {t.account.copy}
-                </Button>
-              </div>
-            </div>
-
-            {/* Información esencial (sin detalles técnicos de bajo nivel) */}
-            <dl className="grid grid-cols-2 gap-3 text-xs">
-              <div className="rounded-lg bg-slate-950/60 p-3">
-                <dt className="flex items-center gap-1.5 text-slate-400">
-                  <Cpu className="h-3.5 w-3.5 text-sky-400" />
-                  {t.account.linkedPc}
-                </dt>
-                <dd className="mt-1 truncate font-mono text-slate-200">
-                  {sub.boundMachineId ?? t.account.pcPending}
-                </dd>
-              </div>
-              <div className="rounded-lg bg-slate-950/60 p-3">
-                <dt className="text-slate-400">{t.account.lastConnection}</dt>
-                <dd className="mt-1 text-slate-200 tabular-nums">
-                  {formatRelativeTime(sub.lastHeartbeatAt)}
-                </dd>
-              </div>
-            </dl>
-
-            <div className="flex items-center justify-between border-t border-slate-800/80 pt-4">
-              <span className="text-xs text-slate-400">
-                {t.account.expires}:{' '}
-                <span className="font-medium text-slate-200">
-                  {new Date(sub.expiresAt).toLocaleDateString(dateLocale, {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </span>
-              </span>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setUnbindTarget(sub)}
-                disabled={!sub.boundMachineId}
+            return (
+              <Card
+                key={sub.id}
+                className={`p-6 space-y-5 ${
+                  expired
+                    ? 'border-rose-500/40 bg-rose-950/10'
+                    : 'border-emerald-500/30'
+                }`}
               >
-                <RefreshCcw className="h-3.5 w-3.5 text-amber-400" />
-                {t.account.unbindBtn}
-              </Button>
-            </div>
-          </Card>
-        ))}
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-bold text-white">
+                        Licencia Única de Membresía • {planInfo.label}
+                      </h2>
+                      <Badge variant="amber">
+                        Acceso Total al Catálogo ({catalogBots.length} Bots)
+                      </Badge>
+                      <Badge variant="sky">
+                        Bloqueo: 1 sola Computadora (HWID)
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Esta única LicenseKey autoriza todos los bots del catálogo en 1 sola computadora a la vez. Cuando vence la membresía, todos los bots se desactivan simultáneamente.
+                    </p>
+                  </div>
+
+                  {expired ? (
+                    <Badge variant="rose">
+                      Membresía Vencida • Todos los Bots Desactivados
+                    </Badge>
+                  ) : allowedToOperate ? (
+                    <Badge variant="emerald" pulse>
+                      {t.account.statusActive}
+                    </Badge>
+                  ) : (
+                    <Badge variant="rose">{t.account.statusSuspended}</Badge>
+                  )}
+                </div>
+
+                {/* Alerta de vencimiento: desactiva todos los bots del usuario */}
+                {expired && (
+                  <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-2.5 text-xs text-rose-200">
+                      <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-sm text-rose-300">
+                          Suscripción Vencida — Todos tus bots han sido desactivados
+                        </div>
+                        <p className="mt-0.5 text-rose-200/90">
+                          Tu membresía venció el{' '}
+                          <strong>
+                            {new Date(sub.expiresAt).toLocaleDateString(dateLocale)}
+                          </strong>
+                          . Como todos los bots comparten tu LicenseKey única ({sub.licenseKey}), el servidor ha revocado la ejecución de todas las estrategias en tu computadora.
+                        </p>
+                      </div>
+                    </div>
+                    <Link to="/catalog" className="shrink-0">
+                      <Button variant="primary" size="sm">
+                        Renovar Membresía
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+
+                {/* Clave de licencia destacada con copiado en un clic */}
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    {t.account.licenseKeyLabel} (Controla todos tus bots en 1 PC)
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-3">
+                    <code className="font-mono text-base font-bold tracking-wide text-emerald-300">
+                      {sub.licenseKey}
+                    </code>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleCopy(sub.licenseKey)}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        {t.account.copy}
+                      </Button>
+                      <Link to="/my-bots">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          disabled={!allowedToOperate}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Descargar Bots
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Regla de Exclusividad: 1 Computadora (Machine ID) */}
+                <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Cpu className="h-4 w-4 text-sky-400" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-sky-300">
+                        Candado de Computadora Única (1 PC Lock - Machine ID)
+                      </span>
+                    </div>
+                    {sub.boundMachineId ? (
+                      <Badge variant="emerald">1 PC Vinculada y Bloqueada</Badge>
+                    ) : (
+                      <Badge variant="amber">Pendiente de Vincular PC</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Un bot solo puede estar configurado y operando en <strong>una (1) computadora</strong> a la vez. Si intentas cargar cualquier bot con tu licencia en una segunda computadora con un Machine ID distinto, el servidor rechazará la conexión automáticamente (<code className="text-amber-300">REVOKE_INVALID_HWID</code>).
+                  </p>
+
+                  {sub.boundMachineId ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/90 p-3">
+                      <div className="text-xs">
+                        <span className="text-slate-400">Equipo único autorizado: </span>
+                        <code className="font-mono font-bold text-sky-300">
+                          {sub.boundMachineId}
+                        </code>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setUnbindTarget(sub)}
+                      >
+                        <RefreshCcw className="h-3.5 w-3.5 text-amber-400" />
+                        Cambiar de Computadora (Liberar HWID)
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                      <input
+                        type="text"
+                        value={customMachineId}
+                        onChange={(e) => setCustomMachineId(e.target.value)}
+                        placeholder="Ej: WIN11-TRD-9F82A1C0"
+                        className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 font-mono text-xs text-white focus:border-sky-500 focus:outline-none"
+                      />
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleBindSingleComputer(sub)}
+                        isLoading={updateSubscriptionMutation.isPending}
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        Vincular Computadora Única
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bots controlados por esta licencia única */}
+                <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-3.5 space-y-2">
+                  <div className="text-xs font-bold text-slate-300">
+                    {allowedToOperate
+                      ? 'Bots habilitados actualmente en tu computadora vinculada:'
+                      : 'Bots desactivados en tu cuenta (Membresía vencida o pausada):'}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {catalogBots.map((b) => (
+                      <Badge
+                        key={b.id}
+                        variant={allowedToOperate ? 'emerald' : 'rose'}
+                      >
+                        {allowedToOperate ? (
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        ) : (
+                          <X className="h-3 w-3 mr-1" />
+                        )}
+                        {b.name} ({b.primaryInstrument}) •{' '}
+                        {allowedToOperate ? 'ACTIVO' : 'DESACTIVADO'}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Información esencial de hardware y conexión */}
+                <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="rounded-lg bg-slate-950/60 p-3">
+                    <dt className="flex items-center gap-1.5 text-slate-400">
+                      <Cpu className="h-3.5 w-3.5 text-sky-400" />
+                      {t.account.linkedPc}
+                    </dt>
+                    <dd className="mt-1 truncate font-mono text-slate-200 font-semibold">
+                      {sub.boundMachineId ?? t.account.pcPending}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-slate-950/60 p-3">
+                    <dt className="text-slate-400">Cuenta NT8 Reportada</dt>
+                    <dd className="mt-1 font-mono text-sky-300">
+                      {sub.ninjaAccountName}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-slate-950/60 p-3">
+                    <dt className="text-slate-400">{t.account.lastConnection}</dt>
+                    <dd className="mt-1 text-slate-200 tabular-nums">
+                      {formatRelativeTime(sub.lastHeartbeatAt)}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="flex items-center justify-between border-t border-slate-800/80 pt-4">
+                  <span className="text-xs text-slate-400">
+                    {t.account.expires}:{' '}
+                    <span
+                      className={`font-medium ${
+                        expired ? 'text-rose-400 font-bold' : 'text-slate-200'
+                      }`}
+                    >
+                      {new Date(sub.expiresAt).toLocaleDateString(dateLocale, {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                      {expired ? ' (VENCIDA)' : ''}
+                    </span>
+                  </span>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setUnbindTarget(sub)}
+                    disabled={!sub.boundMachineId}
+                  >
+                    <RefreshCcw className="h-3.5 w-3.5 text-amber-400" />
+                    {t.account.unbindBtn}
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 

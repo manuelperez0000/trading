@@ -54,6 +54,7 @@ import {
 } from '@features/subscriptions/application/hooks/useSubscriptionsPolling';
 import {
   getSubscriptionPlanLabel,
+  isSubscriptionExpired,
   type Subscription,
 } from '@features/subscriptions/domain/entities/Subscription';
 import {
@@ -84,7 +85,7 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<
-    'ALL' | 'ENABLED' | 'DISABLED' | 'PENDING_ACK'
+    'ALL' | 'ENABLED' | 'DISABLED' | 'EXPIRED' | 'PENDING_ACK'
   >('ALL');
   const [subCurrentPage, setSubCurrentPage] = useState(1);
   const SUBSCRIPTIONS_PER_PAGE = 5;
@@ -365,12 +366,58 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
         sub.instrument.toLowerCase().includes(searchQuery.toLowerCase());
 
       if (!matchesSearch) return false;
-      if (statusFilter === 'ENABLED') return sub.remoteEnabled;
+      if (statusFilter === 'EXPIRED') return isSubscriptionExpired(sub);
+      if (statusFilter === 'ENABLED') {
+        return sub.remoteEnabled && !isSubscriptionExpired(sub);
+      }
       if (statusFilter === 'DISABLED') return !sub.remoteEnabled;
       if (statusFilter === 'PENDING_ACK') return sub.syncState === 'PENDING_ACK';
       return true;
     });
   }, [subscriptions, searchQuery, statusFilter]);
+
+  const expiredSubscriptions = useMemo(
+    () => subscriptions.filter((s) => isSubscriptionExpired(s)),
+    [subscriptions]
+  );
+  const expiredWithBotsStillOn = useMemo(
+    () => expiredSubscriptions.filter((s) => s.remoteEnabled),
+    [expiredSubscriptions]
+  );
+
+  const handleDeactivateSingleExpired = (sub: Subscription) => {
+    toggleMutation.mutate(
+      {
+        subscriptionId: sub.id,
+        enabled: false,
+        reason: 'Membresía vencida — Desactivación de todos los bots del usuario',
+      },
+      {
+        onSuccess: () => {
+          toast.warning(
+            'Bots del usuario desactivados por vencimiento',
+            `Se envió orden de apagado a todos los bots de ${sub.traderName} (${sub.licenseKey}).`
+          );
+        },
+        onError: () => toast.danger(t.toast.actionError),
+      }
+    );
+  };
+
+  const handleDeactivateAllExpired = () => {
+    if (expiredWithBotsStillOn.length === 0) return;
+    expiredWithBotsStillOn.forEach((sub) => {
+      toggleMutation.mutate({
+        subscriptionId: sub.id,
+        enabled: false,
+        reason: 'Corte automático por vencimiento de membresía',
+      });
+    });
+    toast.warning(
+      'Membresías vencidas desactivadas',
+      `Se desactivaron todos los bots de ${expiredWithBotsStillOn.length} usuario(s) con suscripción vencida.`
+    );
+  };
 
   const totalSubPages = Math.max(
     1,
@@ -1024,11 +1071,27 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {expiredWithBotsStillOn.length > 0 && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleDeactivateAllExpired}
+                    className="gap-1.5 text-xs"
+                    title="Apagar inmediatamente todos los bots de los clientes cuya membresía ya venció"
+                  >
+                    <PowerOff className="h-3.5 w-3.5" />
+                    Cortar Vencidas ({expiredWithBotsStillOn.length})
+                  </Button>
+                )}
                 {(
                   [
                     { id: 'ALL', label: t.adminSubs.filterAll },
                     { id: 'ENABLED', label: t.adminSubs.filterEnabled },
                     { id: 'DISABLED', label: t.adminSubs.filterDisabled },
+                    {
+                      id: 'EXPIRED',
+                      label: `Vencidas (${expiredSubscriptions.length})`,
+                    },
                     { id: 'PENDING_ACK', label: t.adminSubs.filterPending },
                   ] as const
                 ).map((tab) => (
@@ -1110,44 +1173,56 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                             <span className="inline-flex items-center gap-1 text-slate-400">
                               <Calendar className="h-3 w-3 text-slate-500" />
                               Vence:{' '}
-                              <strong className="text-slate-300">
+                              <strong
+                                className={
+                                  isSubscriptionExpired(sub)
+                                    ? 'text-rose-400'
+                                    : 'text-slate-300'
+                                }
+                              >
                                 {new Date(sub.expiresAt).toLocaleDateString()}
                               </strong>
                             </span>
+                            {isSubscriptionExpired(sub) && (
+                              <Badge variant="rose">Membresía Vencida</Badge>
+                            )}
                             <span className="rounded bg-slate-800/90 px-1.5 py-0.5 font-mono text-sky-300">
                               {t.adminTable.account} {sub.ninjaAccountName}
                             </span>
                           </div>
                         </td>
 
-                        {/* Licencia y MachineID */}
+                        {/* Licencia y MachineID (1 PC Exclusiva) */}
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-1.5 font-mono text-xs font-semibold text-emerald-300">
                             <KeyRound className="h-3.5 w-3.5" />
                             {sub.licenseKey}
                           </div>
-                          <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-                            <Cpu className="h-3.5 w-3.5 text-slate-500" />
-                            <span className="font-mono">
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+                            <Cpu className="h-3.5 w-3.5 text-sky-400" />
+                            <span className="font-mono text-slate-200">
                               {sub.boundMachineId ?? t.adminTable.unbound}
                             </span>
                             {sub.boundMachineId && (
-                              <button
-                                type="button"
-                                onClick={() => handleResetHwid(sub)}
-                                className="text-[11px] text-amber-400 hover:underline cursor-pointer"
-                                title="Liberar MachineID para permitir cambio de PC del cliente"
-                              >
-                                Reset HWID
-                              </button>
+                              <>
+                                <Badge variant="sky">1 PC Bloqueada</Badge>
+                                <button
+                                  type="button"
+                                  onClick={() => handleResetHwid(sub)}
+                                  className="text-[11px] text-amber-400 hover:underline cursor-pointer"
+                                  title="Liberar MachineID para permitir cambio de PC del cliente"
+                                >
+                                  Reset HWID
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
 
-                        {/* Estrategia y PnL */}
+                        {/* Cobertura de Membresía y Telemetría */}
                         <td className="py-4 px-4">
-                          <div className="font-medium text-slate-200">
-                            {sub.activeStrategyName}
+                          <div className="font-semibold text-emerald-300 text-xs">
+                            ✓ Catálogo Completo de Bots
                           </div>
                           <div className="mt-1 flex items-center gap-2">
                             <Badge variant="slate">{sub.instrument}</Badge>
@@ -1200,6 +1275,18 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                         {/* Acciones Remotas */}
                         <td className="py-4 px-4 text-right">
                           <div className="flex flex-wrap items-center justify-end gap-1.5">
+                            {isSubscriptionExpired(sub) && sub.remoteEnabled && (
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleDeactivateSingleExpired(sub)}
+                                className="gap-1 text-xs"
+                                title="La suscripción venció: desactivar inmediatamente todos los bots de este usuario"
+                              >
+                                <PowerOff className="h-3.5 w-3.5" />
+                                Desactivar Bots (Vencida)
+                              </Button>
+                            )}
                             <RemoteSwitch
                               isEnabled={sub.remoteEnabled}
                               syncState={sub.syncState}
