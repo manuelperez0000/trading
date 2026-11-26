@@ -1,13 +1,22 @@
 import { create } from 'zustand';
-import type { User, UserRole, LoginCredentials, RegisterInput } from '@features/auth/domain/entities/User';
+import {
+  getStoredTestClients,
+  type LoginCredentials,
+  type RegisterInput,
+  type User,
+  type UserRole,
+} from '@features/auth/domain/entities/User';
 import { container } from '@app/di/container';
 
 interface AuthState {
   isAuthenticated: boolean;
   user: User;
+  isSimulatingClient: boolean;
   login: (credentials: LoginCredentials) => Promise<User>;
   register: (input: RegisterInput) => Promise<User>;
   loginAsDemoUser: (role?: UserRole) => User;
+  impersonateTestClient: (client: User) => User;
+  returnToAdminFromSimulation: () => void;
   refreshCurrentUser: () => Promise<User | null>;
   logout: () => Promise<void>;
   switchRolePreview: (role: UserRole) => void;
@@ -111,20 +120,50 @@ function getInitialUser(): User {
   return DEFAULT_USER;
 }
 
+const ADMIN_BACKUP_STORAGE_KEY = 'tla_admin_backup_before_sim_v1';
+
 export const useAuthStore = create<AuthState>((set) => ({
   // Por defecto el visitante entra como público (no autenticado) hasta que inicie sesión explícitamente
   isAuthenticated:
     localStorage.getItem(SESSION_ACTIVE_KEY) === 'true' &&
     Boolean(localStorage.getItem(TOKEN_STORAGE_KEY)),
   user: getInitialUser(),
+  isSimulatingClient: Boolean(localStorage.getItem(ADMIN_BACKUP_STORAGE_KEY)),
 
   login: async (credentials) => {
-    const session = await container.loginUseCase.execute(credentials);
-    const mergedUser = mergeUserWithSavedOverrides(session.user);
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
-    localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
-    set({ isAuthenticated: true, user: mergedUser });
-    return mergedUser;
+    try {
+      const session = await container.loginUseCase.execute(credentials);
+      const mergedUser = mergeUserWithSavedOverrides(session.user);
+      localStorage.removeItem(ADMIN_BACKUP_STORAGE_KEY);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
+      localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
+      set({
+        isAuthenticated: true,
+        user: mergedUser,
+        isSimulatingClient: false,
+      });
+      return mergedUser;
+    } catch (err) {
+      // Permitir iniciar sesión con cualquiera de los clientes de prueba por correo electrónico
+      const cleanEmail = credentials.email.trim().toLowerCase();
+      const matchedTestClient = getStoredTestClients().find(
+        (c) => c.email.toLowerCase() === cleanEmail
+      );
+      if (matchedTestClient) {
+        const mergedClient = mergeUserWithSavedOverrides(matchedTestClient);
+        localStorage.removeItem(ADMIN_BACKUP_STORAGE_KEY);
+        localStorage.setItem(TOKEN_STORAGE_KEY, 'demo-test-client-jwt-token');
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedClient));
+        localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
+        set({
+          isAuthenticated: true,
+          user: mergedClient,
+          isSimulatingClient: false,
+        });
+        return mergedClient;
+      }
+      throw err;
+    }
   },
 
   register: async (input) => {
@@ -148,11 +187,55 @@ export const useAuthStore = create<AuthState>((set) => ({
       handle: role === 'ADMIN' ? '@carlos_admin' : '@ana_trader',
       role,
     };
+    localStorage.removeItem(ADMIN_BACKUP_STORAGE_KEY);
     localStorage.setItem(TOKEN_STORAGE_KEY, 'demo-jwt-session-token');
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(demoUser));
     localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
-    set({ isAuthenticated: true, user: demoUser });
+    set({ isAuthenticated: true, user: demoUser, isSimulatingClient: false });
     return demoUser;
+  },
+
+  impersonateTestClient: (client: User) => {
+    set((state) => {
+      if (state.user.role === 'ADMIN') {
+        localStorage.setItem(
+          ADMIN_BACKUP_STORAGE_KEY,
+          JSON.stringify(state.user)
+        );
+      }
+      const mergedClient = mergeUserWithSavedOverrides(client);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedClient));
+      localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
+      return {
+        isAuthenticated: true,
+        user: mergedClient,
+        isSimulatingClient: true,
+      };
+    });
+    return mergeUserWithSavedOverrides(client);
+  },
+
+  returnToAdminFromSimulation: () => {
+    try {
+      const rawBackup = localStorage.getItem(ADMIN_BACKUP_STORAGE_KEY);
+      const adminUser: User = rawBackup
+        ? JSON.parse(rawBackup)
+        : { ...DEFAULT_USER, role: 'ADMIN' };
+      localStorage.removeItem(ADMIN_BACKUP_STORAGE_KEY);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(adminUser));
+      localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
+      set({
+        isAuthenticated: true,
+        user: adminUser,
+        isSimulatingClient: false,
+      });
+    } catch {
+      set({
+        isAuthenticated: true,
+        user: { ...DEFAULT_USER, role: 'ADMIN' },
+        isSimulatingClient: false,
+      });
+    }
   },
 
   refreshCurrentUser: async () => {

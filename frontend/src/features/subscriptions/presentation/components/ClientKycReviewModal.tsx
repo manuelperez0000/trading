@@ -82,6 +82,10 @@ export const ClientKycReviewModal: React.FC<ClientKycReviewModalProps> = ({
   const [notes, setNotes] = useState('');
   const [rejectedItems, setRejectedItems] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<{
+    title: string;
+    url: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!client) return;
@@ -346,7 +350,8 @@ export const ClientKycReviewModal: React.FC<ClientKycReviewModalProps> = ({
                 const isFlagged = rejectedItems.includes(doc.key);
                 const isImage =
                   hasUrl &&
-                  /\.(png|jpe?g|gif|webp)$/i.test(doc.url.split('?')[0]);
+                  (doc.url.startsWith('data:image/') ||
+                    /\.(png|jpe?g|gif|webp)$/i.test(doc.url.split('?')[0]));
 
                 return (
                   <div
@@ -376,18 +381,19 @@ export const ClientKycReviewModal: React.FC<ClientKycReviewModalProps> = ({
                       {hasUrl ? (
                         <div className="space-y-2">
                           {isImage ? (
-                            <a
-                              href={doc.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="block overflow-hidden rounded-lg border border-slate-800 bg-slate-900 h-28"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPreviewDoc({ title: doc.title, url: doc.url })
+                              }
+                              className="block w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-900 h-32 cursor-pointer"
                             >
                               <img
                                 src={doc.url}
                                 alt={doc.title}
                                 className="h-full w-full object-cover hover:scale-105 transition-transform"
                               />
-                            </a>
+                            </button>
                           ) : (
                             <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 p-2.5 text-[11px] text-slate-300 font-mono truncate">
                               {doc.key === 'urlContratoDisclaimer' ? (
@@ -399,15 +405,28 @@ export const ClientKycReviewModal: React.FC<ClientKycReviewModalProps> = ({
                             </div>
                           )}
 
-                          <a
-                            href={doc.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-400 hover:text-sky-300 underline"
-                          >
-                            <span>Abrir documento completo</span>
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
+                          {doc.url.startsWith('data:image/') ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPreviewDoc({ title: doc.title, url: doc.url })
+                              }
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-400 hover:text-sky-300 underline cursor-pointer"
+                            >
+                              <span>Ampliar documento completo</span>
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </button>
+                          ) : (
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-400 hover:text-sky-300 underline"
+                            >
+                              <span>Abrir documento completo</span>
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          )}
                         </div>
                       ) : (
                         <p className="text-xs text-amber-300/90 italic py-4">
@@ -576,6 +595,39 @@ export const ClientKycReviewModal: React.FC<ClientKycReviewModalProps> = ({
             )}
           </div>
         </div>
+
+        {/* Visor Ampliado de Documento dentro del Modal */}
+        {previewDoc && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+            onClick={() => setPreviewDoc(null)}
+          >
+            <div
+              className="relative max-w-3xl w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 space-y-3 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <span className="text-sm font-bold text-white">
+                  {previewDoc.title}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(null)}
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="flex items-center justify-center bg-slate-900 rounded-xl p-2 overflow-hidden">
+                <img
+                  src={previewDoc.url}
+                  alt={previewDoc.title}
+                  className="max-h-[75vh] w-auto object-contain rounded-lg"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
