@@ -58,6 +58,14 @@ export class AuthMapper {
         fechaCreacion: parsed.fechaCreacion,
         fechaActualizacion: parsed.fechaActualizacion,
         estado: parsed.estado,
+        kycStatus: parsed.kycStatus
+          ? (parsed.kycStatus.toUpperCase() as User['kycStatus'])
+          : undefined,
+        kycNotes: parsed.kycNotes || '',
+        kycRejectedItems: parsed.kycRejectedItems || [],
+        kycReviewedAt: parsed.kycReviewedAt
+          ? String(parsed.kycReviewedAt)
+          : undefined,
       };
     }
 

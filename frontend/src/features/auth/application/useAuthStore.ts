@@ -57,6 +57,12 @@ function mergeUserWithSavedOverrides(user: User): User {
       user.urlContratoDisclaimer || overrides.urlContratoDisclaimer || '',
     urlComprobanteAceptacion:
       user.urlComprobanteAceptacion || overrides.urlComprobanteAceptacion || '',
+    kycStatus: overrides.kycStatus || user.kycStatus,
+    kycNotes:
+      overrides.kycNotes !== undefined ? overrides.kycNotes : user.kycNotes,
+    kycRejectedItems:
+      overrides.kycRejectedItems || user.kycRejectedItems || [],
+    kycReviewedAt: overrides.kycReviewedAt || user.kycReviewedAt,
   };
 }
 

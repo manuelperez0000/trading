@@ -13,6 +13,7 @@ import {
   savePasswordResetToken,
   toPublicUser,
   updateUser,
+  updateUserKycReview,
 } from "../models/User.js";
 import authenticate from "../middleware/authenticate.js";
 import requireAdmin from "../middleware/requireAdmin.js";
@@ -199,6 +200,48 @@ async function updateCurrentUserProfile(req, res, next) {
 
 router.put("/me", authenticate, updateCurrentUserProfile);
 router.patch("/me", authenticate, updateCurrentUserProfile);
+
+router.patch(
+  "/:id/kyc-review",
+  authenticate,
+  requireAdmin,
+  async (req, res, next) => {
+    try {
+      const targetId = req.params.id;
+      const { kycStatus, kycNotes, kycRejectedItems, estado } = req.body ?? {};
+      if (!kycStatus) {
+        return responser.error({
+          res,
+          message: "El estado de revisión KYC (kycStatus) es obligatorio.",
+          status: 400,
+        });
+      }
+
+      const updated = await updateUserKycReview(targetId, {
+        kycStatus,
+        kycNotes: kycNotes ?? "",
+        kycRejectedItems: Array.isArray(kycRejectedItems) ? kycRejectedItems : [],
+        estado,
+      });
+
+      if (!updated) {
+        return responser.error({
+          res,
+          message: "No se encontró el cliente especificado.",
+          status: 404,
+        });
+      }
+
+      return responser.success({
+        res,
+        message: "Revisión de perfil y documentación guardada correctamente.",
+        body: { user: toPublicUser(updated) },
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
+);
 
 router.post("/recover-password", async (req, res, next) => {
   const body = req.body ?? {};
