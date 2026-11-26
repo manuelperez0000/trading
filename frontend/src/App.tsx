@@ -28,6 +28,7 @@ import {
   MyLicensesPage,
   UserProfilePage,
 } from '@features/account/presentation/pages/AccountPages';
+import { ClientDashboardPage } from '@features/account/presentation/pages/ClientDashboardPage';
 import { LandingPage } from '@features/landing/presentation/pages/LandingPage';
 import { NotFoundPage } from '@shared/ui/NotFoundPage';
 
@@ -73,7 +74,10 @@ const AppRoutes: React.FC = () => {
       <Route path="/recover" element={<Navigate to="/auth/recover-password" replace />} />
       <Route path="/recover-password" element={<Navigate to="/auth/recover-password" replace />} />
       <Route path="/admin" element={<Navigate to="/admin/subscriptions" replace />} />
-      <Route path="/dashboard" element={<Navigate to="/admin/subscriptions" replace />} />
+      <Route path="/admin/dashboard" element={<Navigate to="/admin/subscriptions" replace />} />
+      <Route path="/client" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/client/dashboard" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/mi-panel" element={<Navigate to="/dashboard" replace />} />
       <Route path="/clients" element={<Navigate to="/admin/clients" replace />} />
       <Route path="/clientes" element={<Navigate to="/admin/clients" replace />} />
       <Route path="/gestion-clientes" element={<Navigate to="/admin/clients" replace />} />
@@ -132,7 +136,8 @@ const AppRoutes: React.FC = () => {
         />
         <Route path="/social" element={<SocialWallPage />} />
 
-        {/* Módulos del Tablero Frontend: Catálogo, Detalle, Licencias, Pagos y Perfil */}
+        {/* Módulos del Dashboard de Clientes: Resumen, Catálogo, Detalle, Licencias, Pagos y Perfil */}
+        <Route path="/dashboard" element={<ClientDashboardPage />} />
         <Route path="/catalog" element={<BotsCatalogPage />} />
         <Route path="/catalog/:botId" element={<BotDetailPage />} />
         <Route path="/my-bots" element={<MyBotsPage />} />

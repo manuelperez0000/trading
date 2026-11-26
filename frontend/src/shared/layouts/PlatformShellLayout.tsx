@@ -5,9 +5,11 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  Download,
   Globe,
   KeyRound,
   Layers,
+  LayoutDashboard,
   LogOut,
   Menu,
   MessageSquareShare,
@@ -91,10 +93,59 @@ export const PlatformShellLayout: React.FC = () => {
     (s) => s.syncState === 'PENDING_ACK'
   ).length;
 
-  const navGroups: NavGroupConfig[] = [
+  const isAdmin = user.role === 'ADMIN';
+
+  // Menú lateral exclusivo para el Dashboard de Administración
+  const adminNavGroups: NavGroupConfig[] = [
     {
-      groupTitle: lang === 'es' ? 'Portal Público' : 'Public Portal',
+      groupTitle: lang === 'es' ? 'Gestión & Operaciones' : 'Management & Operations',
       items: [
+        {
+          to: '/admin/subscriptions',
+          label: lang === 'es' ? 'Control de Suscripciones' : 'Subscriptions Control',
+          icon: <KeyRound className="h-4 w-4 shrink-0 text-amber-400" />,
+          badgeCount: pendingSyncCount > 0 ? pendingSyncCount : undefined,
+        },
+        {
+          to: '/admin/clients',
+          label: lang === 'es' ? 'Directorio de Clientes' : 'Clients Directory',
+          icon: <Users className="h-4 w-4 shrink-0 text-sky-400" />,
+        },
+        {
+          to: '/admin/plans',
+          label: lang === 'es' ? 'Planes de Membresía' : 'Membership Plans',
+          icon: <Layers className="h-4 w-4 shrink-0 text-emerald-400" />,
+        },
+        {
+          to: '/catalog',
+          label: lang === 'es' ? 'Gestión de Bots' : 'Bots Management',
+          icon: <Bot className="h-4 w-4 shrink-0 text-amber-300" />,
+        },
+      ],
+    },
+    {
+      groupTitle: lang === 'es' ? 'Telemetría & Comunidad' : 'Telemetry & Community',
+      items: [
+        {
+          to: '/admin/ninja-lab',
+          label: t.nav.ninjaLab,
+          icon: <Terminal className="h-4 w-4 shrink-0" />,
+        },
+        {
+          to: '/social',
+          label: lang === 'es' ? 'Moderación Muro Social' : 'Social Wall Moderation',
+          icon: <MessageSquareShare className="h-4 w-4 shrink-0" />,
+        },
+      ],
+    },
+    {
+      groupTitle: lang === 'es' ? 'Cuenta & Portal' : 'Account & Portal',
+      items: [
+        {
+          to: '/profile',
+          label: lang === 'es' ? 'Perfil de Administrador' : 'Admin Profile',
+          icon: <User className="h-4 w-4 shrink-0" />,
+        },
         {
           to: '/',
           label: lang === 'es' ? 'Ver Landing Page' : 'View Landing Page',
@@ -102,34 +153,43 @@ export const PlatformShellLayout: React.FC = () => {
         },
       ],
     },
+  ];
+
+  // Menú lateral exclusivo para el Dashboard de Clientes / Traders
+  const clientNavGroups: NavGroupConfig[] = [
     {
-      groupTitle: t.nav.groupAdmin,
-      adminOnly: true,
+      groupTitle: lang === 'es' ? 'Mi Panel de Cliente' : 'My Client Dashboard',
       items: [
         {
-          to: '/admin/subscriptions',
-          label: t.nav.controlSubscriptions,
-          icon: <Users className="h-4 w-4 shrink-0 text-amber-400" />,
-          badgeCount: pendingSyncCount > 0 ? pendingSyncCount : undefined,
-          adminOnly: true,
+          to: '/dashboard',
+          label: lang === 'es' ? 'Resumen de Mi Cuenta' : 'Account Overview',
+          icon: <LayoutDashboard className="h-4 w-4 shrink-0 text-emerald-400" />,
         },
         {
-          to: '/admin/plans',
-          label: lang === 'es' ? 'Planes de Membresía' : 'Membership Plans',
-          icon: <Layers className="h-4 w-4 shrink-0 text-emerald-400" />,
-          adminOnly: true,
+          to: '/catalog',
+          label: t.nav.botsCatalog,
+          icon: <Bot className="h-4 w-4 shrink-0 text-amber-400" />,
         },
         {
-          to: '/admin/ninja-lab',
-          label: t.nav.ninjaLab,
-          icon: <Terminal className="h-4 w-4 shrink-0" />,
-          adminOnly: true,
+          to: '/my-bots',
+          label: lang === 'es' ? 'Mis Bots (Descargas NT8)' : 'My Bots (NT8 Downloads)',
+          icon: <Download className="h-4 w-4 shrink-0 text-emerald-400" />,
+        },
+        {
+          to: '/my-subscriptions',
+          label: t.nav.myLicenses,
+          icon: <KeyRound className="h-4 w-4 shrink-0 text-sky-400" />,
         },
       ],
     },
     {
-      groupTitle: t.nav.groupSocial,
+      groupTitle: lang === 'es' ? 'Pagos & Comunidad' : 'Billing & Community',
       items: [
+        {
+          to: '/billing',
+          label: t.nav.billing,
+          icon: <CreditCard className="h-4 w-4 shrink-0" />,
+        },
         {
           to: '/social',
           label: t.nav.socialWall,
@@ -138,59 +198,35 @@ export const PlatformShellLayout: React.FC = () => {
       ],
     },
     {
-      groupTitle:
-        user.role === 'ADMIN'
-          ? lang === 'es'
-            ? 'Catálogo del Sistema'
-            : 'System Catalog'
-          : t.nav.groupTrader,
-      items: [
-        {
-          to: '/catalog',
-          label: t.nav.botsCatalog,
-          icon: <Bot className="h-4 w-4 shrink-0" />,
-        },
-        {
-          to: '/my-bots',
-          label: lang === 'es' ? 'Mis Bots' : 'My Bots',
-          icon: <Bot className="h-4 w-4 shrink-0 text-emerald-400" />,
-          traderOnly: true,
-        },
-        {
-          to: '/my-subscriptions',
-          label: t.nav.myLicenses,
-          icon: <KeyRound className="h-4 w-4 shrink-0" />,
-          traderOnly: true,
-        },
-        {
-          to: '/billing',
-          label: t.nav.billing,
-          icon: <CreditCard className="h-4 w-4 shrink-0" />,
-          traderOnly: true,
-        },
-      ],
-    },
-    {
-      groupTitle: lang === 'es' ? 'Mi Cuenta' : 'My Account',
+      groupTitle: lang === 'es' ? 'Mi Cuenta & Portal' : 'My Account & Portal',
       items: [
         {
           to: '/profile',
-          label:
-            user.role === 'ADMIN'
-              ? lang === 'es'
-                ? 'Perfil de Administrador'
-                : 'Admin Profile'
-              : t.nav.profile,
+          label: lang === 'es' ? 'Mi Perfil y Documentación' : 'My Profile & KYC',
           icon: <User className="h-4 w-4 shrink-0" />,
+        },
+        {
+          to: '/',
+          label: lang === 'es' ? 'Ver Landing Page' : 'View Landing Page',
+          icon: <Globe className="h-4 w-4 shrink-0 text-amber-400" />,
         },
       ],
     },
   ];
 
-  const isItemActive = (to: string) =>
-    to === '/catalog'
-      ? location.pathname === '/catalog'
-      : location.pathname.startsWith(to);
+  const navGroups: NavGroupConfig[] = isAdmin ? adminNavGroups : clientNavGroups;
+
+  const isItemActive = (to: string) => {
+    if (to === '/') return location.pathname === '/';
+    if (to === '/catalog') return location.pathname === '/catalog';
+    if (to === '/admin/clients') {
+      return (
+        location.pathname.startsWith('/admin/clients') ||
+        location.pathname.startsWith('/admin/clientes')
+      );
+    }
+    return location.pathname.startsWith(to);
+  };
 
   // Breadcrumb legible (Grupo › Módulo) en lugar de mostrar la URL técnica
   const activeCrumb = (() => {
@@ -232,8 +268,18 @@ export const PlatformShellLayout: React.FC = () => {
                 <div className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5 group-hover:text-amber-300 transition-colors">
                   Trading Life Academy
                 </div>
-                <div className="text-[10px] font-semibold tracking-wider text-amber-400 uppercase">
-                  Learn • Trade • Grow
+                <div
+                  className={`text-[10px] font-bold tracking-wider uppercase ${
+                    isAdmin ? 'text-amber-400' : 'text-emerald-400'
+                  }`}
+                >
+                  {isAdmin
+                    ? lang === 'es'
+                      ? 'Consola de Administración'
+                      : 'Admin Console'
+                    : lang === 'es'
+                    ? 'Portal del Cliente'
+                    : 'Client Portal'}
                 </div>
               </div>
             )}
@@ -378,6 +424,23 @@ export const PlatformShellLayout: React.FC = () => {
   if (!isAuthenticated && !isPubliclyBrowsableRoute) {
     const redirectTarget = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/auth/login?redirect=${redirectTarget}`} replace />;
+  }
+
+  // Separación estricta de Dashboards por Rol:
+  // 1) Un Cliente NO puede acceder a rutas de Administración (/admin/*)
+  if (isAuthenticated && !isAdmin && location.pathname.startsWith('/admin')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // 2) Un Administrador que visite rutas exclusivas de Cliente (/dashboard, /my-bots, /my-subscriptions, /billing) va a su Consola Admin
+  const isClientExclusiveRoute =
+    location.pathname === '/dashboard' ||
+    location.pathname.startsWith('/my-bots') ||
+    location.pathname.startsWith('/my-subscriptions') ||
+    location.pathname.startsWith('/billing');
+
+  if (isAuthenticated && isAdmin && isClientExclusiveRoute) {
+    return <Navigate to="/admin/subscriptions" replace />;
   }
 
   // Onboarding obligatorio: solo para clientes normales con perfil incompleto (los administradores no requieren contacto ni documentación)

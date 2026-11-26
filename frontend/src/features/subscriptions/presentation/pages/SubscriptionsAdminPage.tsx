@@ -74,19 +74,19 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
   >('ALL');
 
   const location = useLocation();
-  const [activeMainTab, setActiveMainTab] = useState<'SUBSCRIPTIONS' | 'USERS'>(() =>
-    location.pathname.includes('/clients') || location.pathname.includes('/clientes')
-      ? 'USERS'
-      : 'SUBSCRIPTIONS'
+  const isClientsRoute =
+    location.pathname.includes('/clients') ||
+    location.pathname.includes('/clientes');
+
+  const [activeMainTab, setActiveMainTab] = useState<'SUBSCRIPTIONS' | 'USERS'>(
+    () => (isClientsRoute ? 'USERS' : 'SUBSCRIPTIONS')
   );
   const [registeredUsers, setRegisteredUsers] = useState<UserEntity[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   useEffect(() => {
-    if (location.pathname.includes('/clients') || location.pathname.includes('/clientes')) {
-      setActiveMainTab('USERS');
-    }
-  }, [location.pathname]);
+    setActiveMainTab(isClientsRoute ? 'USERS' : 'SUBSCRIPTIONS');
+  }, [isClientsRoute]);
 
   useEffect(() => {
     setIsLoadingUsers(true);
@@ -270,19 +270,25 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Cabecera de Control Remoto */}
+      {/* Cabecera Dinámica según Módulo Admin: Suscripciones vs Clientes */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-bold tracking-tight text-white">
-              {t.adminSubs.title}
+              {activeMainTab === 'USERS'
+                ? 'Directorio y Gestión de Clientes'
+                : 'Control de Suscripciones y Licencias'}
             </h1>
-            <Badge variant="emerald" pulse>
-              {t.adminSubs.badgePolling}
+            <Badge variant={activeMainTab === 'USERS' ? 'sky' : 'emerald'} pulse>
+              {activeMainTab === 'USERS'
+                ? `${registeredUsers.length} Registrados`
+                : t.adminSubs.badgePolling}
             </Badge>
           </div>
           <p className="mt-1 text-sm text-slate-400">
-            {t.adminSubs.subtitle}
+            {activeMainTab === 'USERS'
+              ? 'Consulta la base de datos de clientes registrados, revisa sus datos de contacto y asígnales licencias de suscripción.'
+              : t.adminSubs.subtitle}
           </p>
         </div>
 

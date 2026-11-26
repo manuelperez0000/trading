@@ -15,6 +15,15 @@ export const LandingNavbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isLandingRoot = location.pathname === '/' || location.pathname === '/landing' || location.pathname === '/home';
+  const dashboardPath = user.role === 'ADMIN' ? '/admin/subscriptions' : '/dashboard';
+  const dashboardLabel =
+    user.role === 'ADMIN'
+      ? lang === 'es'
+        ? 'Consola Admin'
+        : 'Admin Console'
+      : lang === 'es'
+      ? 'Mi Panel'
+      : 'My Dashboard';
 
   const navLinks = [
     { href: isLandingRoot ? '#bots' : '/#bots', label: lang === 'es' ? 'Bots Automatizados' : 'Automated Bots' },
@@ -80,14 +89,14 @@ export const LandingNavbar: React.FC = () => {
                   <span>{user.fullName.split(' ')[0]}</span>
                 </Button>
               </Link>
-              <Link to="/my-subscriptions">
+              <Link to={dashboardPath}>
                 <Button
                   variant="primary"
                   size="sm"
                   className="text-xs shadow-md shadow-amber-500/20"
                 >
                   <LayoutDashboard className="h-3.5 w-3.5" />
-                  {lang === 'es' ? 'Mi Panel' : 'My Dashboard'}
+                  {dashboardLabel}
                 </Button>
               </Link>
               <button
@@ -166,10 +175,10 @@ export const LandingNavbar: React.FC = () => {
           <div className="pt-3 border-t border-slate-800 flex flex-col gap-2">
             {isAuthenticated ? (
               <>
-                <Link to="/my-subscriptions" onClick={() => setMobileMenuOpen(false)}>
+                <Link to={dashboardPath} onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="primary" size="md" className="w-full justify-center">
                     <LayoutDashboard className="h-4 w-4" />
-                    {lang === 'es' ? 'Ir a Mi Panel' : 'Go to My Dashboard'}
+                    {dashboardLabel}
                   </Button>
                 </Link>
                 <Button

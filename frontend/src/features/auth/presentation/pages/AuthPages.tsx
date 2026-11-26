@@ -73,8 +73,9 @@ const AuthShell: React.FC<{
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/catalog';
-  const hasPurchaseRedirect = Boolean(searchParams.get('redirect'));
+  const explicitRedirect = searchParams.get('redirect');
+  const redirectTo = explicitRedirect || '/dashboard';
+  const hasPurchaseRedirect = Boolean(explicitRedirect);
 
   const { login } = useAuthStore();
   const [email, setEmail] = useState('');
@@ -90,10 +91,20 @@ export const LoginPage: React.FC = () => {
         'Inicio de sesión exitoso',
         `Bienvenido ${loggedUser.fullName} (${loggedUser.role === 'ADMIN' ? 'Administrador' : 'Cliente / Estudiante'}).`
       );
-      if (loggedUser.role !== 'ADMIN' && !isUserProfileComplete(loggedUser)) {
+      if (loggedUser.role === 'ADMIN') {
+        const adminTarget =
+          explicitRedirect && !explicitRedirect.startsWith('/dashboard')
+            ? explicitRedirect
+            : '/admin/subscriptions';
+        navigate(adminTarget);
+      } else if (!isUserProfileComplete(loggedUser)) {
         navigate('/profile?onboarding=1');
       } else {
-        navigate(redirectTo);
+        const clientTarget =
+          explicitRedirect && !explicitRedirect.startsWith('/admin')
+            ? explicitRedirect
+            : '/dashboard';
+        navigate(clientTarget);
       }
     } catch (err) {
       toast.danger(
