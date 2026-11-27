@@ -7,6 +7,7 @@ export interface SocialPost {
   text: string;
   image: string | null;
   likesCount: number;
+  commentsCount: number;
   likedByMe: boolean;
   followersCount: number;
   followingCount: number;
@@ -16,6 +17,22 @@ export interface SocialPost {
 export interface CreateSocialPostInput {
   text: string;
   image?: File;
+}
+
+export interface SocialComment {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  authorHandle: string;
+  authorAvatarUrl: string | null;
+  content: string;
+  createdAtIso: string;
+}
+
+export interface CreateSocialCommentInput {
+  postId: string;
+  content: string;
 }
 
 export function validateCreateSocialPostDomainRule(
@@ -29,5 +46,17 @@ export function validateCreateSocialPostDomainRule(
   }
   if (input.image && input.image.size > 5 * 1024 * 1024) {
     throw new Error('La imagen no puede superar los 5 MB.');
+  }
+}
+
+export function validateCreateSocialCommentDomainRule(
+  input: CreateSocialCommentInput
+): void {
+  const normalized = input.content.trim();
+  if (!normalized) {
+    throw new Error('El comentario no puede estar vacío.');
+  }
+  if (normalized.length > 2000) {
+    throw new Error('El comentario no puede superar 2000 caracteres.');
   }
 }
