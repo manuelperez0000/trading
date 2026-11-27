@@ -532,46 +532,48 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
           {isStrictAdmin && (
             <Button
               variant="secondary"
-              size="sm"
+              size="xs"
               onClick={() => {
                 setCredentialsFocusedUser(null);
                 setIsCredentialsModalOpen(true);
               }}
-              className="gap-1.5 text-xs border-amber-500/40 text-amber-300 hover:bg-amber-500/15"
+              className="border-amber-500/40 text-amber-300 hover:bg-amber-500/15"
+              tooltip="Abrir bóveda con los correos y contraseñas de todos los usuarios registrados"
             >
               <KeyRound className="h-3.5 w-3.5 text-amber-400" />
-              Ver Usuarios y Contraseñas
+              Usuarios y Claves
             </Button>
           )}
           <Button
             variant="primary"
-            size="sm"
+            size="xs"
             onClick={() => setIsCreateModalOpen(true)}
-            className="gap-1.5 text-xs shadow-sm shadow-amber-500/10"
+            className="shadow-sm shadow-amber-500/10"
+            tooltip="Crear y asignar manualmente una nueva licencia de suscripción"
           >
             <Plus className="h-3.5 w-3.5" />
             Crear Suscripción
           </Button>
           <Button
             variant="secondary"
-            size="sm"
+            size="xs"
             isLoading={globalKillSwitchMutation.isPending}
             onClick={() => setKillSwitchDialog('ENABLE_ALL')}
-            className="gap-1.5 text-xs"
+            tooltip="Reactivar la ejecución remota de bots para todas las suscripciones"
           >
             <Zap className="h-3.5 w-3.5 text-emerald-400" />
             Habilitar Todas
           </Button>
           <Button
             variant="danger"
-            size="sm"
+            size="xs"
             isLoading={globalKillSwitchMutation.isPending}
             onClick={() => setKillSwitchDialog('DISABLE_ALL')}
-            className="gap-1.5 text-xs"
+            tooltip="Kill-Switch Global: detener inmediatamente todos los bots en todas las cuentas"
           >
             <PowerOff className="h-3.5 w-3.5" />
             Apagar Todas
@@ -627,23 +629,24 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                   Revisa los documentos enviados por los nuevos clientes, aprueba su perfil o envíales observaciones por plataforma y WhatsApp para que actualicen sus datos.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                 <Button
                   variant="secondary"
-                  size="sm"
+                  size="xs"
                   onClick={() => setIsNewTestClientOpen((prev) => !prev)}
-                  className="gap-1.5 border-amber-500/40 text-amber-300"
+                  className="border-amber-500/40 text-amber-300"
+                  tooltip="Generar rápidamente un cliente de prueba con documentos KYC precargados"
                 >
-                  <UserPlus className="h-4 w-4" />
-                  + Crear Cliente de Prueba
+                  <UserPlus className="h-3.5 w-3.5" />
+                  + Cliente Prueba
                 </Button>
                 <Button
                   variant="primary"
-                  size="sm"
+                  size="xs"
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="gap-2"
+                  tooltip="Crear y asignar una nueva licencia de suscripción a un cliente"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                   Nueva Suscripción
                 </Button>
               </div>
@@ -929,21 +932,21 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                             )}
                           </td>
 
-                           <td className="py-3.5 px-4 text-right">
-                            <div className="flex flex-wrap items-center justify-end gap-2">
+                           <td className="py-3 px-4 text-right">
+                            <div className="inline-flex items-center justify-end gap-1 whitespace-nowrap">
                               {isStrictAdmin && (
                                 <Button
                                   variant="secondary"
-                                  size="sm"
+                                  size="xs"
                                   onClick={() => {
                                     setCredentialsFocusedUser(u);
                                     setIsCredentialsModalOpen(true);
                                   }}
-                                  className="text-xs gap-1.5 border-amber-500/35 text-amber-300 hover:bg-amber-500/15"
-                                  title="Ver usuario (correo / handle) y contraseña de acceso"
+                                  className="border-amber-500/35 text-amber-300 hover:bg-amber-500/15"
+                                  tooltip={`Ver o editar usuario (${u.email}) y contraseña de acceso`}
                                 >
-                                  <KeyRound className="h-3.5 w-3.5" />
-                                  Usuario y Contraseña
+                                  <KeyRound className="h-3 w-3" />
+                                  <span>Clave</span>
                                 </Button>
                               )}
 
@@ -955,25 +958,31 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                                         ? 'primary'
                                         : 'secondary'
                                     }
-                                    size="sm"
+                                    size="xs"
                                     onClick={() => setReviewingClient(u)}
-                                    className="text-xs gap-1.5"
+                                    tooltip={
+                                      kyc.status === 'EN_REVISION'
+                                        ? 'Revisar y aprobar o rechazar los 3 documentos KYC enviados por este cliente'
+                                        : 'Ver expediente de documentos KYC y datos de contacto del cliente'
+                                    }
                                   >
-                                    <FileCheck2 className="h-3.5 w-3.5" />
-                                    {kyc.status === 'EN_REVISION'
-                                      ? 'Revisar Documentos'
-                                      : 'Ver Expediente KYC'}
+                                    <FileCheck2 className="h-3 w-3" />
+                                    <span>
+                                      {kyc.status === 'EN_REVISION'
+                                        ? 'Revisar'
+                                        : 'KYC'}
+                                    </span>
                                   </Button>
 
                                   <Button
                                     variant="secondary"
-                                    size="sm"
+                                    size="xs"
                                     onClick={() => handleSimulateClientView(u)}
-                                    className="text-xs gap-1 border-sky-500/30 text-sky-300 hover:bg-sky-500/15"
-                                    title="Entrar temporalmente como este cliente para probar su vista de Perfil o Dashboard"
+                                    className="border-sky-500/30 text-sky-300 hover:bg-sky-500/15"
+                                    tooltip="Entrar temporalmente en modo simulación para ver el panel como este cliente"
                                   >
-                                    <Eye className="h-3.5 w-3.5" />
-                                    Vista Cliente
+                                    <Eye className="h-3 w-3" />
+                                    <span>Vista</span>
                                   </Button>
                                 </>
                               )}
@@ -981,27 +990,28 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                               {hasSub ? (
                                 <Button
                                   variant="secondary"
-                                  size="sm"
+                                  size="xs"
                                   onClick={() => {
                                     setActiveMainTab('SUBSCRIPTIONS');
                                     setSearchQuery(u.email);
                                   }}
-                                  className="text-xs text-emerald-400 border-emerald-500/30 gap-1.5"
+                                  className="text-emerald-400 border-emerald-500/30"
+                                  tooltip={`Ver licencia activa (${hasSub.licenseKey}) en la tabla de suscripciones`}
                                 >
-                                  <KeyRound className="h-3.5 w-3.5" />
-                                  Licencia ({hasSub.licenseKey})
+                                  <KeyRound className="h-3 w-3" />
+                                  <span>Licencia</span>
                                 </Button>
                               ) : (
                                 <Button
                                   variant="secondary"
-                                  size="sm"
+                                  size="xs"
                                   onClick={() => {
                                     setIsCreateModalOpen(true);
                                   }}
-                                  className="text-xs gap-1.5"
+                                  tooltip="Crear y asignar una nueva licencia de suscripción para este cliente"
                                 >
-                                  <Plus className="h-3.5 w-3.5" />
-                                  Asignar Licencia
+                                  <Plus className="h-3 w-3" />
+                                  <span>Asignar</span>
                                 </Button>
                               )}
                             </div>
@@ -1311,19 +1321,18 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                           </div>
                         </td>
 
-                        {/* Acciones Remotas */}
-                        <td className="py-4 px-4 text-right">
-                          <div className="flex flex-wrap items-center justify-end gap-1.5">
+                        {/* Acciones Remotas Compactas con Tooltips */}
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="inline-flex items-center justify-end gap-1 whitespace-nowrap">
                             {isSubscriptionExpired(sub) && sub.remoteEnabled && (
                               <Button
                                 variant="danger"
-                                size="sm"
+                                size="xs"
                                 onClick={() => handleDeactivateSingleExpired(sub)}
-                                className="gap-1 text-xs"
-                                title="La suscripción venció: desactivar inmediatamente todos los bots de este usuario"
+                                tooltip="Suscripción vencida: apagar inmediatamente todos los bots de este usuario"
                               >
-                                <PowerOff className="h-3.5 w-3.5" />
-                                Desactivar Bots (Vencida)
+                                <PowerOff className="h-3 w-3" />
+                                <span>Cortar</span>
                               </Button>
                             )}
                             <RemoteSwitch
@@ -1335,41 +1344,41 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                             {sub.syncState === 'PENDING_ACK' && (
                               <Button
                                 variant="warning"
-                                size="sm"
+                                size="xs"
                                 onClick={() => handleForceImmediateHeartbeat(sub)}
-                                title="Forzar ciclo inmediato de Polling"
+                                tooltip="Forzar ciclo inmediato de sincronización HTTP con NinjaTrader 8"
                               >
-                                <RefreshCcw className="h-3.5 w-3.5" />
+                                <RefreshCcw className="h-3 w-3" />
                               </Button>
                             )}
 
                             <Button
                               variant="secondary"
-                              size="sm"
+                              size="xs"
                               onClick={() => setEditingSubscription(sub)}
-                              className="border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200 gap-1.5 cursor-pointer text-xs"
-                              title="Editar suscripción, plan y vigencia"
+                              className="border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:text-amber-200"
+                              tooltip="Editar plan, fecha de vencimiento, Machine ID o cuenta NT8"
                             >
-                              <Edit3 className="h-3.5 w-3.5" />
-                              Editar
+                              <Edit3 className="h-3 w-3" />
+                              <span>Editar</span>
                             </Button>
 
                             <Button
                               variant="secondary"
-                              size="sm"
+                              size="xs"
                               onClick={() => setDeletingSubscription(sub)}
-                              className="border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 gap-1.5 cursor-pointer text-xs"
-                              title="Eliminar o revocar suscripción"
+                              className="border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+                              tooltip="Revocar y eliminar permanentemente esta suscripción"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Revocar
+                              <Trash2 className="h-3 w-3" />
+                              <span>Revocar</span>
                             </Button>
 
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="xs"
                               onClick={() => onSelectLicenseForLab(sub.licenseKey)}
-                              title="Probar en simulador de telemetría"
+                              tooltip="Probar esta licencia en el Simulador de Telemetría NinjaTrader Lab"
                             >
                               <Terminal className="h-3.5 w-3.5 text-sky-400" />
                             </Button>

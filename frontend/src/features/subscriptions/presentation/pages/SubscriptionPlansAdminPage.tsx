@@ -769,25 +769,27 @@ export const SubscriptionPlansAdminPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Botones de Acción */}
-              <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between gap-2">
+              {/* Botones de Acción Compactos con Tooltips */}
+              <div className="pt-4 border-t border-slate-800/80 flex items-center justify-end gap-1.5">
                 <Button
                   variant="secondary"
-                  size="sm"
+                  size="xs"
                   onClick={() => setEditingPlan(plan)}
-                  className="flex-1 gap-1.5 text-xs text-amber-300 border-amber-500/30 hover:bg-amber-500/10 cursor-pointer"
+                  className="text-amber-300 border-amber-500/30 hover:bg-amber-500/10"
+                  tooltip="Editar nombre, precio, duración y beneficios de este plan"
                 >
-                  <Edit3 className="h-3.5 w-3.5" />
-                  Editar Plan
+                  <Edit3 className="h-3 w-3" />
+                  <span>Editar</span>
                 </Button>
                 <Button
                   variant="secondary"
-                  size="sm"
+                  size="xs"
                   onClick={() => setDeletingPlan(plan)}
-                  className="gap-1.5 text-xs text-rose-400 border-rose-500/30 hover:bg-rose-500/10 cursor-pointer"
-                  title="Eliminar este plan"
+                  className="text-rose-400 border-rose-500/30 hover:bg-rose-500/10"
+                  tooltip="Eliminar permanentemente este plan de membresía"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
+                  <span>Eliminar</span>
                 </Button>
               </div>
             </Card>
