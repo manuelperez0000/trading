@@ -47,6 +47,7 @@ export const SocialWallPage: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState('');
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [openQuickCommentPostId, setOpenQuickCommentPostId] = useState<
     string | null
@@ -58,6 +59,10 @@ export const SocialWallPage: React.FC = () => {
     null
   );
   const [modalPostId, setModalPostId] = useState<string | null>(null);
+
+  useEffect(() => {
+    composerTextareaRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (!imagePreview) return undefined;
@@ -161,13 +166,14 @@ export const SocialWallPage: React.FC = () => {
             </div>
             <div className="min-w-0 flex-1">
               <textarea
+                ref={composerTextareaRef}
                 aria-label="Cuéntanos tu experiencia"
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
                 placeholder="Cuéntanos tu experiencia"
                 rows={2}
                 maxLength={5000}
-                className="min-h-20 w-full resize-y border-0 bg-transparent py-1 text-lg font-medium text-slate-100 shadow-none outline-none ring-0 placeholder:text-slate-500 focus:border-0 focus:bg-transparent focus:shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 sm:text-xl"
+                className="min-h-20 w-full resize-y rounded-xl border border-slate-700/70 bg-slate-800/55 px-4 py-3 text-base font-medium text-slate-100 shadow-inner shadow-black/5 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-400/60 focus:bg-slate-800/75 focus:outline-none focus:ring-0 sm:text-lg"
               />
               {imageError && (
                 <p role="alert" className="mt-2 text-xs text-rose-300">
