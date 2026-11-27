@@ -53,24 +53,14 @@ export const ClientDashboardPage: React.FC = () => {
 
   const quickModules = [
     {
-      to: '/catalog',
-      icon: <Bot className="h-4 w-4 text-amber-400" />,
-      iconBg: 'bg-amber-500/15',
-      title: lang === 'es' ? 'Catálogo de Bots' : 'Bots Catalog',
-      desc:
-        lang === 'es'
-          ? 'Especificaciones técnicas y planes disponibles'
-          : 'Technical specs and available plans',
-    },
-    {
       to: '/my-bots',
       icon: <Download className="h-4 w-4 text-emerald-400" />,
       iconBg: 'bg-emerald-500/15',
       title: lang === 'es' ? 'Mis Bots & Descargas NT8' : 'My Bots & Downloads',
       desc:
         lang === 'es'
-          ? 'Descarga tus paquetes .zip para NinjaTrader 8'
-          : 'Download your .zip packages for NinjaTrader 8',
+          ? 'Detalles técnicos, métricas y descarga .cs para NinjaTrader 8'
+          : 'Technical details, metrics and .cs download for NinjaTrader 8',
     },
     {
       to: '/my-subscriptions',

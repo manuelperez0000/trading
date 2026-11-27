@@ -187,11 +187,6 @@ export const PlatformShellLayout: React.FC = () => {
           icon: <LayoutDashboard className="h-4 w-4 shrink-0 text-emerald-400" />,
         },
         {
-          to: '/catalog',
-          label: t.nav.botsCatalog,
-          icon: <Bot className="h-4 w-4 shrink-0 text-amber-400" />,
-        },
-        {
           to: '/my-bots',
           label: lang === 'es' ? 'Mis Bots (Descargas NT8)' : 'My Bots (NT8 Downloads)',
           icon: <Download className="h-4 w-4 shrink-0 text-emerald-400" />,
@@ -235,6 +230,12 @@ export const PlatformShellLayout: React.FC = () => {
   const isItemActive = (to: string) => {
     if (to === '/') return location.pathname === '/';
     if (to === '/catalog') return location.pathname === '/catalog';
+    if (to === '/my-bots') {
+      return (
+        location.pathname.startsWith('/my-bots') ||
+        (!isAdmin && location.pathname.startsWith('/catalog/'))
+      );
+    }
     if (to === '/admin/clients') {
       return (
         location.pathname.startsWith('/admin/clients') ||
