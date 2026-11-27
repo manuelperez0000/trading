@@ -353,33 +353,34 @@ export const AdminUserCredentialsModal: React.FC<
                           )}
                         </td>
 
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="py-3 px-4 text-right">
+                          <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
                             <Button
                               type="button"
                               variant="secondary"
-                              size="sm"
+                              size="xs"
                               onClick={() =>
                                 handleCopyText(
                                   'Credenciales completas',
                                   `Usuario: ${creds.email} | Contraseña: ${creds.password}`
                                 )
                               }
-                              className="text-xs gap-1"
+                              tooltip="Copiar usuario y contraseña juntos al portapapeles"
                             >
                               <Copy className="h-3 w-3" />
-                              Copiar Ambos
+                              <span>Copiar</span>
                             </Button>
                             {!isEditing && (
                               <Button
                                 type="button"
                                 variant="secondary"
-                                size="sm"
+                                size="xs"
                                 onClick={() => handleStartEditPassword(u)}
-                                className="text-xs gap-1 border-amber-500/30 text-amber-300 hover:bg-amber-500/15"
+                                className="border-amber-500/30 text-amber-300 hover:bg-amber-500/15"
+                                tooltip="Modificar la contraseña de acceso de este usuario"
                               >
                                 <Edit3 className="h-3 w-3" />
-                                Editar Clave
+                                <span>Clave</span>
                               </Button>
                             )}
                           </div>

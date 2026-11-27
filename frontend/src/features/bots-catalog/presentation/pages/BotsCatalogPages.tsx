@@ -1578,11 +1578,15 @@ export const BotsCatalogPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Link to={`/catalog/${bot.id}`}>
-                    <Button variant="secondary" size="md">
+                    <Button
+                      variant="secondary"
+                      size="xs"
+                      tooltip="Ver ficha técnica, métricas y parámetros NinjaScript del bot"
+                    >
                       {t.catalog.viewDetails}
-                      <ArrowUpRight className="h-4 w-4" />
+                      <ArrowUpRight className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
 
@@ -1590,41 +1594,43 @@ export const BotsCatalogPage: React.FC = () => {
                     <>
                       <Button
                         variant="secondary"
-                        size="md"
+                        size="xs"
                         onClick={() => setBotForEdit(bot)}
-                        className="gap-1.5 text-amber-300 hover:text-amber-200 border-amber-500/30 hover:bg-amber-500/10 cursor-pointer"
-                        title="Editar estrategia"
+                        className="text-amber-300 hover:text-amber-200 border-amber-500/30 hover:bg-amber-500/10"
+                        tooltip="Editar especificaciones, métricas y parámetros de esta estrategia"
                       >
-                        <Sliders className="h-4 w-4" />
+                        <Sliders className="h-3.5 w-3.5" />
                         Editar
                       </Button>
                       <Button
                         variant="ghost"
-                        size="md"
+                        size="xs"
                         onClick={() => setBotForDelete(bot)}
-                        className="gap-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 cursor-pointer"
-                        title="Eliminar del catálogo"
+                        className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+                        tooltip="Eliminar permanentemente este bot del catálogo"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                         Eliminar
                       </Button>
                     </>
                   ) : hasActiveMembership ? (
                     <Button
                       variant="primary"
-                      size="md"
+                      size="xs"
                       onClick={() => navigate('/my-bots')}
+                      tooltip="Ir a Mis Bots para descargar el archivo NinjaScript (.cs)"
                     >
-                      <Download className="h-4 w-4" />
-                      Descargar en Mis Bots
+                      <Download className="h-3.5 w-3.5" />
+                      Descargar
                     </Button>
                   ) : (
                     <Button
                       variant="primary"
-                      size="md"
+                      size="xs"
                       onClick={() => setBotForPurchase(bot)}
+                      tooltip="Elegir un plan de membresía para desbloquear todos los bots"
                     >
-                      <ShoppingCart className="h-4 w-4" />
+                      <ShoppingCart className="h-3.5 w-3.5" />
                       Activar Membresía
                     </Button>
                   )}
@@ -2282,30 +2288,40 @@ namespace NinjaTrader.NinjaScript.Strategies.TradingLifeAcademy
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Link to={`/catalog/${botItem.id}`}>
-                  <Button variant="secondary" size="md">
+                  <Button
+                    variant="secondary"
+                    size="xs"
+                    tooltip="Ver ficha técnica, métricas y parámetros NinjaScript del bot"
+                  >
                     {t.catalog.viewDetails}
-                    <ArrowUpRight className="h-4 w-4" />
+                    <ArrowUpRight className="h-3.5 w-3.5" />
                   </Button>
                 </Link>
 
                 {hasActiveMembership ? (
                   <Button
                     variant="primary"
-                    size="md"
+                    size="xs"
                     onClick={() => handleDownloadStrategy(botItem)}
+                    tooltip={`Descargar estrategia ${botItem.codeName}.cs vinculada a tu PC (${activeMachineId})`}
                   >
-                    <Download className="h-4 w-4" />
+                    <Download className="h-3.5 w-3.5" />
                     Descargar (.cs)
                   </Button>
                 ) : (
                   <Button
                     variant="primary"
-                    size="md"
+                    size="xs"
                     onClick={() => setBotForPurchase(botItem)}
+                    tooltip={
+                      isExpired
+                        ? 'Renovar membresía para reactivar todos tus bots'
+                        : 'Activar membresía mensual o anual para desbloquear todos los bots'
+                    }
                   >
-                    <ShoppingCart className="h-4 w-4" />
+                    <ShoppingCart className="h-3.5 w-3.5" />
                     {isExpired ? 'Renovar' : 'Activar'}
                   </Button>
                 )}
