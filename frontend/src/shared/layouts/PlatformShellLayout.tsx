@@ -269,16 +269,30 @@ export const PlatformShellLayout: React.FC = () => {
   const renderSidebarContent = (isMobile = false) => (
     <div className="flex h-full flex-col justify-between">
       <div>
-        <div className="flex items-center justify-between border-b border-slate-800/80 px-4 py-4">
+        <div
+          className={`flex border-b border-slate-800/80 ${
+            isSidebarCollapsed && !isMobile
+              ? 'flex-col items-center justify-center gap-2.5 px-2 py-3.5'
+              : 'items-center justify-between px-4 py-4'
+          }`}
+        >
           <Link
             to="/"
-            className="flex items-center gap-3 overflow-hidden group cursor-pointer hover:opacity-90 transition-opacity"
-            title={lang === 'es' ? 'Ir al Portal Público / Landing Page' : 'Go to Public Portal / Landing Page'}
+            className={`flex items-center gap-3 group cursor-pointer hover:opacity-90 transition-opacity ${
+              isSidebarCollapsed && !isMobile
+                ? 'justify-center shrink-0'
+                : 'overflow-hidden'
+            }`}
+            title={
+              lang === 'es'
+                ? 'Ir al Portal Público / Landing Page'
+                : 'Go to Public Portal / Landing Page'
+            }
           >
             <img
               src="/tla-logo.jpg"
               alt="Trading Life Academy"
-              className="h-9 w-9 shrink-0 rounded-xl object-cover border border-amber-500/50 shadow-md shadow-amber-500/20 group-hover:border-amber-400 transition-colors"
+              className="h-10 w-10 min-w-10 min-h-10 aspect-square shrink-0 rounded-xl object-cover border border-amber-500/50 shadow-md shadow-amber-500/20 group-hover:border-amber-400 transition-colors"
             />
             {(!isSidebarCollapsed || isMobile) && (
               <div className="truncate">
@@ -306,7 +320,18 @@ export const PlatformShellLayout: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
+              className={`rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer shrink-0 ${
+                isSidebarCollapsed ? 'w-10 flex items-center justify-center border border-slate-800/80 bg-slate-900/80' : ''
+              }`}
+              title={
+                isSidebarCollapsed
+                  ? lang === 'es'
+                    ? 'Expandir menú'
+                    : 'Expand menu'
+                  : lang === 'es'
+                  ? 'Contraer menú'
+                  : 'Collapse menu'
+              }
             >
               {isSidebarCollapsed ? (
                 <ChevronRight className="h-4 w-4" />
@@ -318,7 +343,7 @@ export const PlatformShellLayout: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsMobileDrawerOpen(false)}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white shrink-0"
             >
               <X className="h-4 w-4" />
             </button>
@@ -355,7 +380,11 @@ export const PlatformShellLayout: React.FC = () => {
                       onClick={() => setIsMobileDrawerOpen(false)}
                       title={isSidebarCollapsed ? item.label : undefined}
                       className={() =>
-                        `flex items-center justify-between gap-2.5 rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${
+                        `flex items-center ${
+                          isSidebarCollapsed && !isMobile
+                            ? 'justify-center px-2 py-2.5'
+                            : 'justify-between gap-2.5 px-3 py-2.5'
+                        } rounded-xl text-xs font-medium transition-all ${
                           isActiveRoute
                             ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40 font-semibold shadow-xs shadow-amber-500/10'
                             : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100 border border-transparent'
