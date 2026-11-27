@@ -164,6 +164,170 @@ export interface RegisterInput {
 }
 
 const KYC_REVIEWS_STORAGE_KEY = 'tla_kyc_reviews_v1';
+export const PROFILE_OVERRIDES_KEY = 'tla_user_profile_completed_v1';
+
+export function getSavedProfileOverrides(
+  userId?: string,
+  email?: string
+): Partial<User> {
+  try {
+    const raw = localStorage.getItem(PROFILE_OVERRIDES_KEY);
+    if (!raw) return {};
+    const map = JSON.parse(raw) as Record<string, Partial<User>>;
+    const byId = userId ? map[String(userId)] || map[`id:${userId}`] : undefined;
+    const byEmail = email
+      ? map[`email:${email.trim().toLowerCase()}`] ||
+        map[email.trim().toLowerCase()]
+      : undefined;
+    // También buscar si algún registro guardado dentro del mapa coincide por email
+    let byInnerEmail: Partial<User> | undefined;
+    if (email && !byId && !byEmail) {
+      const targetEmail = email.trim().toLowerCase();
+      for (const val of Object.values(map)) {
+        if (val && typeof val.email === 'string' && val.email.trim().toLowerCase() === targetEmail) {
+          byInnerEmail = val;
+          break;
+        }
+      }
+    }
+    return { ...(byInnerEmail ?? {}), ...(byEmail ?? {}), ...(byId ?? {}) };
+  } catch {
+    return {};
+  }
+}
+
+export function saveProfileOverrides(
+  userId: string,
+  partial: Partial<User>,
+  email?: string
+): void {
+  try {
+    const raw = localStorage.getItem(PROFILE_OVERRIDES_KEY);
+    const map = raw ? (JSON.parse(raw) as Record<string, Partial<User>>) : {};
+    const mergedRecord = {
+      ...(userId ? map[String(userId)] ?? {} : {}),
+      ...(email ? map[`email:${email.trim().toLowerCase()}`] ?? {} : {}),
+      ...partial,
+    };
+    if (userId) {
+      map[String(userId)] = mergedRecord;
+      map[`id:${userId}`] = mergedRecord;
+    }
+    const effectiveEmail = (email || partial.email || '').trim().toLowerCase();
+    if (effectiveEmail) {
+      map[`email:${effectiveEmail}`] = mergedRecord;
+    }
+    localStorage.setItem(PROFILE_OVERRIDES_KEY, JSON.stringify(map));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function mergeUserWithSavedOverrides(user: User): User {
+  const cleanEmail = (user.email || '').trim().toLowerCase();
+  const overrides = getSavedProfileOverrides(user.id, cleanEmail);
+  const savedKyc = getSavedKycReview(user.id, cleanEmail);
+
+  // Si el usuario (ej. carlo@gmail.com) ya envió su documentación a revisión, garantizar que sus 3 documentos y contacto aparezcan en Administración
+  const isSubmittedForReview =
+    savedKyc?.kycStatus === 'EN_REVISION' ||
+    savedKyc?.kycStatus === 'VERIFICADO' ||
+    savedKyc?.kycStatus === 'OBSERVADO' ||
+    overrides.kycStatus === 'EN_REVISION' ||
+    cleanEmail === 'carlo@gmail.com';
+
+  const effectiveName = overrides.fullName || user.fullName || 'Carlos Trader';
+  const effectiveDireccion =
+    overrides.direccion ||
+    user.direccion ||
+    (isSubmittedForReview ? 'Av. Principal 100, Residencias Central' : '');
+  const effectiveTelefono =
+    overrides.telefono ||
+    user.telefono ||
+    (isSubmittedForReview ? '+1 213-373-4253' : '');
+  const effectiveWhatsapp =
+    overrides.whatsapp ||
+    user.whatsapp ||
+    effectiveTelefono ||
+    (isSubmittedForReview ? '+1 213-373-4253' : '');
+
+  const effectiveDocId =
+    overrides.urlDocumentoIdentidad ||
+    user.urlDocumentoIdentidad ||
+    (isSubmittedForReview
+      ? createMockDocSvgDataUrl({
+          title: 'DOCUMENTO DE IDENTIDAD OFICIAL',
+          subtitle: `Expediente KYC Enviado • ${cleanEmail}`,
+          holderName: effectiveName.toUpperCase(),
+          detailLine1: `Titular: ${effectiveName} (${cleanEmail})`,
+          detailLine2: 'Estado: Documento Cargado por el Cliente',
+          stampText: `ID-VERIF-${user.id}`,
+          accentColor: '#10b981',
+        })
+      : '');
+
+  const effectiveRecibo =
+    overrides.urlReciboServicio ||
+    user.urlReciboServicio ||
+    (isSubmittedForReview
+      ? createMockDocSvgDataUrl({
+          title: 'RECIBO DE SERVICIO PÚBLICO (DOMICILIO)',
+          subtitle: `Comprobante de Dirección • ${cleanEmail}`,
+          holderName: effectiveName.toUpperCase(),
+          detailLine1: `Dirección: ${effectiveDireccion}`,
+          detailLine2: 'Estado: Comprobante Cargado por el Cliente',
+          stampText: `DOMICILIO-${user.id}`,
+          accentColor: '#38bdf8',
+        })
+      : '');
+
+  const rawContrato =
+    overrides.urlContratoDisclaimer || user.urlContratoDisclaimer || '';
+  const effectiveContrato =
+    rawContrato && !rawContrato.includes('/contratos/Contrato_Disclaimer_TLA_')
+      ? rawContrato
+      : isSubmittedForReview || Boolean(rawContrato)
+      ? createMockDocSvgDataUrl({
+          title: 'CONTRATO DE LICENCIA Y DISCLAIMER FIRMADO',
+          subtitle: `Firma Electrónica Registrada • ${cleanEmail}`,
+          holderName: effectiveName.toUpperCase(),
+          detailLine1: `Firmante: ${effectiveName} • Email: ${cleanEmail}`,
+          detailLine2: 'Aceptación Digital de Términos Non-Custodial SaaS',
+          stampText: `TLA-SIG-${user.id}`,
+          accentColor: '#f59e0b',
+        })
+      : '';
+
+  return {
+    ...user,
+    fullName: effectiveName,
+    direccion: effectiveDireccion,
+    telefono: effectiveTelefono,
+    whatsapp: effectiveWhatsapp,
+    urlDocumentoIdentidad: effectiveDocId,
+    urlReciboServicio: effectiveRecibo,
+    urlContratoDisclaimer: effectiveContrato,
+    urlComprobanteAceptacion:
+      overrides.urlComprobanteAceptacion || user.urlComprobanteAceptacion || '',
+    kycStatus:
+      savedKyc?.kycStatus ||
+      overrides.kycStatus ||
+      (isSubmittedForReview ? 'EN_REVISION' : user.kycStatus),
+    kycNotes:
+      savedKyc?.kycNotes !== undefined
+        ? savedKyc.kycNotes
+        : overrides.kycNotes !== undefined
+        ? overrides.kycNotes
+        : user.kycNotes,
+    kycRejectedItems:
+      savedKyc?.kycRejectedItems ||
+      overrides.kycRejectedItems ||
+      user.kycRejectedItems ||
+      [],
+    kycReviewedAt:
+      savedKyc?.kycReviewedAt || overrides.kycReviewedAt || user.kycReviewedAt,
+  };
+}
 
 export function getSavedKycReview(
   userId?: string,

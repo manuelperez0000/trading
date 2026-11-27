@@ -198,6 +198,8 @@ export async function updateUser(id, userData) {
   // Cuando el cliente actualiza y envía sus documentos, pasa a revisión del administrador
   values.push("en_revision");
   assignments.push(`kyc_status = $${values.length}`);
+  values.push("en_revision");
+  assignments.push(`estado = $${values.length}`);
 
   const { rows } = await pool.query(
     `UPDATE users

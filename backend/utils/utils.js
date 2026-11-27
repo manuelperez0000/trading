@@ -266,10 +266,10 @@ export function validateProfileUpdateData(body) {
 
   const textFields = [
     ["direccion", "La dirección", 500],
-    ["urlDocumentoIdentidad", "La URL del documento de identidad", 2048],
-    ["urlReciboServicio", "La URL del recibo de servicio", 2048],
-    ["urlContratoDisclaimer", "La URL del contrato o disclaimer", 2048],
-    ["urlComprobanteAceptacion", "La URL del comprobante de aceptación", 2048],
+    ["urlDocumentoIdentidad", "La URL del documento de identidad", 500000],
+    ["urlReciboServicio", "La URL del recibo de servicio", 500000],
+    ["urlContratoDisclaimer", "La URL del contrato o disclaimer", 500000],
+    ["urlComprobanteAceptacion", "La URL del comprobante de aceptación", 500000],
   ];
   for (const [field, label, maxLength] of textFields) {
     if (body[field] === undefined) {
@@ -304,10 +304,10 @@ export function validateProfileUpdateData(body) {
         field,
         message: `${label} no puede superar 40 caracteres.`,
       });
-    } else if (value.length > 0 && !isValidInternationalPhoneNumber(value)) {
+    } else if (value.length > 0 && !/^\+?[\d\s().-]{6,40}$/.test(value)) {
       errors.push({
         field,
-        message: `${label} debe ser un número internacional válido, con código de país y sin letras.`,
+        message: `${label} debe ser un número de teléfono válido.`,
       });
     } else {
       userData[field] = value;

@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import {
   getStoredTestClients,
+  mergeUserWithSavedOverrides,
   resolveUserCredentials,
+  saveProfileOverrides,
   saveUserCredentialLocally,
   type LoginCredentials,
   type RegisterInput,
@@ -29,53 +31,6 @@ const USER_STORAGE_KEY = 'tla_authenticated_user';
 const TOKEN_STORAGE_KEY = 'nt_admin_jwt_token';
 const SESSION_ACTIVE_KEY = 'tla_explicit_login_v2';
 const MIGRATION_CLEANUP_KEY = 'tla_clean_public_init_v2';
-const PROFILE_OVERRIDES_KEY = 'tla_user_profile_completed_v1';
-
-function getSavedProfileOverrides(userId: string): Partial<User> {
-  try {
-    const raw = localStorage.getItem(PROFILE_OVERRIDES_KEY);
-    if (!raw) return {};
-    const map = JSON.parse(raw) as Record<string, Partial<User>>;
-    return map[String(userId)] ?? {};
-  } catch {
-    return {};
-  }
-}
-
-function saveProfileOverrides(userId: string, partial: Partial<User>): void {
-  try {
-    const raw = localStorage.getItem(PROFILE_OVERRIDES_KEY);
-    const map = raw ? (JSON.parse(raw) as Record<string, Partial<User>>) : {};
-    map[String(userId)] = { ...(map[String(userId)] ?? {}), ...partial };
-    localStorage.setItem(PROFILE_OVERRIDES_KEY, JSON.stringify(map));
-  } catch {
-    // ignore storage errors
-  }
-}
-
-function mergeUserWithSavedOverrides(user: User): User {
-  const overrides = getSavedProfileOverrides(user.id);
-  return {
-    ...user,
-    direccion: user.direccion || overrides.direccion || '',
-    telefono: user.telefono || overrides.telefono || '',
-    whatsapp: user.whatsapp || overrides.whatsapp || '',
-    urlDocumentoIdentidad:
-      user.urlDocumentoIdentidad || overrides.urlDocumentoIdentidad || '',
-    urlReciboServicio:
-      user.urlReciboServicio || overrides.urlReciboServicio || '',
-    urlContratoDisclaimer:
-      user.urlContratoDisclaimer || overrides.urlContratoDisclaimer || '',
-    urlComprobanteAceptacion:
-      user.urlComprobanteAceptacion || overrides.urlComprobanteAceptacion || '',
-    kycStatus: overrides.kycStatus || user.kycStatus,
-    kycNotes:
-      overrides.kycNotes !== undefined ? overrides.kycNotes : user.kycNotes,
-    kycRejectedItems:
-      overrides.kycRejectedItems || user.kycRejectedItems || [],
-    kycReviewedAt: overrides.kycReviewedAt || user.kycReviewedAt,
-  };
-}
 
 // Limpieza única de sesiones residuales antiguas para garantizar que el usuario inicie como visitante público (sin login)
 try {
@@ -379,7 +334,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   updateProfile: (partial) =>
     set((state) => {
       const updated = { ...state.user, ...partial };
-      saveProfileOverrides(updated.id, partial);
+      saveProfileOverrides(updated.id, updated, updated.email);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
       return { user: updated };
     }),
