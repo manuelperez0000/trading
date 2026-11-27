@@ -26,7 +26,7 @@ import {
 import { useI18n } from '@core/i18n/useLanguageStore';
 import { useThemeStore } from '@core/theme/useThemeStore';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
-import { isUserProfileComplete } from '@features/auth/domain/entities/User';
+import { getEffectiveKycStatus } from '@features/auth/domain/entities/User';
 import { LandingNavbar } from '@features/landing/presentation/components/LandingNavbar';
 import { LandingFooter } from '@features/landing/presentation/components/LandingFooter';
 import {
@@ -415,11 +415,15 @@ export const PlatformShellLayout: React.FC = () => {
     return <Navigate to="/admin/subscriptions" replace />;
   }
 
-  // Onboarding obligatorio: solo para clientes normales con perfil incompleto (los administradores no requieren contacto ni documentación)
+  // Onboarding obligatorio: si el cliente aún tiene su perfil INCOMPLETO o fue OBSERVADO para corregir documentos, llevarlo a /profile
+  const currentKycStatus = getEffectiveKycStatus(user);
+  const requiresImmediateProfileCompletion =
+    currentKycStatus === 'INCOMPLETO' || currentKycStatus === 'OBSERVADO';
+
   if (
     isAuthenticated &&
     user?.role !== 'ADMIN' &&
-    !isUserProfileComplete(user) &&
+    requiresImmediateProfileCompletion &&
     location.pathname !== '/profile'
   ) {
     return <Navigate to="/profile?onboarding=1" replace />;

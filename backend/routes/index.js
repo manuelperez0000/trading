@@ -4,6 +4,7 @@ import imagesRouter from "./images.js";
 import responser from "../utils/responser.js";
 import postsRouter from "./posts.js";
 import subscriptionPlansRouter from "./subscriptionPlans.js";
+import subscriptionsRouter from "./subscriptions.js";
 import usersRouter from "./users.js";
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.use("/bots", botsRouter);
 router.use("/images", imagesRouter);
 router.use("/subscription-plans", subscriptionPlansRouter);
 router.use("/plans", subscriptionPlansRouter);
+router.use("/subscriptions", subscriptionsRouter);
 
 export default router;

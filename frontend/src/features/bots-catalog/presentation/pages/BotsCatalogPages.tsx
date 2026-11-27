@@ -320,41 +320,52 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
                     ★ 1 Licencia para todos los bots
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {activePlans.map((plan) => {
-                    const isSelected = selectedPlan?.id === plan.id;
-                    return (
-                      <button
-                        key={plan.id}
-                        type="button"
-                        onClick={() => setSelectedPlanId(plan.id)}
-                        className={`rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
-                          isSelected
-                            ? 'border-emerald-500 bg-emerald-500/15 text-white shadow-lg shadow-emerald-500/10'
-                            : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                            {plan.badgeText || `${plan.durationDays} Días`}
-                          </span>
-                          {isSelected && (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                          )}
-                        </div>
-                        <div className="text-sm font-bold text-white mt-1">
-                          {plan.name}
-                        </div>
-                        <div className="text-base font-mono font-extrabold text-emerald-400 mt-0.5">
-                          {formatUsd(plan.priceUsd)} USD
-                        </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
-                          {plan.description}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                {activePlans.length === 0 ? (
+                  <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-200 space-y-1">
+                    <div className="font-bold text-amber-300">
+                      No hay planes de membresía publicados en este momento
+                    </div>
+                    <p className="text-slate-300">
+                      El Administrador aún no ha publicado planes de suscripción activos en el sistema. Por favor intenta más tarde o contacta a soporte para que te asignen tu membresía.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {activePlans.map((plan) => {
+                      const isSelected = selectedPlan?.id === plan.id;
+                      return (
+                        <button
+                          key={plan.id}
+                          type="button"
+                          onClick={() => setSelectedPlanId(plan.id)}
+                          className={`rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-500/15 text-white shadow-lg shadow-emerald-500/10'
+                              : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                              {plan.badgeText || `${plan.durationDays} Días`}
+                            </span>
+                            {isSelected && (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                            )}
+                          </div>
+                          <div className="text-sm font-bold text-white mt-1">
+                            {plan.name}
+                          </div>
+                          <div className="text-base font-mono font-extrabold text-emerald-400 mt-0.5">
+                            {formatUsd(plan.priceUsd)} USD
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
+                            {plan.description}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Selector de Perfil Preconfigurado */}
@@ -392,19 +403,19 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 flex items-center justify-between text-xs">
                 <div className="space-y-0.5">
                   <div className="text-slate-300">
-                    LicenseKey Asignada:{' '}
+                    LicenseKey a Generar:{' '}
                     <span className="font-mono font-bold text-emerald-300">
-                      NT8-QTM-9921-ALPHA
+                      NT8-TLA-XXXX-ALL (Única por Cliente)
                     </span>
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    Desbloquea Proton + Nova + Pulsar simultáneamente en NT8
+                    Desbloquea todos los bots del catálogo en 1 computadora autorizada
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-[11px] text-slate-400">Total a Pagar</div>
                   <div className="text-lg font-extrabold text-white">
-                    {formatUsd(computedPriceUsd)}
+                    {selectedPlan ? formatUsd(computedPriceUsd) : '—'}
                   </div>
                 </div>
               </div>
@@ -416,6 +427,7 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
                 <Button
                   variant="primary"
                   size="lg"
+                  disabled={!selectedPlan}
                   isLoading={createSubscriptionMutation.isPending}
                   onClick={handleConfirmPurchase}
                 >
@@ -1429,9 +1441,7 @@ export const BotsCatalogPage: React.FC = () => {
     isAuthenticated && !isAdmin
       ? subscriptions.find(
           (s) => s.email.toLowerCase() === user.email.toLowerCase()
-        ) ??
-        subscriptions[0] ??
-        null
+        ) ?? null
       : null;
   const hasActiveMembership = isSubscriptionAllowedToOperate(mySubscription);
 
@@ -1671,9 +1681,7 @@ export const BotDetailPage: React.FC = () => {
     isAuthenticated && !isAdmin
       ? subscriptions.find(
           (s) => s.email.toLowerCase() === user.email.toLowerCase()
-        ) ??
-        subscriptions[0] ??
-        null
+        ) ?? null
       : null;
   const hasActiveMembership = isSubscriptionAllowedToOperate(mySubscription);
 
@@ -1957,9 +1965,7 @@ export const MyBotsPage: React.FC = () => {
   const mySubscription =
     subscriptions.find(
       (s) => s.email.toLowerCase() === user.email.toLowerCase()
-    ) ??
-    subscriptions[0] ??
-    null;
+    ) ?? null;
 
   const isExpired = isSubscriptionExpired(mySubscription);
   const hasActiveMembership = isSubscriptionAllowedToOperate(mySubscription);
