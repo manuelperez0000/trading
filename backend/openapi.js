@@ -464,6 +464,98 @@ const openApiDocument = {
         },
       },
     },
+    "/posts/{id}/comments": {
+      parameters: [idParameter],
+      get: {
+        tags: ["Publicaciones"],
+        summary: "Listar comentarios de una publicación",
+        operationId: "listPostComments",
+        security: [{ bearerAuth: [] }, {}],
+        responses: {
+          "200": response(
+            "Comentarios listados.",
+            {
+              type: "object",
+              required: ["comments"],
+              properties: { comments: { type: "array", items: ref("Comment") } },
+            },
+            { body: { comments: [] }, message: "Comentarios listados correctamente.", status: 200 },
+          ),
+          "400": badRequest,
+          "404": notFound,
+          "500": serverError,
+        },
+      },
+      post: {
+        tags: ["Publicaciones"],
+        summary: "Crear comentario en una publicación",
+        description:
+          "Requiere Bearer. Inserta el comentario e incrementa comments_count en una transacción.",
+        operationId: "createPostComment",
+        security: [{ bearerAuth: [] }],
+        requestBody: jsonRequest("CreateCommentRequest", {
+          content: "Excelente análisis y ejecución.",
+        }),
+        responses: {
+          "201": response(
+            "Comentario creado.",
+            {
+              type: "object",
+              required: ["comment", "comments_count", "post"],
+              properties: {
+                comment: ref("Comment"),
+                comments_count: { type: "integer", minimum: 0 },
+                post: ref("Post"),
+              },
+            },
+          ),
+          "400": badRequest,
+          "401": unauthorized,
+          "404": notFound,
+          "413": requestTooLarge,
+          "500": serverError,
+        },
+      },
+    },
+    "/posts/{id}/comments/{commentId}": {
+      parameters: [
+        idParameter,
+        {
+          name: "commentId",
+          in: "path",
+          required: true,
+          description: "ID decimal del comentario.",
+          schema: { type: "string", pattern: "^[1-9][0-9]{0,18}$" },
+        },
+      ],
+      delete: {
+        tags: ["Publicaciones"],
+        summary: "Eliminar comentario",
+        description:
+          "Permite al autor del comentario o de la publicación eliminarlo y decrementar comments_count en una transacción.",
+        operationId: "deletePostComment",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": response(
+            "Comentario eliminado.",
+            {
+              type: "object",
+              required: ["comment", "comments_count", "post"],
+              properties: {
+                comment: ref("Comment"),
+                comments_count: { type: "integer", minimum: 0 },
+                post: ref("Post"),
+              },
+            },
+          ),
+          "400": badRequest,
+          "401": unauthorized,
+          "403": forbidden,
+          "404": notFound,
+          "500": serverError,
+        },
+      },
+    },
     "/posts/{id}": {
       parameters: [idParameter],
       get: {
@@ -778,7 +870,7 @@ const openApiDocument = {
       },
       Post: {
         type: "object",
-        required: ["id", "user_id", "title", "text", "image", "status", "created_at", "likes_count"],
+        required: ["id", "user_id", "title", "text", "image", "status", "created_at", "likes_count", "comments_count"],
         properties: {
           id: { type: "string" },
           user_id: { type: "string" },
@@ -788,11 +880,33 @@ const openApiDocument = {
           status: { type: "boolean" },
           created_at: { type: "string", format: "date-time" },
           likes_count: { type: "integer", minimum: 0 },
+          comments_count: { type: "integer", minimum: 0 },
           author_name: { type: "string" },
           followers_count: { type: "integer", minimum: 0 },
           following_count: { type: "integer", minimum: 0 },
           liked_by_me: { type: "boolean" },
           is_following: { type: "boolean" },
+        },
+      },
+      Comment: {
+        type: "object",
+        required: ["id", "post_id", "user_id", "content", "created_at", "username"],
+        properties: {
+          id: { type: "string" },
+          post_id: { type: "string" },
+          user_id: { type: "string" },
+          content: { type: "string", maxLength: 2000 },
+          created_at: { type: "string", format: "date-time" },
+          author_name: { type: "string" },
+          username: { type: "string" },
+          avatar_url: { type: "string", nullable: true },
+        },
+      },
+      CreateCommentRequest: {
+        type: "object",
+        required: ["content"],
+        properties: {
+          content: { type: "string", minLength: 1, maxLength: 2000 },
         },
       },
       CreatePostRequest: {

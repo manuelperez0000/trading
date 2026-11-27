@@ -20,7 +20,10 @@ import {
 // Muro Social
 import type { ISocialWallRepository } from '@features/social-wall/domain/repositories/SocialWallRepository';
 import { HttpSocialWallRepository } from '@features/social-wall/infrastructure/repositories/HttpSocialWallRepository';
-import { CreateSocialPostUseCase } from '@features/social-wall/application/use-cases/socialWallUseCases';
+import {
+  CreateSocialCommentUseCase,
+  CreateSocialPostUseCase,
+} from '@features/social-wall/application/use-cases/socialWallUseCases';
 
 // Autenticación y Usuarios
 import type { IAuthRepository } from '@features/auth/domain/repositories/AuthRepository';
@@ -87,6 +90,7 @@ class AppDependencyContainer {
 
   // Casos de Uso: Muro Social
   public createSocialPostUseCase: CreateSocialPostUseCase;
+  public createSocialCommentUseCase: CreateSocialCommentUseCase;
 
   // Casos de Uso: Autenticación
   public loginUseCase: LoginUseCase;
@@ -153,6 +157,9 @@ class AppDependencyContainer {
     );
 
     this.createSocialPostUseCase = new CreateSocialPostUseCase(
+      this.socialWallRepository
+    );
+    this.createSocialCommentUseCase = new CreateSocialCommentUseCase(
       this.socialWallRepository
     );
 

@@ -89,6 +89,12 @@
   background: var(--color-slate-500);
 }
 
-.social-wall-spacing{
-  padding:0px 120px;
+.social-wall-spacing {
+  padding: 0;
+}
+
+@media (min-width: 1024px) {
+  .social-wall-spacing {
+    padding: 0px 120px;
+  }
 }

@@ -227,6 +227,15 @@ usuario autenticado. Cada respuesta conserva el sobre común de la API.
 - Requiere autenticación. Alterna el like de forma transaccional y responde
   con el post actualizado y `liked`.
 
+### `GET /api/v1/posts/:id/comments`
+- Lista los comentarios de la publicación en orden cronológico (`ORDER BY created_at ASC, id ASC`), incluyendo datos básicos del autor (`user_id`, `author_name`, `username`, `avatar_url`).
+
+### `POST /api/v1/posts/:id/comments`
+- Requiere autenticación. Valida que `content` no esté vacío, inserta el comentario e incrementa `posts.comments_count` dentro de una transacción atómica. Devuelve `{ comment, comments_count, post }`.
+
+### `DELETE /api/v1/posts/:id/comments/:commentId`
+- Requiere autenticación. Permite al autor del comentario o al autor del post eliminarlo y decrementar `GREATEST(comments_count - 1, 0)` dentro de la misma transacción.
+
 ### `PUT /api/v1/users/:id/follow` y `DELETE /api/v1/users/:id/follow`
 - Requieren autenticación. Seguir y dejar de seguir son operaciones
   idempotentes, actualizan ambos contadores en la misma transacción y rechazan

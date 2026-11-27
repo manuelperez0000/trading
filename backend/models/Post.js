@@ -1,10 +1,10 @@
 import pool from "../config/database.js";
 
 const postFields =
-  "id, user_id, title, post_text AS text, image_url AS image, status, created_at, likes_count";
+  "id, user_id, title, post_text AS text, image_url AS image, status, created_at, likes_count, comments_count";
 const socialPostFields = `
   p.id, p.user_id, p.title, p.post_text AS text, p.image_url AS image,
-  p.status, p.created_at, p.likes_count,
+  p.status, p.created_at, p.likes_count, p.comments_count,
   u.name AS author_name, u.followers_count, u.following_count,
   CASE WHEN $2::bigint IS NULL THEN FALSE
     ELSE EXISTS (

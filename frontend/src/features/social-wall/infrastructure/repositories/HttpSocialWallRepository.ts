@@ -1,12 +1,20 @@
 import { env } from '@core/config/env';
 import { httpClient, type ApiResponse } from '@core/http/httpClient';
 import type {
+  CreateSocialCommentInput,
   CreateSocialPostInput,
+  SocialComment,
   SocialPost,
 } from '@features/social-wall/domain/entities/SocialPost';
 import type { ISocialWallRepository } from '@features/social-wall/domain/repositories/SocialWallRepository';
-import type { SocialPostDto } from '@features/social-wall/infrastructure/dto/SocialPostDto';
-import { SocialPostMapper } from '@features/social-wall/infrastructure/mappers/SocialPostMapper';
+import type {
+  SocialCommentDto,
+  SocialPostDto,
+} from '@features/social-wall/infrastructure/dto/SocialPostDto';
+import {
+  SocialCommentMapper,
+  SocialPostMapper,
+} from '@features/social-wall/infrastructure/mappers/SocialPostMapper';
 
 interface ImageUploadResponse {
   id: string;
@@ -65,5 +73,53 @@ export class HttpSocialWallRepository implements ISocialWallRepository {
       return;
     }
     await httpClient.delete<ApiResponse<{ follow: unknown }>>(path);
+  }
+
+  public async getComments(postId: string): Promise<SocialComment[]> {
+    const response = await httpClient.get<
+      ApiResponse<{ comments: SocialCommentDto[] }>
+    >(`/posts/${encodeURIComponent(postId)}/comments`);
+    return response.body.comments.map((comment) =>
+      SocialCommentMapper.toDomain(comment)
+    );
+  }
+
+  public async createComment(
+    input: CreateSocialCommentInput
+  ): Promise<{ comment: SocialComment; post: SocialPost }> {
+    const response = await httpClient.post<
+      ApiResponse<{
+        comment: SocialCommentDto;
+        comments_count: number;
+        post: SocialPostDto;
+      }>
+    >(`/posts/${encodeURIComponent(input.postId)}/comments`, {
+      content: input.content.trim(),
+    });
+    return {
+      comment: SocialCommentMapper.toDomain(response.body.comment),
+      post: SocialPostMapper.toDomain(response.body.post),
+    };
+  }
+
+  public async deleteComment(params: {
+    postId: string;
+    commentId: string;
+  }): Promise<{ commentId: string; post: SocialPost }> {
+    const response = await httpClient.delete<
+      ApiResponse<{
+        comment: { id: string | number };
+        comments_count: number;
+        post: SocialPostDto;
+      }>
+    >(
+      `/posts/${encodeURIComponent(params.postId)}/comments/${encodeURIComponent(
+        params.commentId
+      )}`
+    );
+    return {
+      commentId: String(response.body.comment.id),
+      post: SocialPostMapper.toDomain(response.body.post),
+    };
   }
 }

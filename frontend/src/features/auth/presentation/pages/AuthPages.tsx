@@ -107,6 +107,7 @@ export const LoginPage: React.FC = () => {
         navigate(clientTarget);
       }
     } catch (err) {
+      console.log(err);
       toast.danger(
         'Error al iniciar sesión',
         err instanceof Error ? err.message : 'Correo o contraseña incorrectos.'
@@ -237,6 +238,7 @@ export const RegisterPage: React.FC = () => {
       );
       navigate('/profile?onboarding=1');
     } catch (err) {
+      console.error(err);
       toast.danger(
         'Error en el registro',
         err instanceof Error ? err.message : 'No se pudo registrar el usuario.'
