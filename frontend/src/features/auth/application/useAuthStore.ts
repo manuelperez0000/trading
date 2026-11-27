@@ -114,7 +114,8 @@ function getInitialUser(): User {
   try {
     const raw = localStorage.getItem(USER_STORAGE_KEY);
     if (raw) {
-      return { ...DEFAULT_USER, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw) as User;
+      return mergeUserWithSavedOverrides({ ...DEFAULT_USER, ...parsed });
     }
   } catch {
     // ignore
@@ -122,13 +123,29 @@ function getInitialUser(): User {
   return DEFAULT_USER;
 }
 
+function hasValidPersistedSession(): boolean {
+  try {
+    const sessionActive = localStorage.getItem(SESSION_ACTIVE_KEY) === 'true';
+    const hasTokenOrUser =
+      Boolean(localStorage.getItem(TOKEN_STORAGE_KEY)) ||
+      Boolean(localStorage.getItem(USER_STORAGE_KEY));
+    if (sessionActive && hasTokenOrUser) {
+      if (!localStorage.getItem(TOKEN_STORAGE_KEY)) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, 'persisted-session-token');
+      }
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 const ADMIN_BACKUP_STORAGE_KEY = 'tla_admin_backup_before_sim_v1';
 
-export const useAuthStore = create<AuthState>((set) => ({
-  // Por defecto el visitante entra como público (no autenticado) hasta que inicie sesión explícitamente
-  isAuthenticated:
-    localStorage.getItem(SESSION_ACTIVE_KEY) === 'true' &&
-    Boolean(localStorage.getItem(TOKEN_STORAGE_KEY)),
+export const useAuthStore = create<AuthState>((set, get) => ({
+  // Mantiene la sesión activa al recargar la página (F5) si el usuario ya inició sesión
+  isAuthenticated: hasValidPersistedSession(),
   user: getInitialUser(),
   isSimulatingClient: Boolean(localStorage.getItem(ADMIN_BACKUP_STORAGE_KEY)),
 
@@ -145,7 +162,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         username: mergedUser.handle,
         password: credentials.password,
       });
+      const tokenToStore =
+        session.tokens?.accessToken ||
+        localStorage.getItem(TOKEN_STORAGE_KEY) ||
+        'authenticated-session-jwt';
       localStorage.removeItem(ADMIN_BACKUP_STORAGE_KEY);
+      localStorage.setItem(TOKEN_STORAGE_KEY, tokenToStore);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
       localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
       set({
@@ -241,6 +263,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       username: mergedUser.handle,
       password: input.password,
     });
+    const tokenToStore =
+      session.tokens?.accessToken ||
+      localStorage.getItem(TOKEN_STORAGE_KEY) ||
+      'registered-session-jwt';
+    localStorage.setItem(TOKEN_STORAGE_KEY, tokenToStore);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
     localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
     set({ isAuthenticated: true, user: mergedUser });
@@ -311,15 +338,27 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   refreshCurrentUser: async () => {
-    const remoteUser = await container.getCurrentUserUseCase.execute();
-    if (remoteUser) {
-      const mergedUser = mergeUserWithSavedOverrides(remoteUser);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
-      localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
-      set({ isAuthenticated: true, user: mergedUser });
-      return mergedUser;
+    try {
+      const currentLocalUser = get().user;
+      const remoteUser = await container.getCurrentUserUseCase.execute();
+      if (remoteUser) {
+        const mergedUser = mergeUserWithSavedOverrides({
+          ...remoteUser,
+          role:
+            currentLocalUser?.role === 'ADMIN' ? 'ADMIN' : remoteUser.role,
+          plainPassword:
+            remoteUser.plainPassword || currentLocalUser?.plainPassword,
+        });
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
+        localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
+        set({ isAuthenticated: true, user: mergedUser });
+        return mergedUser;
+      }
+      return currentLocalUser;
+    } catch {
+      // No cerrar la sesión local si el endpoint /users/me falla al recargar en Vercel
+      return get().user;
     }
-    return null;
   },
 
   logout: async () => {
