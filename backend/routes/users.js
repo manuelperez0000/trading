@@ -8,6 +8,7 @@ import {
   createUser,
   findUserByEmail,
   findUserById,
+  isUserAdmin,
   listUsers,
   resetPassword,
   savePasswordResetToken,
@@ -117,8 +118,9 @@ router.post("/login", async (req, res, next) => {
       throw new Error("JWT_SECRET must contain at least 32 characters");
     }
 
+    const role = isUserAdmin(user) ? "admin" : "client";
     const token = jwt.sign(
-      { sub: String(user.id), email: user.email },
+      { sub: String(user.id), email: user.email, role },
       process.env.JWT_SECRET,
       { expiresIn: "10d" },
     );
@@ -130,7 +132,7 @@ router.post("/login", async (req, res, next) => {
         token,
         user: {
           ...toPublicUser(user),
-          role: admins.includes(String(user.id)) ? "admin" : "client",
+          role,
         },
       },
     });

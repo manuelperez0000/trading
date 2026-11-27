@@ -144,8 +144,37 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
       return mergedUser;
     } catch (err) {
-      // Permitir iniciar sesión con cualquiera de los clientes de prueba por correo electrónico
       const cleanEmail = credentials.email.trim().toLowerCase();
+
+      // Respaldo de cuenta Administrador preconfigurada si el backend está offline o aún no sincronizado
+      if (
+        (cleanEmail === 'admin@tradinglifeacademy.com' ||
+          cleanEmail === 'carlos@tradinglifeacademy.com') &&
+        credentials.password === 'Admin123456!'
+      ) {
+        const adminAccount: User = {
+          ...DEFAULT_USER,
+          id: '1',
+          fullName: 'Carlos Figuera (Admin)',
+          email: cleanEmail,
+          handle: '@carlos_admin',
+          role: 'ADMIN',
+          estado: 'verificado',
+          kycStatus: 'VERIFICADO',
+        };
+        localStorage.removeItem(ADMIN_BACKUP_STORAGE_KEY);
+        localStorage.setItem(TOKEN_STORAGE_KEY, 'admin-fallback-jwt-token');
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(adminAccount));
+        localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
+        set({
+          isAuthenticated: true,
+          user: adminAccount,
+          isSimulatingClient: false,
+        });
+        return adminAccount;
+      }
+
+      // Permitir iniciar sesión con cualquiera de los clientes de prueba por correo electrónico
       const matchedTestClient = getStoredTestClients().find(
         (c) => c.email.toLowerCase() === cleanEmail
       );

@@ -4,8 +4,6 @@ import {
   Heart,
   ImagePlus,
   Send,
-  Sparkles,
-  TrendingUp,
   Users,
   X,
 } from 'lucide-react';
