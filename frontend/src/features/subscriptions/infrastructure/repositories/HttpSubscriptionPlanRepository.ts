@@ -1,45 +1,29 @@
 import { httpClient } from '@core/http/httpClient';
-import {
-  INITIAL_SUBSCRIPTION_PLANS,
-  type CreateSubscriptionPlanInput,
-  type SubscriptionPlan,
-  type UpdateSubscriptionPlanInput,
+import type {
+  CreateSubscriptionPlanInput,
+  SubscriptionPlan,
+  UpdateSubscriptionPlanInput,
 } from '../../domain/entities/SubscriptionPlan';
 import type { ISubscriptionPlanRepository } from '../../domain/repositories/SubscriptionPlanRepository';
 
-const STORAGE_KEY_PLANS = 'tla_admin_subscription_plans_v1';
-const STORAGE_KEY_PLANS_SEEDED_ONCE = 'tla_admin_subscription_plans_seeded_once_v1';
+const STORAGE_KEY_PLANS = 'tla_admin_subscription_plans_manual_v2';
 
 function getStoredPlans(): SubscriptionPlan[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PLANS);
-    const alreadySeededOnce =
-      localStorage.getItem(STORAGE_KEY_PLANS_SEEDED_ONCE) === 'true';
-
-    if (!raw && !alreadySeededOnce) {
-      localStorage.setItem(
-        STORAGE_KEY_PLANS,
-        JSON.stringify(INITIAL_SUBSCRIPTION_PLANS)
-      );
-      localStorage.setItem(STORAGE_KEY_PLANS_SEEDED_ONCE, 'true');
-      return INITIAL_SUBSCRIPTION_PLANS;
-    }
-
     if (!raw) {
       return [];
     }
-
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_SUBSCRIPTION_PLANS;
+    return [];
   }
 }
 
 function saveStoredPlans(plans: SubscriptionPlan[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(plans));
-    localStorage.setItem(STORAGE_KEY_PLANS_SEEDED_ONCE, 'true');
   } catch {
     // ignore
   }

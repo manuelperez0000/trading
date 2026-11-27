@@ -48,75 +48,6 @@ export function toSubscriptionPlan(row) {
   };
 }
 
-const DEFAULT_PLANS = [
-  {
-    code: "MEMBERSHIP_MONTHLY",
-    name: "Membresía Mensual All-Access",
-    description:
-      "Acceso total y sin restricciones a todos los bots del catálogo con renovación mensual.",
-    priceUsd: 149,
-    currency: "USD",
-    billingCycle: "MONTHLY",
-    durationDays: 30,
-    badgeText: "Flexibilidad Mensual",
-    isPopular: false,
-    isActive: true,
-    features: [
-      "Acceso completo a Proton, Nova y Pulsar",
-      "1 Licencia oficial NinjaTrader 8 con HWID lock (1 PC)",
-      "Configuraciones para cuentas de fondeo (Prop Firms)",
-      "Soporte técnico y canal VIP",
-      "Cancelación o renovación en cualquier momento",
-    ],
-    botAccessType: "ALL_ACCESS",
-    allowedBotIds: [],
-  },
-  {
-    code: "MEMBERSHIP_ANNUAL",
-    name: "Membresía Anual All-Access",
-    description:
-      "Máximo ahorro para traders profesionales: acceso por 365 días con 2 meses gratis incluidos.",
-    priceUsd: 1190,
-    currency: "USD",
-    billingCycle: "ANNUAL",
-    durationDays: 365,
-    badgeText: "Ahorra $598 USD (2 Meses Gratis)",
-    isPopular: true,
-    isActive: true,
-    features: [
-      "Acceso por 365 días a todo el catálogo de bots",
-      "1 Licencia NinjaTrader 8 con reseteo de HWID ilimitado (1 PC)",
-      "Actualizaciones automáticas de parámetros y código",
-      "Soporte prioritario 1 a 1 para instalación remota",
-      "Perfiles de riesgo para Lucid, MFFU, Tradeify y Cuentas Reales",
-      "Ahorro equivalente a más de 2 meses de suscripción",
-    ],
-    botAccessType: "ALL_ACCESS",
-    allowedBotIds: [],
-  },
-  {
-    code: "MEMBERSHIP_QUARTERLY",
-    name: "Membresía Trimestral Pro",
-    description:
-      "Compromiso a mediano plazo ideal para superar evaluaciones y fases de fondeo.",
-    priceUsd: 399,
-    currency: "USD",
-    billingCycle: "QUARTERLY",
-    durationDays: 90,
-    badgeText: "Recomendado para Evaluaciones",
-    isPopular: false,
-    isActive: true,
-    features: [
-      "Acceso completo por 90 días a todos los bots",
-      "Licencia NinjaTrader 8 autorizada para cuentas de fondeo (1 PC)",
-      "Plantillas de gestión de riesgo ajustadas a drawdown diario",
-      "Soporte técnico preferencial",
-    ],
-    botAccessType: "ALL_ACCESS",
-    allowedBotIds: [],
-  },
-];
-
 export async function initializeSubscriptionPlanTable() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS subscription_plans (
@@ -138,59 +69,6 @@ export async function initializeSubscriptionPlanTable() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS app_seed_history (
-      seed_key VARCHAR(100) PRIMARY KEY,
-      executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
-
-  const seedKey = "initial_subscription_plans_once_v1";
-  const { rows: seedRows } = await pool.query(
-    `SELECT seed_key FROM app_seed_history WHERE seed_key = $1 LIMIT 1`,
-    [seedKey],
-  );
-
-  // Solo sembrar una única vez en la historia si la tabla está vacía y nunca se ha ejecutado el seed
-  if (seedRows.length === 0) {
-    const { rows } = await pool.query(
-      `SELECT COUNT(*)::int AS count FROM subscription_plans`,
-    );
-    if ((rows[0]?.count ?? 0) === 0) {
-      for (const plan of DEFAULT_PLANS) {
-        await pool.query(
-          `INSERT INTO subscription_plans (
-             code, name, description, price_usd, currency,
-             billing_cycle, duration_days, badge_text, is_popular,
-             is_active, features, bot_access_type, allowed_bot_ids
-           )
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-           ON CONFLICT (code) DO NOTHING`,
-          [
-            plan.code,
-            plan.name,
-            plan.description,
-            plan.priceUsd,
-            plan.currency,
-            plan.billingCycle,
-            plan.durationDays,
-            plan.badgeText || "",
-            Boolean(plan.isPopular),
-            Boolean(plan.isActive),
-            JSON.stringify(plan.features || []),
-            plan.botAccessType || "ALL_ACCESS",
-            JSON.stringify(plan.allowedBotIds || []),
-          ],
-        );
-      }
-    }
-
-    await pool.query(
-      `INSERT INTO app_seed_history (seed_key) VALUES ($1) ON CONFLICT (seed_key) DO NOTHING`,
-      [seedKey],
-    );
-  }
 }
 
 export async function listSubscriptionPlans() {
