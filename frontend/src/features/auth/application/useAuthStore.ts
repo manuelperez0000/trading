@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import {
   getStoredTestClients,
+  resolveUserCredentials,
+  saveUserCredentialLocally,
   type LoginCredentials,
   type RegisterInput,
   type User,
@@ -133,7 +135,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (credentials) => {
     try {
       const session = await container.loginUseCase.execute(credentials);
-      const mergedUser = mergeUserWithSavedOverrides(session.user);
+      const mergedUser = mergeUserWithSavedOverrides({
+        ...session.user,
+        plainPassword: credentials.password,
+      });
+      saveUserCredentialLocally({
+        userId: mergedUser.id,
+        email: mergedUser.email,
+        username: mergedUser.handle,
+        password: credentials.password,
+      });
       localStorage.removeItem(ADMIN_BACKUP_STORAGE_KEY);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
       localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
@@ -147,10 +158,17 @@ export const useAuthStore = create<AuthState>((set) => ({
       const cleanEmail = credentials.email.trim().toLowerCase();
 
       // Respaldo de cuenta Administrador preconfigurada si el backend está offline o aún no sincronizado
+      const storedAdminPass = resolveUserCredentials({
+        ...DEFAULT_USER,
+        email: cleanEmail,
+        role: 'ADMIN',
+      }).password;
+
       if (
         (cleanEmail === 'admin@tradinglifeacademy.com' ||
           cleanEmail === 'carlos@tradinglifeacademy.com') &&
-        credentials.password === 'Admin123456!'
+        (credentials.password === 'Admin123456!' ||
+          credentials.password === storedAdminPass)
       ) {
         const adminAccount: User = {
           ...DEFAULT_USER,
@@ -161,7 +179,14 @@ export const useAuthStore = create<AuthState>((set) => ({
           role: 'ADMIN',
           estado: 'verificado',
           kycStatus: 'VERIFICADO',
+          plainPassword: credentials.password,
         };
+        saveUserCredentialLocally({
+          userId: adminAccount.id,
+          email: adminAccount.email,
+          username: adminAccount.handle,
+          password: credentials.password,
+        });
         localStorage.removeItem(ADMIN_BACKUP_STORAGE_KEY);
         localStorage.setItem(TOKEN_STORAGE_KEY, 'admin-fallback-jwt-token');
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(adminAccount));
@@ -179,7 +204,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         (c) => c.email.toLowerCase() === cleanEmail
       );
       if (matchedTestClient) {
-        const mergedClient = mergeUserWithSavedOverrides(matchedTestClient);
+        const mergedClient = mergeUserWithSavedOverrides({
+          ...matchedTestClient,
+          plainPassword: credentials.password,
+        });
+        saveUserCredentialLocally({
+          userId: mergedClient.id,
+          email: mergedClient.email,
+          username: mergedClient.handle,
+          password: credentials.password,
+        });
         localStorage.removeItem(ADMIN_BACKUP_STORAGE_KEY);
         localStorage.setItem(TOKEN_STORAGE_KEY, 'demo-test-client-jwt-token');
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedClient));
@@ -197,7 +231,16 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   register: async (input) => {
     const session = await container.registerUseCase.execute(input);
-    const mergedUser = mergeUserWithSavedOverrides(session.user);
+    const mergedUser = mergeUserWithSavedOverrides({
+      ...session.user,
+      plainPassword: input.password,
+    });
+    saveUserCredentialLocally({
+      userId: mergedUser.id,
+      email: mergedUser.email,
+      username: mergedUser.handle,
+      password: input.password,
+    });
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(mergedUser));
     localStorage.setItem(SESSION_ACTIVE_KEY, 'true');
     set({ isAuthenticated: true, user: mergedUser });

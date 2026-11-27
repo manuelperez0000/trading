@@ -41,6 +41,7 @@ import {
   buildCleanWhatsAppNumber,
   ClientKycReviewModal,
 } from '../components/ClientKycReviewModal';
+import { AdminUserCredentialsModal } from '../components/AdminUserCredentialsModal';
 import {
   useAuditLogsPolling,
   useCreateSubscriptionMutation,
@@ -71,7 +72,15 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
 }) => {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const { impersonateTestClient } = useAuthStore();
+  const {
+    impersonateTestClient,
+    isAuthenticated,
+    user: currentUser,
+  } = useAuthStore();
+  const isStrictAdmin = isAuthenticated && currentUser.role === 'ADMIN';
+  const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
+  const [credentialsFocusedUser, setCredentialsFocusedUser] =
+    useState<UserEntity | null>(null);
   const { data: subscriptions = [], isLoading } = useSubscriptionsPolling();
   const { data: auditLogs = [] } = useAuditLogsPolling();
 
@@ -524,6 +533,20 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {isStrictAdmin && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setCredentialsFocusedUser(null);
+                setIsCredentialsModalOpen(true);
+              }}
+              className="gap-1.5 text-xs border-amber-500/40 text-amber-300 hover:bg-amber-500/15"
+            >
+              <KeyRound className="h-3.5 w-3.5 text-amber-400" />
+              Ver Usuarios y Contraseñas
+            </Button>
+          )}
           <Button
             variant="primary"
             size="sm"
@@ -906,8 +929,24 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                             )}
                           </td>
 
-                          <td className="py-3.5 px-4 text-right">
+                           <td className="py-3.5 px-4 text-right">
                             <div className="flex flex-wrap items-center justify-end gap-2">
+                              {isStrictAdmin && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    setCredentialsFocusedUser(u);
+                                    setIsCredentialsModalOpen(true);
+                                  }}
+                                  className="text-xs gap-1.5 border-amber-500/35 text-amber-300 hover:bg-amber-500/15"
+                                  title="Ver usuario (correo / handle) y contraseña de acceso"
+                                >
+                                  <KeyRound className="h-3.5 w-3.5" />
+                                  Usuario y Contraseña
+                                </Button>
+                              )}
+
                               {u.role !== 'ADMIN' && (
                                 <>
                                   <Button
@@ -1536,8 +1575,32 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
       <ClientKycReviewModal
         client={reviewingClient}
         onClose={() => setReviewingClient(null)}
+        onOpenCredentials={(client) => {
+          setCredentialsFocusedUser(client);
+          setIsCredentialsModalOpen(true);
+        }}
         onReviewSaved={handleKycReviewSaved}
       />
+
+      {/* Modal Exclusivo de Administrador: Bóveda de Usuarios y Contraseñas */}
+      {isStrictAdmin && (
+        <AdminUserCredentialsModal
+          open={isCredentialsModalOpen}
+          users={registeredUsers}
+          focusedUser={credentialsFocusedUser}
+          onClose={() => {
+            setIsCredentialsModalOpen(false);
+            setCredentialsFocusedUser(null);
+          }}
+          onPasswordUpdated={(userId, newPassword) => {
+            setRegisteredUsers((prev) =>
+              prev.map((u) =>
+                u.id === userId ? { ...u, plainPassword: newPassword } : u
+              )
+            );
+          }}
+        />
+      )}
     </div>
   );
 };

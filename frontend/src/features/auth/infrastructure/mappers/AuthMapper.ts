@@ -66,6 +66,9 @@ export class AuthMapper {
         kycReviewedAt: parsed.kycReviewedAt
           ? String(parsed.kycReviewedAt)
           : undefined,
+        plainPassword:
+          parsed.plainPassword ||
+          (typeof u.plainPassword === 'string' ? u.plainPassword : undefined),
       };
     }
 

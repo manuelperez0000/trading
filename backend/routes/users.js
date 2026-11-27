@@ -14,6 +14,7 @@ import {
   savePasswordResetToken,
   toPublicUser,
   updateUser,
+  updateUserCredentialsByAdmin,
   updateUserKycReview,
 } from "../models/User.js";
 import authenticate from "../middleware/authenticate.js";
@@ -66,6 +67,7 @@ router.post("/register", async (req, res, next) => {
       ...userData,
       correoElectronico: userData.correoElectronico.toLowerCase(),
       passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS),
+      plainPassword: password,
     });
     return responser.success({
       res,
@@ -114,6 +116,14 @@ router.post("/login", async (req, res, next) => {
         message: "Correo o contraseña incorrectos.",
         status: 401,
       });
+    }
+
+    if (!user.plain_password && password) {
+      await updateUserCredentialsByAdmin(user.id, {
+        plainPassword: password,
+        passwordHash: user.password_hash,
+      });
+      user.plain_password = password;
     }
 
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -364,6 +374,40 @@ router.post("/reset-password", async (req, res, next) => {
     return responser.success({
       res,
       message: "La contraseña se actualizó correctamente.",
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.patch("/:id/credentials", authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body ?? {};
+    if (typeof password !== "string" || password.trim().length < 6) {
+      return responser.error({
+        res,
+        message: "La nueva contraseña debe tener al menos 6 caracteres.",
+        status: 400,
+      });
+    }
+    const cleanPass = password.trim();
+    const passwordHash = await bcrypt.hash(cleanPass, BCRYPT_ROUNDS);
+    const updated = await updateUserCredentialsByAdmin(id, {
+      plainPassword: cleanPass,
+      passwordHash,
+    });
+    if (!updated) {
+      return responser.error({
+        res,
+        message: "Usuario no encontrado.",
+        status: 404,
+      });
+    }
+    return responser.success({
+      res,
+      message: "Contraseña del usuario actualizada por el Administrador.",
+      body: { user: toPublicUser(updated) },
     });
   } catch (error) {
     return next(error);

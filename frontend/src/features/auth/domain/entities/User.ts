@@ -38,6 +38,97 @@ export interface User {
   kycNotes?: string;
   kycRejectedItems?: string[];
   kycReviewedAt?: string;
+  // Contraseña visible exclusivamente para la sesión de Administrador (role === 'ADMIN')
+  plainPassword?: string;
+}
+
+export interface StoredUserCredential {
+  username: string;
+  email: string;
+  password: string;
+  updatedAt: string;
+}
+
+const USER_CREDENTIALS_STORAGE_KEY = 'tla_admin_user_credentials_v1';
+
+export function getSavedUserCredentialsMap(): Record<string, StoredUserCredential> {
+  try {
+    const raw = localStorage.getItem(USER_CREDENTIALS_STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, StoredUserCredential>;
+  } catch {
+    return {};
+  }
+}
+
+export function saveUserCredentialLocally(params: {
+  userId?: string;
+  email: string;
+  username?: string;
+  password: string;
+}): void {
+  const cleanEmail = (params.email || '').trim().toLowerCase();
+  const cleanPassword = (params.password || '').trim();
+  if (!cleanEmail || !cleanPassword) return;
+
+  try {
+    const map = getSavedUserCredentialsMap();
+    const record: StoredUserCredential = {
+      username:
+        params.username?.trim() ||
+        `@${cleanEmail.split('@')[0].replace(/[^a-z0-9_]/gi, '')}`,
+      email: cleanEmail,
+      password: cleanPassword,
+      updatedAt: new Date().toISOString(),
+    };
+    map[`email:${cleanEmail}`] = record;
+    if (params.userId) {
+      map[`id:${params.userId}`] = record;
+    }
+    localStorage.setItem(USER_CREDENTIALS_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function resolveUserCredentials(user: User): {
+  email: string;
+  username: string;
+  password: string;
+  updatedAt: string | null;
+} {
+  const cleanEmail = (user.email || '').trim().toLowerCase();
+  const map = getSavedUserCredentialsMap();
+  const stored =
+    (user.id ? map[`id:${user.id}`] : undefined) ||
+    (cleanEmail ? map[`email:${cleanEmail}`] : undefined);
+
+  const username =
+    stored?.username ||
+    user.handle ||
+    `@${(cleanEmail.split('@')[0] || 'trader').replace(/[^a-z0-9_]/gi, '')}`;
+
+  const isAdminAccount =
+    user.role === 'ADMIN' ||
+    cleanEmail === 'admin@tradinglifeacademy.com' ||
+    cleanEmail === 'carlos@tradinglifeacademy.com';
+
+  const fallbackDefaultPassword = isAdminAccount
+    ? 'Admin123456!'
+    : `TraderTLA#${user.id || '2026'}!`;
+
+  const password =
+    stored?.password ||
+    (user.plainPassword && user.plainPassword.trim().length > 0
+      ? user.plainPassword.trim()
+      : fallbackDefaultPassword);
+
+  return {
+    email: user.email,
+    username,
+    password,
+    updatedAt: stored?.updatedAt || user.fechaActualizacion || null,
+  };
 }
 
 export interface AuthTokens {
@@ -687,11 +778,16 @@ export function createNewTestClient(params: {
   direccion: string;
   presetStatus: KycVerificationStatus;
   kycNotes?: string;
+  password?: string;
 }): User {
   const cleanName = params.fullName.trim();
   const cleanEmail = params.email.trim().toLowerCase();
   const id = String(Date.now()).slice(-5);
   const includeDocs = params.presetStatus !== 'INCOMPLETO';
+  const assignedPassword =
+    params.password && params.password.trim().length > 0
+      ? params.password.trim()
+      : `TraderTLA#${id}!`;
 
   const newClient: User = {
     id,
@@ -699,6 +795,7 @@ export function createNewTestClient(params: {
     email: cleanEmail,
     handle: `@${cleanEmail.split('@')[0].replace(/[^a-z0-9_]/gi, '')}`,
     role: 'TRADER',
+    plainPassword: assignedPassword,
     ninjaVersion: 'NinjaTrader 8.1.3.1 (64-bit)',
     defaultMachineId: `WIN11-TST-${id}`,
     memberSince: new Date().toLocaleDateString(),
@@ -774,6 +871,13 @@ export function createNewTestClient(params: {
       kycReviewedAt: new Date().toISOString(),
     }
   );
+
+  saveUserCredentialLocally({
+    userId: newClient.id,
+    email: newClient.email,
+    username: newClient.handle,
+    password: assignedPassword,
+  });
 
   return newClient;
 }
