@@ -3,6 +3,7 @@ import pool from "./config/database.js";
 import { initializeBotTable } from "./models/Bot.js";
 import { initializePostTable } from "./models/Post.js";
 import { initializeSocialTables } from "./models/Social.js";
+import { initializeSubscriptionPlanTable } from "./models/SubscriptionPlan.js";
 import { initializeUserTable } from "./models/User.js";
 
 const PORT = process.env.PORT || 3000;
@@ -12,6 +13,7 @@ try {
   await initializePostTable();
   await initializeBotTable();
   await initializeSocialTables();
+  await initializeSubscriptionPlanTable();
   const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
