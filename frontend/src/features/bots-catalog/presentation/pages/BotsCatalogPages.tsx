@@ -1721,11 +1721,13 @@ export const BotDetailPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
-          to="/catalog"
+          to={isAuthenticated && !isAdmin ? '/my-bots' : '/catalog'}
           className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          Volver al Catálogo de Bots
+          {isAuthenticated && !isAdmin
+            ? 'Volver a Mis Bots'
+            : 'Volver al Catálogo de Bots'}
         </Link>
         <div className="flex items-center gap-2">
           {!isAuthenticated ? (
@@ -1945,10 +1947,12 @@ export const BotDetailPage: React.FC = () => {
 };
 
 export const MyBotsPage: React.FC = () => {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { data: catalogBots = [] } = useBotsQuery();
   const { data: subscriptions = [] } = useSubscriptionsPolling();
+  const [botForPurchase, setBotForPurchase] = useState<TradingBot | null>(null);
 
   const mySubscription =
     subscriptions.find(
@@ -2074,14 +2078,14 @@ namespace NinjaTrader.NinjaScript.Strategies.TradingLifeAcademy
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Header Compacto */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800/80 pb-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
               <Bot className="h-6 w-6 text-emerald-400" />
-              Mis Bots (Catálogo Incluido en tu Membresía)
+              Mis Bots (Descargas & Especificaciones NT8)
             </h1>
             <Badge
               variant={
@@ -2096,7 +2100,7 @@ namespace NinjaTrader.NinjaScript.Strategies.TradingLifeAcademy
             </Badge>
           </div>
           <p className="mt-1 text-xs text-slate-400">
-            Tus bots solo pueden configurarse en 1 computadora ({activeMachineId}). Si tu suscripción vence, todos los bots se desactivan automáticamente.
+            Explora los detalles técnicos de cada bot, métricas certificadas, perfiles de fondeo y descarga tus archivos NinjaScript (.cs) vinculados a tu única computadora ({activeMachineId}).
           </p>
         </div>
 
@@ -2109,145 +2113,207 @@ namespace NinjaTrader.NinjaScript.Strategies.TradingLifeAcademy
           >
             Gestionar PC / Licencia ({activeLicenseKey})
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/catalog')}
-            className="text-xs gap-1.5"
-          >
-            <Plus className="h-3.5 w-3.5 text-amber-400" />
-            Ver Especificaciones en Catálogo
-          </Button>
         </div>
       </div>
 
-      {/* Estado de Membresía Vencida o Suspendida: Desactiva todos los bots */}
-      {!hasActiveMembership ? (
+      {/* Banner de Alerta cuando la Membresía está Vencida o Suspendida */}
+      {!hasActiveMembership && (
         <Card
-          className={`p-8 text-center space-y-4 ${
+          className={`p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
             isExpired
               ? 'border-rose-500/40 bg-rose-500/10'
               : 'border-amber-500/30 bg-amber-500/5'
           }`}
         >
-          <div
-            className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border ${
-              isExpired
-                ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
-                : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
-            }`}
-          >
-            <Lock className="h-6 w-6" />
+          <div className="flex items-start gap-3">
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+                isExpired
+                  ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                  : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+              }`}
+            >
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">
+                {isExpired
+                  ? 'Membresía Vencida — Todos tus bots han sido desactivados'
+                  : mySubscription && !mySubscription.remoteEnabled
+                  ? 'Membresía Desactivada — Todos tus bots están detenidos'
+                  : 'Activa tu Membresía Mensual o Anual para desbloquear la descarga de todos los bots'}
+              </h3>
+              <p className="mt-0.5 text-xs text-slate-300">
+                {isExpired
+                  ? `Tu suscripción venció el ${new Date(
+                      mySubscription!.expiresAt
+                    ).toLocaleDateString()}. Todos los bots vinculados a tu licencia única (${activeLicenseKey}) en la computadora ${activeMachineId} están desactivados.`
+                  : mySubscription && !mySubscription.remoteEnabled
+                  ? `Tu licencia única (${activeLicenseKey}) fue desactivada remotamente. Puedes ver los detalles de cada bot abajo, pero la descarga y operativa en NT8 están pausadas.`
+                  : `Con una sola membresía mensual o anual desbloqueas la descarga y ejecución de los ${catalogBots.length} bots del catálogo.`}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-bold text-white">
-              {isExpired
-                ? 'Membresía Vencida — Todos tus bots han sido desactivados'
-                : mySubscription && !mySubscription.remoteEnabled
-                ? 'Membresía Desactivada — Todos tus bots están detenidos'
-                : 'Activa tu Membresía Mensual o Anual para desbloquear todos los bots'}
-            </h3>
-            <p className="mt-1 text-xs text-slate-300 max-w-lg mx-auto">
-              {isExpired
-                ? `Tu suscripción venció el ${new Date(
-                    mySubscription!.expiresAt
-                  ).toLocaleDateString()}. Todos los bots vinculados a tu licencia única (${activeLicenseKey}) en la computadora ${activeMachineId} han sido desactivados automáticamente.`
-                : mySubscription && !mySubscription.remoteEnabled
-                ? `Tu licencia única (${activeLicenseKey}) fue desactivada remotamente, por lo que ninguno de los ${catalogBots.length} bots puede operar en NinjaTrader 8.`
-                : `En Trading Life Academy no necesitas comprar licencias individuales por cada bot. Al activar tu membresía tendrás acceso inmediato a todo el catálogo (${catalogBots.length} bots) en tu computadora autorizada.`}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="primary"
               size="sm"
-              onClick={() => navigate('/catalog')}
+              onClick={() => {
+                if (catalogBots.length > 0) {
+                  setBotForPurchase(catalogBots[0]);
+                }
+              }}
             >
-              {isExpired
-                ? 'Renovar Membresía y Reactivar Mis Bots'
-                : 'Ir al Catálogo y Activar Membresía'}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => navigate('/my-subscriptions')}
-            >
-              Revisar Estado de Mi Licencia
+              {isExpired ? 'Renovar Membresía' : 'Activar Membresía'}
             </Button>
           </div>
         </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {catalogBots.map((botItem) => (
-            <Card
-              key={botItem.id}
-              className="p-4 border-slate-800 bg-slate-900/80 hover:border-emerald-500/40 transition-all flex flex-col justify-between space-y-4"
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
-                      <Bot className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white">{botItem.name}</h3>
-                      <span className="font-mono text-[11px] text-slate-400">
-                        {botItem.codeName} • {botItem.version}
-                      </span>
-                    </div>
-                  </div>
-                  <Badge variant="emerald">Activo • 1 PC</Badge>
-                </div>
-
-                <p className="text-xs text-slate-400 line-clamp-2">
-                  {botItem.shortDescription}
-                </p>
-
-                <div className="space-y-1.5 text-xs rounded-xl border border-slate-800/80 bg-slate-950/60 p-3">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Mercados:</span>
-                    <span className="font-semibold text-slate-200">
-                      {botItem.supportedInstruments.join(', ')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">PC Autorizada (1 PC):</span>
-                    <span className="font-mono text-sky-300 font-semibold">
-                      {activeMachineId}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Licencia Única:</span>
-                    <span className="font-mono text-amber-300 font-semibold">
-                      {activeLicenseKey}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => handleDownloadStrategy(botItem)}
-                  className="flex-1 gap-1.5 justify-center text-xs"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Descargar (.cs • 1 PC)
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => navigate(`/catalog/${botItem.id}`)}
-                  className="text-xs"
-                >
-                  Parámetros
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
       )}
+
+      {/* Grid Completo de Bots con Detalles Específicos, Perfiles, Métricas y Descarga */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 2xl:grid-cols-3">
+        {catalogBots.map((botItem) => (
+          <Card
+            key={botItem.id}
+            className="p-6 flex flex-col justify-between space-y-5 hover:border-emerald-500/40 transition-colors"
+          >
+            <div className="space-y-4">
+              {/* Cabecera del Bot */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
+                    <Bot className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">
+                      {botItem.name}
+                    </h2>
+                    <div className="text-xs font-mono text-slate-400">
+                      {botItem.codeName} • {botItem.version}
+                    </div>
+                  </div>
+                </div>
+                <Badge variant="emerald">{botItem.primaryInstrument}</Badge>
+              </div>
+
+              {/* Descripción Técnica */}
+              <p className="text-sm text-slate-300 leading-relaxed">
+                {botItem.shortDescription}
+              </p>
+
+              {/* Etiquetas de Perfiles Soportados */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">
+                  Perfiles:
+                </span>
+                <Badge variant="amber">Lucid Trading</Badge>
+                <Badge variant="sky">MFFU</Badge>
+                <Badge variant="emerald">Tradeify</Badge>
+                <Badge variant="slate">Cuenta Real Live</Badge>
+              </div>
+
+              {/* Métricas Clave (Win Rate, Profit Factor, Max Drawdown) */}
+              <div className="grid grid-cols-3 gap-3 rounded-xl border border-slate-800 bg-slate-950/80 p-3.5 text-center">
+                <div>
+                  <div className="text-[11px] uppercase text-slate-400">
+                    Win Rate
+                  </div>
+                  <div className="mt-0.5 text-base font-bold font-mono text-emerald-400">
+                    {botItem.winRatePercent}%
+                  </div>
+                </div>
+                <div className="border-x border-slate-800">
+                  <div className="text-[11px] uppercase text-slate-400">
+                    Profit Factor
+                  </div>
+                  <div className="mt-0.5 text-base font-bold font-mono text-sky-400">
+                    {botItem.profitFactor}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase text-slate-400">
+                    Max Drawdown
+                  </div>
+                  <div className="mt-0.5 text-base font-bold font-mono text-rose-400 tabular-nums">
+                    {formatUsd(botItem.maxDrawdownUsd)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pie de Tarjeta: Estado de Licencia / 1-PC + Botones Ver Detalles y Descargar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/80 pt-4">
+              <div>
+                {hasActiveMembership && mySubscription ? (
+                  <>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                      ✓ Incluido en tu {planLabel}
+                    </div>
+                    <div className="text-xs font-mono text-slate-300 mt-0.5">
+                      Licencia:{' '}
+                      <strong className="text-amber-300">
+                        {activeLicenseKey}
+                      </strong>
+                    </div>
+                    <div className="text-[10px] text-sky-300 font-mono">
+                      1 PC Autorizada: {activeMachineId}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-rose-400">
+                      {isExpired
+                        ? 'Membresía Vencida (Bot Desactivado)'
+                        : 'Membresía Pausada / Sin Activar'}
+                    </div>
+                    <div className="text-xs font-bold text-white mt-0.5">
+                      Plan Mensual o Anual All-Access
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      1 sola licencia activa todos los bots
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link to={`/catalog/${botItem.id}`}>
+                  <Button variant="secondary" size="md">
+                    {t.catalog.viewDetails}
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+
+                {hasActiveMembership ? (
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => handleDownloadStrategy(botItem)}
+                  >
+                    <Download className="h-4 w-4" />
+                    Descargar (.cs)
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => setBotForPurchase(botItem)}
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    {isExpired ? 'Renovar' : 'Activar'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Modal de Activación / Renovación de Membresía */}
+      <PurchaseGateModal
+        bot={botForPurchase}
+        onClose={() => setBotForPurchase(null)}
+      />
     </div>
   );
 };
