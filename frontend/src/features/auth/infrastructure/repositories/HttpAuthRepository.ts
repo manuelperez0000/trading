@@ -27,6 +27,12 @@ export class HttpAuthRepository implements IAuthRepository {
     if (rawRole === 'admin') {
       return 'ADMIN';
     }
+    if (
+      user.email.trim().toLowerCase() === 'admin@tradinglifeacademy.com' ||
+      user.email.trim().toLowerCase() === 'carlos@tradinglifeacademy.com'
+    ) {
+      return 'ADMIN';
+    }
     if (rawRole === 'client' || rawRole === 'trader') {
       return 'TRADER';
     }

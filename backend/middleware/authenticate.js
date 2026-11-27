@@ -28,7 +28,11 @@ export default function authenticate(req, res, next) {
       });
     }
 
-    req.user = { id: claims.sub };
+    req.user = {
+      id: claims.sub,
+      email: typeof claims.email === "string" ? claims.email : undefined,
+      role: typeof claims.role === "string" ? claims.role : undefined,
+    };
     return next();
   } catch (error) {
     if (

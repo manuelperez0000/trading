@@ -335,16 +335,12 @@ export const MyLicensesPage: React.FC = () => {
     user.defaultMachineId || 'WIN11-TRD-9F82A1C0'
   );
 
-  // Filtrar a la membresía única del cliente autenticado (o respaldo a la primera disponible)
+  // Filtrar estrictamente a la membresía única del cliente autenticado (sin heredar licencias de otros usuarios)
   const clientSubscriptions = subscriptions.filter(
     (s) => s.email.toLowerCase() === user.email.toLowerCase()
   );
   const myMembershipList =
-    clientSubscriptions.length > 0
-      ? [clientSubscriptions[0]]
-      : subscriptions.length > 0
-      ? [subscriptions[0]]
-      : [];
+    clientSubscriptions.length > 0 ? [clientSubscriptions[0]] : [];
 
   const handleCopy = (licenseKey: string) => {
     navigator.clipboard?.writeText(licenseKey);
@@ -430,9 +426,9 @@ export const MyLicensesPage: React.FC = () => {
             Activa tu membresía mensual o anual para obtener tu LicenseKey única con acceso a todo el catálogo de bots.
           </p>
           <div className="pt-2">
-            <Link to="/catalog">
+            <Link to="/my-bots">
               <Button variant="primary" size="md">
-                Explorar Catálogo y Membresías
+                Ir a Mis Bots y Activar Membresía
               </Button>
             </Link>
           </div>

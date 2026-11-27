@@ -6,7 +6,32 @@ import {
 
 export class SubscriptionMapper {
   public static toDomain(rawDto: unknown): Subscription {
-    const dto = SubscriptionApiDtoSchema.parse(rawDto);
+    const r = (rawDto ?? {}) as Record<string, any>;
+    const u = r.body?.subscription ?? r.subscription ?? r;
+    if ('traderName' in u && 'licenseKey' in u) {
+      return {
+        id: String(u.id),
+        traderName: String(u.traderName),
+        email: String(u.email),
+        ninjaAccountName: String(u.ninjaAccountName || 'Sim101'),
+        licenseKey: String(u.licenseKey),
+        planTier: u.planTier || 'MEMBERSHIP_MONTHLY',
+        subscriptionCycle: u.subscriptionCycle,
+        remoteEnabled: Boolean(u.remoteEnabled),
+        syncState: u.syncState || 'CONFIRMED_ON',
+        connectionStatus: u.connectionStatus || 'ONLINE_TRADING',
+        boundMachineId: u.boundMachineId ?? null,
+        activeStrategyName: String(u.activeStrategyName || 'ALL_CATALOG_BOTS'),
+        instrument: String(u.instrument || 'ALL MARKETS'),
+        dailyPnlUsd: Number(u.dailyPnlUsd) || 0,
+        lastHeartbeatAt: u.lastHeartbeatAt ?? new Date().toISOString(),
+        lastLatencyMs: Number(u.lastLatencyMs) || 28,
+        expiresAt: String(u.expiresAt),
+        statusNote: String(u.statusNote || ''),
+      };
+    }
+
+    const dto = SubscriptionApiDtoSchema.parse(u);
     return {
       id: dto.id,
       traderName: dto.trader_name,
@@ -21,7 +46,7 @@ export class SubscriptionMapper {
       activeStrategyName: dto.active_strategy_name,
       instrument: dto.instrument,
       dailyPnlUsd: dto.daily_pnl_usd,
-      lastHeartbeatAt: dto.last_heartbeat_at,
+      lastHeartbeatAt: dto.last_heartbeat_at ?? new Date().toISOString(),
       lastLatencyMs: dto.last_latency_ms,
       expiresAt: dto.expires_at,
       statusNote: dto.status_note,

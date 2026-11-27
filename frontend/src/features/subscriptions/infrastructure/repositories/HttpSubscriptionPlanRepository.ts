@@ -1,25 +1,23 @@
 import { httpClient } from '@core/http/httpClient';
-import {
-  INITIAL_SUBSCRIPTION_PLANS,
-  type CreateSubscriptionPlanInput,
-  type SubscriptionPlan,
-  type UpdateSubscriptionPlanInput,
+import type {
+  CreateSubscriptionPlanInput,
+  SubscriptionPlan,
+  UpdateSubscriptionPlanInput,
 } from '../../domain/entities/SubscriptionPlan';
 import type { ISubscriptionPlanRepository } from '../../domain/repositories/SubscriptionPlanRepository';
 
-const STORAGE_KEY_PLANS = 'tla_admin_subscription_plans_v1';
+const STORAGE_KEY_PLANS = 'tla_admin_subscription_plans_manual_v2';
 
 function getStoredPlans(): SubscriptionPlan[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PLANS);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY_PLANS, JSON.stringify(INITIAL_SUBSCRIPTION_PLANS));
-      return INITIAL_SUBSCRIPTION_PLANS;
+      return [];
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_SUBSCRIPTION_PLANS;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return INITIAL_SUBSCRIPTION_PLANS;
+    return [];
   }
 }
 
@@ -38,7 +36,7 @@ export class HttpSubscriptionPlanRepository implements ISubscriptionPlanReposito
       const rawList = Array.isArray(res)
         ? res
         : res?.body?.plans ?? res?.plans;
-      if (Array.isArray(rawList) && rawList.length > 0) {
+      if (Array.isArray(rawList)) {
         saveStoredPlans(rawList);
         return rawList;
       }
@@ -83,7 +81,16 @@ export class HttpSubscriptionPlanRepository implements ISubscriptionPlanReposito
     saveStoredPlans(updated);
 
     try {
-      await httpClient.post('/subscription-plans', newPlan);
+      const res = await httpClient.post<any>('/subscription-plans', newPlan);
+      const createdFromServer = res?.body?.plan ?? res?.plan;
+      if (createdFromServer && createdFromServer.id) {
+        const syncedList = [
+          createdFromServer,
+          ...currentList.filter((p) => p.code !== createdFromServer.code),
+        ];
+        saveStoredPlans(syncedList);
+        return createdFromServer;
+      }
     } catch {
       // Backend fallback
     }
@@ -96,7 +103,7 @@ export class HttpSubscriptionPlanRepository implements ISubscriptionPlanReposito
     input: UpdateSubscriptionPlanInput
   ): Promise<SubscriptionPlan> {
     const currentList = getStoredPlans();
-    const index = currentList.findIndex((p) => p.id === id);
+    const index = currentList.findIndex((p) => p.id === id || p.code === id);
     if (index === -1) {
       throw new Error(`Plan con ID ${id} no encontrado.`);
     }
@@ -128,7 +135,16 @@ export class HttpSubscriptionPlanRepository implements ISubscriptionPlanReposito
     saveStoredPlans(currentList);
 
     try {
-      await httpClient.put(`/subscription-plans/${id}`, updatedPlan);
+      const res = await httpClient.put<any>(
+        `/subscription-plans/${id}`,
+        updatedPlan
+      );
+      const serverUpdated = res?.body?.plan ?? res?.plan;
+      if (serverUpdated && serverUpdated.id) {
+        currentList[index] = serverUpdated;
+        saveStoredPlans(currentList);
+        return serverUpdated;
+      }
     } catch {
       // Backend fallback
     }

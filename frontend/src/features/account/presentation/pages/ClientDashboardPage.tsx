@@ -20,7 +20,10 @@ import { Card } from '@shared/ui/Card';
 import { toast } from '@shared/ui/toast/toastStore';
 import { useI18n } from '@core/i18n/useLanguageStore';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
-import { isUserProfileComplete } from '@features/auth/domain/entities/User';
+import {
+  getEffectiveKycStatus,
+  isUserProfileComplete,
+} from '@features/auth/domain/entities/User';
 import { useSubscriptionsPolling } from '@features/subscriptions/application/hooks/useSubscriptionsPolling';
 import {
   getSubscriptionPlanLabel,
@@ -36,11 +39,12 @@ export const ClientDashboardPage: React.FC = () => {
   const { data: bots = [] } = useBotsQuery();
 
   const isProfileVerified = isUserProfileComplete(user);
+  const kycStatus = getEffectiveKycStatus(user);
 
   const mySubscriptions = subscriptions.filter(
     (s) => s.email.toLowerCase() === user.email.toLowerCase()
   );
-  const primarySubscription = mySubscriptions[0] ?? subscriptions[0] ?? null;
+  const primarySubscription = mySubscriptions[0] ?? null;
   const activeBotsCount = bots.length;
 
   const handleCopyLicense = (key: string) => {
@@ -151,6 +155,26 @@ export const ClientDashboardPage: React.FC = () => {
           </Link>
         </div>
       </div>
+
+      {/* Aviso informativo cuando el expediente KYC ya fue enviado y está EN_REVISION */}
+      {kycStatus === 'EN_REVISION' && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
+          <div className="flex items-start gap-2.5">
+            <ShieldAlert className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <strong className="text-amber-300">
+                Expediente KYC en Revisión por el Administrador:
+              </strong>{' '}
+              Ya recibimos tus datos de contacto y tus 3 documentos. Puedes explorar tu panel mientras un administrador verifica tu cuenta.
+            </div>
+          </div>
+          <Link to="/profile" className="shrink-0">
+            <Button variant="secondary" size="sm" className="text-xs">
+              Ver Mi Expediente
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Tarjeta Unificada y Compacta de Suscripción, LicenseKey y Hardware */}
       {primarySubscription ? (
@@ -277,10 +301,12 @@ export const ClientDashboardPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <Link to="/catalog">
+            <Link to="/my-bots">
               <Button variant="primary" size="sm" className="shrink-0 text-xs">
                 <Sparkles className="h-3.5 w-3.5" />
-                {lang === 'es' ? 'Explorar Catálogo' : 'Explore Catalog'}
+                {lang === 'es'
+                  ? 'Ir a Mis Bots y Activar Membresía'
+                  : 'Go to My Bots & Activate Plan'}
               </Button>
             </Link>
           </div>

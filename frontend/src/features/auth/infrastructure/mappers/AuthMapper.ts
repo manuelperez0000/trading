@@ -1,8 +1,9 @@
 import { env } from '@core/config/env';
-import type {
-  AuthSession,
-  User,
-  UserRole,
+import {
+  mergeUserWithSavedOverrides,
+  type AuthSession,
+  type User,
+  type UserRole,
 } from '@features/auth/domain/entities/User';
 import {
   AuthResponseDtoSchema,
@@ -37,7 +38,7 @@ export class AuthMapper {
           : undefined;
       const isEnvAdmin = env.adminUserIds.includes(String(parsed.id));
 
-      return {
+      return mergeUserWithSavedOverrides({
         id: parsed.id,
         fullName,
         email,
@@ -66,7 +67,10 @@ export class AuthMapper {
         kycReviewedAt: parsed.kycReviewedAt
           ? String(parsed.kycReviewedAt)
           : undefined,
-      };
+        plainPassword:
+          parsed.plainPassword ||
+          (typeof u.plainPassword === 'string' ? u.plainPassword : undefined),
+      });
     }
 
     // Formato estándar DTO

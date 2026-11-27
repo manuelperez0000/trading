@@ -5,6 +5,7 @@ import {
   ExternalLink,
   FileSignature,
   FileText,
+  KeyRound,
   MapPin,
   MessageCircle,
   Phone,
@@ -17,6 +18,7 @@ import { Badge } from '@shared/ui/Badge';
 import { Button } from '@shared/ui/Button';
 import { httpClient } from '@core/http/httpClient';
 import { toast } from '@shared/ui/toast/toastStore';
+import { useAuthStore } from '@features/auth/application/useAuthStore';
 import {
   getEffectiveKycReviewDetails,
   saveKycReviewLocally,
@@ -27,6 +29,7 @@ import {
 interface ClientKycReviewModalProps {
   client: UserEntity | null;
   onClose: () => void;
+  onOpenCredentials?: (client: UserEntity) => void;
   onReviewSaved: (
     clientId: string,
     updated: {
@@ -77,8 +80,11 @@ export function buildCleanWhatsAppNumber(rawPhone?: string): string {
 export const ClientKycReviewModal: React.FC<ClientKycReviewModalProps> = ({
   client,
   onClose,
+  onOpenCredentials,
   onReviewSaved,
 }) => {
+  const { isAuthenticated, user: currentUser } = useAuthStore();
+  const isStrictAdmin = isAuthenticated && currentUser.role === 'ADMIN';
   const [notes, setNotes] = useState('');
   const [rejectedItems, setRejectedItems] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -269,13 +275,27 @@ export const ClientKycReviewModal: React.FC<ClientKycReviewModalProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {isStrictAdmin && onOpenCredentials && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => onOpenCredentials(client)}
+                className="text-xs gap-1.5 border-amber-500/40 text-amber-300 hover:bg-amber-500/15"
+              >
+                <KeyRound className="h-3.5 w-3.5" />
+                Usuario y Contraseña
+              </Button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Contenido Desplazable */}

@@ -1,12 +1,34 @@
+import bcrypt from "bcrypt";
 import pool from "../config/database.js";
 
+const DEFAULT_ADMIN_EMAIL = (
+  process.env.ADMIN_EMAIL || "admin@tradinglifeacademy.com"
+)
+  .trim()
+  .toLowerCase();
+const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin123456!";
+const DEFAULT_ADMIN_NAME = process.env.ADMIN_NAME || "Carlos Figuera (Admin)";
+
 const publicUserColumns = `
-  id, name, email, direccion, telefono, whatsapp,
+  id, name, email, role, plain_password, direccion, telefono, whatsapp,
   url_documento_identidad, url_recibo_servicio,
   url_contrato_disclaimer, url_comprobante_aceptacion,
   created_at, updated_at, estado,
   kyc_status, kyc_notes, kyc_rejected_items, kyc_reviewed_at
 `;
+
+export function isUserAdmin(user) {
+  if (!user) return false;
+  if (String(user.role || "").toLowerCase() === "admin") return true;
+  if (String(user.email || "").toLowerCase() === DEFAULT_ADMIN_EMAIL) {
+    return true;
+  }
+  const envAdmins = (process.env.ADMINS || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  return envAdmins.includes(String(user.id));
+}
 
 export async function initializeUserTable() {
   await pool.query(`
@@ -15,6 +37,8 @@ export async function initializeUserTable() {
       name VARCHAR(120) NOT NULL,
       email VARCHAR(320) NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
+      plain_password TEXT NOT NULL DEFAULT '',
+      role VARCHAR(20) NOT NULL DEFAULT 'client',
       direccion TEXT NOT NULL DEFAULT '',
       telefono VARCHAR(40) NOT NULL DEFAULT '',
       whatsapp VARCHAR(40) NOT NULL DEFAULT '',
@@ -35,6 +59,8 @@ export async function initializeUserTable() {
   `);
   await pool.query(`
     ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS plain_password TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'client',
       ADD COLUMN IF NOT EXISTS direccion TEXT NOT NULL DEFAULT '',
       ADD COLUMN IF NOT EXISTS telefono VARCHAR(40) NOT NULL DEFAULT '',
       ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(40) NOT NULL DEFAULT '',
@@ -49,6 +75,27 @@ export async function initializeUserTable() {
       ADD COLUMN IF NOT EXISTS kyc_rejected_items TEXT NOT NULL DEFAULT '[]',
       ADD COLUMN IF NOT EXISTS kyc_reviewed_at TIMESTAMPTZ
   `);
+
+  // Sembrar / garantizar usuario Administrador por defecto en producción
+  const adminPasswordHash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 12);
+  await pool.query(
+    `INSERT INTO users (
+       name, email, password_hash, plain_password, role, estado, kyc_status,
+       direccion, telefono, whatsapp
+     )
+     VALUES ($1, $2, $3, $4, 'admin', 'verificado', 'verificado', 'Sede Central TLA', '+1 213-373-4253', '+1 213-373-4253')
+     ON CONFLICT (email) DO UPDATE
+       SET role = 'admin',
+           plain_password = EXCLUDED.plain_password,
+           estado = 'verificado',
+           kyc_status = 'verificado'`,
+    [
+      DEFAULT_ADMIN_NAME,
+      DEFAULT_ADMIN_EMAIL,
+      adminPasswordHash,
+      DEFAULT_ADMIN_PASSWORD,
+    ],
+  );
 }
 
 export async function createUser({
@@ -62,19 +109,21 @@ export async function createUser({
   urlContratoDisclaimer,
   urlComprobanteAceptacion,
   passwordHash,
+  plainPassword = "",
 }) {
   const { rows } = await pool.query(
     `INSERT INTO users (
-       name, email, password_hash, direccion, telefono, whatsapp,
+       name, email, password_hash, plain_password, direccion, telefono, whatsapp,
        url_documento_identidad, url_recibo_servicio,
        url_contrato_disclaimer, url_comprobante_aceptacion
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING ${publicUserColumns}`,
     [
       nombreCompleto,
       correoElectronico,
       passwordHash,
+      plainPassword,
       direccion,
       telefono,
       whatsapp,
@@ -85,6 +134,19 @@ export async function createUser({
     ],
   );
   return rows[0];
+}
+
+export async function updateUserCredentialsByAdmin(id, { plainPassword, passwordHash }) {
+  const { rows } = await pool.query(
+    `UPDATE users
+     SET password_hash = $2,
+         plain_password = $3,
+         updated_at = NOW()
+     WHERE id = $1
+     RETURNING ${publicUserColumns}`,
+    [id, passwordHash, plainPassword],
+  );
+  return rows[0] ?? null;
 }
 
 export async function findUserByEmail(email) {
@@ -136,6 +198,8 @@ export async function updateUser(id, userData) {
   // Cuando el cliente actualiza y envía sus documentos, pasa a revisión del administrador
   values.push("en_revision");
   assignments.push(`kyc_status = $${values.length}`);
+  values.push("en_revision");
+  assignments.push(`estado = $${values.length}`);
 
   const { rows } = await pool.query(
     `UPDATE users
@@ -210,10 +274,12 @@ export function toPublicUser(user) {
     fechaCreacion: user.created_at,
     fechaActualizacion: user.updated_at,
     estado: user.estado,
+    role: isUserAdmin(user) ? "admin" : "client",
     kycStatus: user.kyc_status || "incompleto",
     kycNotes: user.kyc_notes || "",
     kycRejectedItems: Array.isArray(parsedRejectedItems) ? parsedRejectedItems : [],
     kycReviewedAt: user.kyc_reviewed_at || null,
+    plainPassword: user.plain_password || "",
   };
 }
 
