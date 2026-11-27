@@ -11,7 +11,10 @@ import {
 import { Badge } from '@shared/ui/Badge';
 import { Button } from '@shared/ui/Button';
 import { container } from '@app/di/container';
-import type { User as UserEntity } from '@features/auth/domain/entities/User';
+import {
+  getStoredTestClients,
+  type User as UserEntity,
+} from '@features/auth/domain/entities/User';
 import type {
   Subscription,
   SubscriptionCycle,
@@ -60,10 +63,17 @@ export const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = (
 
   useEffect(() => {
     if (open) {
+      const localClients = getStoredTestClients();
       container.listUsersUseCase
         .execute()
-        .then((users) => setRegisteredUsers(users))
-        .catch(() => setRegisteredUsers([]));
+        .then((users) => {
+          const existingEmails = new Set(users.map((u) => u.email.toLowerCase()));
+          const extras = localClients.filter(
+            (c) => !existingEmails.has(c.email.toLowerCase())
+          );
+          setRegisteredUsers([...extras, ...users]);
+        })
+        .catch(() => setRegisteredUsers(localClients));
       setLicenseKey(generateRandomLicenseKey());
       setExpiresAtDate(calculateExpirationIso('MONTHLY'));
     }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -21,7 +21,8 @@ import {
 import { container } from '@app/di/container';
 import { env } from '@core/config/env';
 import {
-  isUserProfileComplete,
+  getEffectiveKycReviewDetails,
+  saveKycReviewLocally,
   type User as DomainUser,
 } from '@features/auth/domain/entities/User';
 import { Badge } from '@shared/ui/Badge';
@@ -36,6 +37,7 @@ import { useAuthStore } from '@features/auth/application/useAuthStore';
 import {
   useResetMachineIdMutation,
   useSubscriptionsPolling,
+  useUpdateSubscriptionMutation,
 } from '@features/subscriptions/application/hooks/useSubscriptionsPolling';
 import {
   useBillingSummaryQuery,
@@ -44,7 +46,13 @@ import {
   useUpdateUserProfileMutation,
   useUserProfileQuery,
 } from '@features/account/application/hooks/useAccount';
-import type { Subscription } from '@features/subscriptions/domain/entities/Subscription';
+import {
+  getSubscriptionPlanLabel,
+  isSubscriptionAllowedToOperate,
+  isSubscriptionExpired,
+  type Subscription,
+} from '@features/subscriptions/domain/entities/Subscription';
+import { useBotsQuery } from '@features/bots-catalog/application/hooks/useBots';
 
 const useDateLocale = () => {
   const { lang } = useI18n();
@@ -316,14 +324,54 @@ const InstallGuideCard: React.FC<{ onDownload: () => void }> = ({
 
 export const MyLicensesPage: React.FC = () => {
   const { t } = useI18n();
+  const { user } = useAuthStore();
   const dateLocale = useDateLocale();
   const { data: subscriptions = [] } = useSubscriptionsPolling();
+  const { data: catalogBots = [] } = useBotsQuery();
   const resetHwidMutation = useResetMachineIdMutation();
+  const updateSubscriptionMutation = useUpdateSubscriptionMutation();
   const [unbindTarget, setUnbindTarget] = useState<Subscription | null>(null);
+  const [customMachineId, setCustomMachineId] = useState<string>(
+    user.defaultMachineId || 'WIN11-TRD-9F82A1C0'
+  );
+
+  // Filtrar a la membresía única del cliente autenticado (o respaldo a la primera disponible)
+  const clientSubscriptions = subscriptions.filter(
+    (s) => s.email.toLowerCase() === user.email.toLowerCase()
+  );
+  const myMembershipList =
+    clientSubscriptions.length > 0
+      ? [clientSubscriptions[0]]
+      : subscriptions.length > 0
+      ? [subscriptions[0]]
+      : [];
 
   const handleCopy = (licenseKey: string) => {
     navigator.clipboard?.writeText(licenseKey);
     toast.success(t.toast.licenseCopied, t.toast.licenseCopiedDesc);
+  };
+
+  const handleBindSingleComputer = (sub: Subscription) => {
+    const cleanId = customMachineId.trim().toUpperCase();
+    if (cleanId.length < 6) {
+      toast.danger('Machine ID inválido', 'Introduce un Machine ID válido de NinjaTrader 8.');
+      return;
+    }
+    updateSubscriptionMutation.mutate(
+      {
+        id: sub.id,
+        updates: { boundMachineId: cleanId },
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            'Computadora Única Vinculada',
+            `Tus bots quedaron bloqueados exclusivamente al equipo ${cleanId} (Regla: 1 sola PC por membresía).`
+          );
+        },
+        onError: () => toast.danger(t.toast.actionError),
+      }
+    );
   };
 
   const handleDownload = () => {
@@ -374,108 +422,264 @@ export const MyLicensesPage: React.FC = () => {
 
       <InstallGuideCard onDownload={handleDownload} />
 
-      {subscriptions.length === 0 ? (
+      {myMembershipList.length === 0 ? (
         <Card className="p-10 text-center text-slate-400 space-y-4 max-w-md mx-auto my-6">
           <KeyRound className="h-10 w-10 text-slate-600 mx-auto" />
-          <h2 className="text-base font-bold text-white">No tienes licencias activas</h2>
+          <h2 className="text-base font-bold text-white">No tienes una membresía activa</h2>
           <p className="text-xs text-slate-400">
-            Explora el catálogo de bots de NinjaTrader 8 para activar una estrategia algorítmica.
+            Activa tu membresía mensual o anual para obtener tu LicenseKey única con acceso a todo el catálogo de bots.
           </p>
           <div className="pt-2">
             <Link to="/catalog">
               <Button variant="primary" size="md">
-                Explorar Catálogo de Bots
+                Explorar Catálogo y Membresías
               </Button>
             </Link>
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
-          {subscriptions.map((sub) => (
-          <Card key={sub.id} className="p-6 space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-white">
-                  {sub.activeStrategyName}
-                </h2>
-                <p className="text-xs text-slate-400">
-                  {t.account.linkedAccount}: {sub.ninjaAccountName} •{' '}
-                  {t.account.market}: {sub.instrument}
-                </p>
-              </div>
+        <div className="grid grid-cols-1 gap-5">
+          {myMembershipList.map((sub) => {
+            const planInfo = getSubscriptionPlanLabel(sub);
+            const expired = isSubscriptionExpired(sub);
+            const allowedToOperate = isSubscriptionAllowedToOperate(sub);
 
-              {sub.remoteEnabled ? (
-                <Badge variant="emerald" pulse>
-                  {t.account.statusActive}
-                </Badge>
-              ) : (
-                <Badge variant="rose">{t.account.statusSuspended}</Badge>
-              )}
-            </div>
-
-            {/* Clave de licencia destacada con copiado en un clic */}
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                {t.account.licenseKeyLabel}
-              </div>
-              <div className="mt-1.5 flex items-center justify-between gap-3">
-                <code className="font-mono text-base font-bold tracking-wide text-emerald-300">
-                  {sub.licenseKey}
-                </code>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleCopy(sub.licenseKey)}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  {t.account.copy}
-                </Button>
-              </div>
-            </div>
-
-            {/* Información esencial (sin detalles técnicos de bajo nivel) */}
-            <dl className="grid grid-cols-2 gap-3 text-xs">
-              <div className="rounded-lg bg-slate-950/60 p-3">
-                <dt className="flex items-center gap-1.5 text-slate-400">
-                  <Cpu className="h-3.5 w-3.5 text-sky-400" />
-                  {t.account.linkedPc}
-                </dt>
-                <dd className="mt-1 truncate font-mono text-slate-200">
-                  {sub.boundMachineId ?? t.account.pcPending}
-                </dd>
-              </div>
-              <div className="rounded-lg bg-slate-950/60 p-3">
-                <dt className="text-slate-400">{t.account.lastConnection}</dt>
-                <dd className="mt-1 text-slate-200 tabular-nums">
-                  {formatRelativeTime(sub.lastHeartbeatAt)}
-                </dd>
-              </div>
-            </dl>
-
-            <div className="flex items-center justify-between border-t border-slate-800/80 pt-4">
-              <span className="text-xs text-slate-400">
-                {t.account.expires}:{' '}
-                <span className="font-medium text-slate-200">
-                  {new Date(sub.expiresAt).toLocaleDateString(dateLocale, {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </span>
-              </span>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setUnbindTarget(sub)}
-                disabled={!sub.boundMachineId}
+            return (
+              <Card
+                key={sub.id}
+                className={`p-6 space-y-5 ${
+                  expired
+                    ? 'border-rose-500/40 bg-rose-950/10'
+                    : 'border-emerald-500/30'
+                }`}
               >
-                <RefreshCcw className="h-3.5 w-3.5 text-amber-400" />
-                {t.account.unbindBtn}
-              </Button>
-            </div>
-          </Card>
-        ))}
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-bold text-white">
+                        Licencia Única de Membresía • {planInfo.label}
+                      </h2>
+                      <Badge variant="amber">
+                        Acceso Total al Catálogo ({catalogBots.length} Bots)
+                      </Badge>
+                      <Badge variant="sky">
+                        Bloqueo: 1 sola Computadora (HWID)
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Esta única LicenseKey autoriza todos los bots del catálogo en 1 sola computadora a la vez. Cuando vence la membresía, todos los bots se desactivan simultáneamente.
+                    </p>
+                  </div>
+
+                  {expired ? (
+                    <Badge variant="rose">
+                      Membresía Vencida • Todos los Bots Desactivados
+                    </Badge>
+                  ) : allowedToOperate ? (
+                    <Badge variant="emerald" pulse>
+                      {t.account.statusActive}
+                    </Badge>
+                  ) : (
+                    <Badge variant="rose">{t.account.statusSuspended}</Badge>
+                  )}
+                </div>
+
+                {/* Alerta de vencimiento: desactiva todos los bots del usuario */}
+                {expired && (
+                  <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-2.5 text-xs text-rose-200">
+                      <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-sm text-rose-300">
+                          Suscripción Vencida — Todos tus bots han sido desactivados
+                        </div>
+                        <p className="mt-0.5 text-rose-200/90">
+                          Tu membresía venció el{' '}
+                          <strong>
+                            {new Date(sub.expiresAt).toLocaleDateString(dateLocale)}
+                          </strong>
+                          . Como todos los bots comparten tu LicenseKey única ({sub.licenseKey}), el servidor ha revocado la ejecución de todas las estrategias en tu computadora.
+                        </p>
+                      </div>
+                    </div>
+                    <Link to="/catalog" className="shrink-0">
+                      <Button variant="primary" size="sm">
+                        Renovar Membresía
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+
+                {/* Clave de licencia destacada con copiado en un clic */}
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    {t.account.licenseKeyLabel} (Controla todos tus bots en 1 PC)
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-3">
+                    <code className="font-mono text-base font-bold tracking-wide text-emerald-300">
+                      {sub.licenseKey}
+                    </code>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleCopy(sub.licenseKey)}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        {t.account.copy}
+                      </Button>
+                      <Link to="/my-bots">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          disabled={!allowedToOperate}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Descargar Bots
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Regla de Exclusividad: 1 Computadora (Machine ID) */}
+                <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Cpu className="h-4 w-4 text-sky-400" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-sky-300">
+                        Candado de Computadora Única (1 PC Lock - Machine ID)
+                      </span>
+                    </div>
+                    {sub.boundMachineId ? (
+                      <Badge variant="emerald">1 PC Vinculada y Bloqueada</Badge>
+                    ) : (
+                      <Badge variant="amber">Pendiente de Vincular PC</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Un bot solo puede estar configurado y operando en <strong>una (1) computadora</strong> a la vez. Si intentas cargar cualquier bot con tu licencia en una segunda computadora con un Machine ID distinto, el servidor rechazará la conexión automáticamente (<code className="text-amber-300">REVOKE_INVALID_HWID</code>).
+                  </p>
+
+                  {sub.boundMachineId ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/90 p-3">
+                      <div className="text-xs">
+                        <span className="text-slate-400">Equipo único autorizado: </span>
+                        <code className="font-mono font-bold text-sky-300">
+                          {sub.boundMachineId}
+                        </code>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setUnbindTarget(sub)}
+                      >
+                        <RefreshCcw className="h-3.5 w-3.5 text-amber-400" />
+                        Cambiar de Computadora (Liberar HWID)
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                      <input
+                        type="text"
+                        value={customMachineId}
+                        onChange={(e) => setCustomMachineId(e.target.value)}
+                        placeholder="Ej: WIN11-TRD-9F82A1C0"
+                        className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 font-mono text-xs text-white focus:border-sky-500 focus:outline-none"
+                      />
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleBindSingleComputer(sub)}
+                        isLoading={updateSubscriptionMutation.isPending}
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        Vincular Computadora Única
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bots controlados por esta licencia única */}
+                <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-3.5 space-y-2">
+                  <div className="text-xs font-bold text-slate-300">
+                    {allowedToOperate
+                      ? 'Bots habilitados actualmente en tu computadora vinculada:'
+                      : 'Bots desactivados en tu cuenta (Membresía vencida o pausada):'}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {catalogBots.map((b) => (
+                      <Badge
+                        key={b.id}
+                        variant={allowedToOperate ? 'emerald' : 'rose'}
+                      >
+                        {allowedToOperate ? (
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        ) : (
+                          <X className="h-3 w-3 mr-1" />
+                        )}
+                        {b.name} ({b.primaryInstrument}) •{' '}
+                        {allowedToOperate ? 'ACTIVO' : 'DESACTIVADO'}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Información esencial de hardware y conexión */}
+                <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="rounded-lg bg-slate-950/60 p-3">
+                    <dt className="flex items-center gap-1.5 text-slate-400">
+                      <Cpu className="h-3.5 w-3.5 text-sky-400" />
+                      {t.account.linkedPc}
+                    </dt>
+                    <dd className="mt-1 truncate font-mono text-slate-200 font-semibold">
+                      {sub.boundMachineId ?? t.account.pcPending}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-slate-950/60 p-3">
+                    <dt className="text-slate-400">Cuenta NT8 Reportada</dt>
+                    <dd className="mt-1 font-mono text-sky-300">
+                      {sub.ninjaAccountName}
+                    </dd>
+                  </div>
+                  <div className="rounded-lg bg-slate-950/60 p-3">
+                    <dt className="text-slate-400">{t.account.lastConnection}</dt>
+                    <dd className="mt-1 text-slate-200 tabular-nums">
+                      {formatRelativeTime(sub.lastHeartbeatAt)}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="flex items-center justify-between border-t border-slate-800/80 pt-4">
+                  <span className="text-xs text-slate-400">
+                    {t.account.expires}:{' '}
+                    <span
+                      className={`font-medium ${
+                        expired ? 'text-rose-400 font-bold' : 'text-slate-200'
+                      }`}
+                    >
+                      {new Date(sub.expiresAt).toLocaleDateString(dateLocale, {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                      {expired ? ' (VENCIDA)' : ''}
+                    </span>
+                  </span>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setUnbindTarget(sub)}
+                    disabled={!sub.boundMachineId}
+                  >
+                    <RefreshCcw className="h-3.5 w-3.5 text-amber-400" />
+                    {t.account.unbindBtn}
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -695,10 +899,6 @@ export const UserProfilePage: React.FC = () => {
   const { data: serverProfile } = useUserProfileQuery();
   const updateMutation = useUpdateUserProfileMutation();
 
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const redirectAfterOnboarding = searchParams.get('redirect') || '';
-
   const user = {
     ...(serverProfile ?? localUser),
     direccion: localUser.direccion || serverProfile?.direccion || '',
@@ -789,20 +989,58 @@ export const UserProfilePage: React.FC = () => {
   ]);
 
   const isAdmin = user.role === 'ADMIN';
+  const kycReview = getEffectiveKycReviewDetails(user);
+  const [unlockedFieldsForCorrection, setUnlockedFieldsForCorrection] =
+    useState<Record<string, boolean>>({});
+
+  const toggleUnlockField = (fieldKey: string) => {
+    setUnlockedFieldsForCorrection((prev) => ({
+      ...prev,
+      [fieldKey]: !prev[fieldKey],
+    }));
+  };
+
+  const isFieldEditableDuringReview = (fieldKey: string, currentValue: string) => {
+    if (isAdmin) return true;
+    if (kycReview.status === 'INCOMPLETO' || kycReview.status === 'VERIFICADO') {
+      return true;
+    }
+    // Mientras está EN_REVISION u OBSERVADO: solo puede corregir lo que falte, lo que el admin haya observado, o lo que desbloquee explícitamente para corregir
+    if (currentValue.trim().length === 0) return true;
+    if (kycReview.rejectedItems.includes(fieldKey)) return true;
+    if (
+      kycReview.status === 'OBSERVADO' &&
+      kycReview.rejectedItems.length === 0
+    ) {
+      return true;
+    }
+    return Boolean(unlockedFieldsForCorrection[fieldKey]);
+  };
 
   const requiredFieldsList = [
-    { label: 'Dirección', value: direccion },
-    { label: 'Teléfono Internacional', value: telefono },
-    { label: 'WhatsApp Internacional', value: whatsapp },
-    { label: 'Documento de Identidad', value: urlDocumentoIdentidad },
-    { label: 'Recibo de Servicio', value: urlReciboServicio },
-    { label: 'Contrato / Disclaimer', value: urlContratoDisclaimer },
+    { key: 'direccion', label: 'Dirección', value: direccion },
+    { key: 'telefono', label: 'Teléfono Internacional', value: telefono },
+    { key: 'whatsapp', label: 'WhatsApp Internacional', value: whatsapp },
+    {
+      key: 'urlDocumentoIdentidad',
+      label: 'Documento de Identidad',
+      value: urlDocumentoIdentidad,
+    },
+    {
+      key: 'urlReciboServicio',
+      label: 'Recibo de Servicio',
+      value: urlReciboServicio,
+    },
+    {
+      key: 'urlContratoDisclaimer',
+      label: 'Contrato / Disclaimer',
+      value: urlContratoDisclaimer,
+    },
   ];
 
   const completedRequiredCount = requiredFieldsList.filter(
     (item) => item.value.trim().length > 0
   ).length;
-  const isProfileCurrentlyComplete = isAdmin || isUserProfileComplete(user);
 
   const handleSyncMe = async () => {
     setIsSyncingMe(true);
@@ -905,6 +1143,8 @@ export const UserProfilePage: React.FC = () => {
       }
     }
 
+    const nextKycStatus = isAdmin ? 'VERIFICADO' : 'EN_REVISION';
+
     const updatedFields = {
       fullName: fullName.trim(),
       email: email.trim(),
@@ -917,32 +1157,43 @@ export const UserProfilePage: React.FC = () => {
       urlReciboServicio: isAdmin ? (user.urlReciboServicio || '') : urlReciboServicio.trim(),
       urlContratoDisclaimer: isAdmin ? (user.urlContratoDisclaimer || '') : urlContratoDisclaimer.trim(),
       urlComprobanteAceptacion: '',
+      kycStatus: nextKycStatus as DomainUser['kycStatus'],
+      kycNotes: '',
+      kycRejectedItems: [],
+      estado: isAdmin ? 'activo' : 'en_revision',
     };
 
+    if (!isAdmin) {
+      saveKycReviewLocally(
+        { id: user.id, email: email.trim() || user.email },
+        {
+          kycStatus: 'EN_REVISION',
+          kycNotes: '',
+          kycRejectedItems: [],
+          kycReviewedAt: new Date().toISOString(),
+        }
+      );
+    }
+
     updateLocalProfile(updatedFields);
+    setUnlockedFieldsForCorrection({});
 
     updateMutation.mutate(updatedFields, {
       onSuccess: () => {
         toast.success(
-          isAdmin ? 'Perfil actualizado' : '¡Perfil y documentación completados!',
+          isAdmin ? 'Perfil actualizado' : '¡Documentación enviada a revisión!',
           isAdmin
             ? 'Tus datos de administrador han sido guardados correctamente.'
-            : 'Tus datos de contacto y documentación han sido guardados correctamente.'
+            : 'Tu perfil y documentos han sido enviados al Administrador para su evaluación.'
         );
-        if (redirectAfterOnboarding) {
-          navigate(redirectAfterOnboarding);
-        }
       },
       onError: () => {
         toast.success(
-          isAdmin ? 'Perfil actualizado' : '¡Perfil y documentación completados!',
+          isAdmin ? 'Perfil actualizado' : '¡Documentación enviada a revisión!',
           isAdmin
             ? 'Tus datos de administrador han sido guardados en tu cuenta.'
-            : 'Tus datos de contacto y documentación han sido guardados en tu cuenta.'
+            : 'Tus correcciones y documentos fueron enviados a revisión del Administrador.'
         );
-        if (redirectAfterOnboarding) {
-          navigate(redirectAfterOnboarding);
-        }
       },
     });
   };
@@ -1042,8 +1293,84 @@ export const UserProfilePage: React.FC = () => {
 
   return (
     <div className="space-y-6 w-full">
-      {/* Banner de Activación Obligatoria cuando el usuario entra por primera vez y le faltan datos de contacto o documentación */}
-      {!isProfileCurrentlyComplete && (
+      {/* Banners de Estado de Revisión KYC para Clientes */}
+      {!isAdmin && kycReview.status === 'OBSERVADO' && (
+        <div className="rounded-2xl border-2 border-rose-500/70 bg-gradient-to-r from-rose-500/20 via-slate-900 to-amber-500/15 p-5 shadow-xl shadow-rose-500/10 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/25 border border-rose-400/50 text-rose-300 mt-0.5">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-extrabold text-white">
+                    Acción Requerida: El Administrador envió observaciones sobre tu documentación
+                  </h2>
+                  <Badge variant="rose">Requiere Corrección</Badge>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Tu perfil fue revisado y algunos datos o documentos no cumplen con las reglas requeridas. Corrige los puntos indicados abajo y vuelve a enviar tu perfil para revisión.
+                </p>
+                {kycReview.notes && (
+                  <div className="mt-2 rounded-xl border border-rose-500/40 bg-slate-950/90 p-3.5 text-xs text-rose-200 space-y-1">
+                    <div className="font-bold uppercase tracking-wider text-rose-400 text-[11px]">
+                      Mensaje del Administrador:
+                    </div>
+                    <p className="text-sm font-medium text-white whitespace-pre-line">
+                      "{kycReview.notes}"
+                    </p>
+                  </div>
+                )}
+                {kycReview.rejectedItems.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[11px] font-semibold text-rose-300">
+                      Elementos a corregir:
+                    </span>
+                    {kycReview.rejectedItems.map((itemKey) => {
+                      const found = requiredFieldsList.find((r) => r.key === itemKey);
+                      return (
+                        <Badge key={itemKey} variant="rose">
+                          {found ? found.label : itemKey}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isAdmin && kycReview.status === 'EN_REVISION' && (
+        <div className="rounded-2xl border-2 border-sky-500/60 bg-gradient-to-r from-sky-500/15 via-slate-900 to-amber-500/10 p-5 shadow-xl shadow-sky-500/10 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/20 border border-sky-400/50 text-sky-300 mt-0.5">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-extrabold text-white">
+                    Documentación Enviada: Tu Perfil está en Revisión por el Administrador
+                  </h2>
+                  <Badge variant="sky" pulse>
+                    En Revisión
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                  Hemos recibido tus datos de contacto y los 3 documentos reglamentarios. Un administrador está evaluando que cumplan con las reglas. <strong>Mientras tu perfil esté en revisión, solo puedes corregir o reemplazar algún dato o documento que te haya faltado.</strong>
+                </p>
+              </div>
+            </div>
+            <Badge variant="emerald" className="shrink-0 self-start sm:self-center">
+              {completedRequiredCount} / 6 Enviados
+            </Badge>
+          </div>
+        </div>
+      )}
+
+      {!isAdmin && kycReview.status === 'INCOMPLETO' && (
         <div className="rounded-2xl border-2 border-amber-500/60 bg-gradient-to-r from-amber-500/15 via-slate-900 to-amber-500/10 p-5 shadow-xl shadow-amber-500/10 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -1055,7 +1382,7 @@ export const UserProfilePage: React.FC = () => {
                   Paso Obligatorio: Completa tus Datos de Contacto y Documentación
                 </h2>
                 <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
-                  ¡Bienvenido a tu nueva cuenta! Para habilitar la compra, descarga y activación de herramientas de automatización, es obligatorio completar tu <strong>Dirección, Teléfono, WhatsApp</strong> y adjuntar los <strong>3 documentos de verificación</strong>.
+                  ¡Bienvenido a tu nueva cuenta! Para enviar tu perfil a revisión del Administrador y habilitar la plataforma, completa tu <strong>Dirección, Teléfono, WhatsApp</strong> y adjunta los <strong>3 documentos de verificación</strong>.
                 </p>
               </div>
             </div>
@@ -1106,16 +1433,23 @@ export const UserProfilePage: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-lg font-bold text-white">{user.fullName}</h2>
                   <Badge variant="emerald">{user.role}</Badge>
-                  <Badge variant="sky">{user.estado || 'activo'}</Badge>
                   {isAdmin ? (
                     <Badge variant="emerald">
                       <ShieldCheck className="h-3 w-3 mr-1" />
                       Cuenta Administrador
                     </Badge>
-                  ) : isProfileCurrentlyComplete ? (
+                  ) : kycReview.status === 'VERIFICADO' ? (
                     <Badge variant="emerald">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Perfil Verificado
+                      Perfil Verificado por Admin
+                    </Badge>
+                  ) : kycReview.status === 'EN_REVISION' ? (
+                    <Badge variant="sky" pulse>
+                      En Revisión por Admin
+                    </Badge>
+                  ) : kycReview.status === 'OBSERVADO' ? (
+                    <Badge variant="rose">
+                      Observado (Requiere Corrección)
                     </Badge>
                   ) : (
                     <Badge variant="amber">Perfil Incompleto (Obligatorio)</Badge>
@@ -1220,81 +1554,156 @@ export const UserProfilePage: React.FC = () => {
                 </Badge>
               </div>
 
-              {/* 3 Campos de Contacto Editables con Selector de País */}
+              {/* 3 Campos de Contacto Editables con Bloqueo Inteligente en Revisión */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
-                    Dirección *
-                  </label>
-                  <div className="relative">
-                    <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                    <input
-                      type="text"
-                      value={direccion}
-                      onChange={(e) => {
-                        setDireccion(e.target.value);
-                        setValidationError(null);
-                      }}
-                      placeholder="Calle, Av., Ciudad y País"
-                      className="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pl-9 pr-3 text-sm text-white focus:border-amber-500 focus:outline-none"
-                      required
-                    />
-                  </div>
-                </div>
+                {(() => {
+                  const isDirEditable = isFieldEditableDuringReview('direccion', direccion);
+                  const isDirRejected = kycReview.rejectedItems.includes('direccion');
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-medium text-slate-300">
+                          Dirección *
+                        </label>
+                        {isDirRejected ? (
+                          <span className="text-[10px] font-bold text-rose-400">
+                            Corregir *
+                          </span>
+                        ) : !isDirEditable ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleUnlockField('direccion')}
+                            className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                          >
+                            Corregir dato
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="relative">
+                        <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <input
+                          type="text"
+                          value={direccion}
+                          disabled={!isDirEditable}
+                          onChange={(e) => {
+                            setDireccion(e.target.value);
+                            setValidationError(null);
+                          }}
+                          placeholder="Calle, Av., Ciudad y País"
+                          className={`w-full rounded-lg border bg-slate-950 py-2 pl-9 pr-3 text-sm text-white focus:outline-none ${
+                            isDirRejected
+                              ? 'border-rose-500 focus:border-rose-400'
+                              : !isDirEditable
+                              ? 'border-slate-800 opacity-60 cursor-not-allowed'
+                              : 'border-slate-700 focus:border-amber-500'
+                          }`}
+                          required
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
-                    Teléfono Internacional *
-                  </label>
-                  <InternationalPhoneInput
-                    value={telefono}
-                    onChange={(fullPhone) => {
-                      setTelefono(fullPhone);
-                      setValidationError(null);
-                    }}
-                    required
-                  />
-                </div>
+                {(() => {
+                  const isTelEditable = isFieldEditableDuringReview('telefono', telefono);
+                  const isTelRejected = kycReview.rejectedItems.includes('telefono');
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-medium text-slate-300">
+                          Teléfono Internacional *
+                        </label>
+                        {isTelRejected ? (
+                          <span className="text-[10px] font-bold text-rose-400">
+                            Corregir *
+                          </span>
+                        ) : !isTelEditable ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleUnlockField('telefono')}
+                            className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                          >
+                            Corregir dato
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className={!isTelEditable ? 'pointer-events-none opacity-60' : ''}>
+                        <InternationalPhoneInput
+                          value={telefono}
+                          onChange={(fullPhone) => {
+                            setTelefono(fullPhone);
+                            setValidationError(null);
+                          }}
+                          required
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-medium text-slate-300">
-                      WhatsApp Internacional *
-                    </label>
-                    {telefono.trim().length > 0 && whatsapp !== telefono && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setWhatsapp(telefono);
-                          setValidationError(null);
-                        }}
-                        className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
-                      >
-                        Usar mismo teléfono
-                      </button>
-                    )}
-                  </div>
-                  <InternationalPhoneInput
-                    value={whatsapp}
-                    onChange={(fullPhone) => {
-                      setWhatsapp(fullPhone);
-                      setValidationError(null);
-                    }}
-                    required
-                    accent="emerald"
-                  />
-                </div>
+                {(() => {
+                  const isWaEditable = isFieldEditableDuringReview('whatsapp', whatsapp);
+                  const isWaRejected = kycReview.rejectedItems.includes('whatsapp');
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-medium text-slate-300">
+                          WhatsApp Internacional *
+                        </label>
+                        {isWaRejected ? (
+                          <span className="text-[10px] font-bold text-rose-400">
+                            Corregir *
+                          </span>
+                        ) : !isWaEditable ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleUnlockField('whatsapp')}
+                            className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                          >
+                            Corregir dato
+                          </button>
+                        ) : telefono.trim().length > 0 && whatsapp !== telefono ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWhatsapp(telefono);
+                              setValidationError(null);
+                            }}
+                            className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
+                          >
+                            Usar mismo teléfono
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className={!isWaEditable ? 'pointer-events-none opacity-60' : ''}>
+                        <InternationalPhoneInput
+                          value={whatsapp}
+                          onChange={(fullPhone) => {
+                            setWhatsapp(fullPhone);
+                            setValidationError(null);
+                          }}
+                          required
+                          accent="emerald"
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* 3 Documentos Obligatorios: 2 Subidas + 1 Contrato y Disclaimer con Firma Digital en Modal y Descarga PDF */}
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                 {uploadableDocs.map((doc) => {
                   const isFilled = doc.value.trim().length > 0;
+                  const isDocRejected = kycReview.rejectedItems.includes(doc.key);
+                  const isDocEditable = isFieldEditableDuringReview(doc.key, doc.value);
                   return (
                     <div
                       key={doc.key}
                       className={`rounded-xl border p-4 space-y-3 transition-colors flex flex-col justify-between ${
-                        isFilled
+                        isDocRejected
+                          ? 'border-rose-500/70 bg-rose-950/20'
+                          : isFilled
                           ? 'border-emerald-500/40 bg-slate-950/90'
                           : 'border-amber-500/40 bg-slate-950/70'
                       }`}
@@ -1304,46 +1713,61 @@ export const UserProfilePage: React.FC = () => {
                           <span className="text-xs font-bold text-white">
                             {doc.label}
                           </span>
-                          {isFilled ? (
+                          {isDocRejected ? (
+                            <Badge variant="rose">Corregir Documento *</Badge>
+                          ) : isFilled ? (
                             <Badge variant="emerald">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Completado
+                              {kycReview.status === 'EN_REVISION' ? 'En Revisión' : 'Completado'}
                             </Badge>
                           ) : (
                             <Badge variant="amber">Obligatorio *</Badge>
                           )}
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <input
-                            type="text"
-                            value={doc.value}
-                            onChange={(e) => {
-                              doc.setter(e.target.value);
-                              setValidationError(null);
-                            }}
-                            placeholder={doc.placeholder}
-                            className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
-                            required
-                          />
-
-                          <label className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/25 cursor-pointer shrink-0 transition-colors">
-                            <Upload className="h-3.5 w-3.5" />
-                            <span>Subir Archivo</span>
+                        {isDocEditable ? (
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <input
-                              type="file"
-                              accept="image/png,image/jpeg,image/gif,image/webp"
-                              className="hidden"
-                              onChange={(e) =>
-                                handleFileUploadSelect(
-                                  e.target.files?.[0],
-                                  doc.setter,
-                                  doc.label
-                                )
-                              }
+                              type="text"
+                              value={doc.value}
+                              onChange={(e) => {
+                                doc.setter(e.target.value);
+                                setValidationError(null);
+                              }}
+                              placeholder={doc.placeholder}
+                              className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+                              required
                             />
-                          </label>
-                        </div>
+
+                            <label className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/25 cursor-pointer shrink-0 transition-colors">
+                              <Upload className="h-3.5 w-3.5" />
+                              <span>Subir Archivo</span>
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/gif,image/webp"
+                                className="hidden"
+                                onChange={(e) =>
+                                  handleFileUploadSelect(
+                                    e.target.files?.[0],
+                                    doc.setter,
+                                    doc.label
+                                  )
+                                }
+                              />
+                            </label>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-xs text-slate-400">
+                            <span>Documento enviado a revisión</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleUnlockField(doc.key)}
+                              className="font-semibold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                            >
+                              Reemplazar
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {isFilled && (
@@ -1443,8 +1867,12 @@ export const UserProfilePage: React.FC = () => {
               <CheckCircle2 className="h-4 w-4" />
               {isAdmin
                 ? 'Guardar Perfil de Administrador'
-                : !isProfileCurrentlyComplete
-                ? 'Guardar Datos Obligatorios y Activar Cuenta'
+                : kycReview.status === 'OBSERVADO'
+                ? 'Enviar Correcciones a Revisión del Administrador'
+                : kycReview.status === 'EN_REVISION'
+                ? 'Guardar Correcciones en Revisión'
+                : kycReview.status === 'INCOMPLETO'
+                ? 'Enviar Documentación a Revisión del Administrador'
                 : t.account.saveProfile}
             </Button>
           </div>

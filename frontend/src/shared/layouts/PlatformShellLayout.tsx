@@ -1,25 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bot,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  Download,
   Globe,
   KeyRound,
   Layers,
+  LayoutDashboard,
   LogOut,
   Menu,
   MessageSquareShare,
+  Moon,
+  Settings,
   ShieldCheck,
+  Sun,
   Terminal,
   User,
   Users,
   X,
 } from 'lucide-react';
 import { useI18n } from '@core/i18n/useLanguageStore';
-import { ThemeToggleButton } from '@shared/ui/ThemeToggleButton';
-import { LanguageSwitcherButton } from '@shared/ui/LanguageSwitcherButton';
+import { useThemeStore } from '@core/theme/useThemeStore';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
 import { isUserProfileComplete } from '@features/auth/domain/entities/User';
 import { LandingNavbar } from '@features/landing/presentation/components/LandingNavbar';
@@ -49,11 +54,34 @@ interface NavGroupConfig {
 export const PlatformShellLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { t, lang } = useI18n();
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { t, lang, toggleLanguage } = useI18n();
+  const { theme, setTheme } = useThemeStore();
+  const {
+    isAuthenticated,
+    user,
+    logout,
+    isSimulatingClient,
+    returnToAdminFromSimulation,
+  } = useAuthStore();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const { autoSimulateNinjaPolls } = usePollingControlStore();
 
@@ -91,7 +119,51 @@ export const PlatformShellLayout: React.FC = () => {
     (s) => s.syncState === 'PENDING_ACK'
   ).length;
 
-  const navGroups: NavGroupConfig[] = [
+  const isAdmin = user.role === 'ADMIN';
+
+  // Menú lateral exclusivo para el Dashboard de Administración
+  const adminNavGroups: NavGroupConfig[] = [
+    {
+      groupTitle: lang === 'es' ? 'Gestión & Operaciones' : 'Management & Operations',
+      items: [
+        {
+          to: '/admin/subscriptions',
+          label: lang === 'es' ? 'Control de Suscripciones' : 'Subscriptions Control',
+          icon: <KeyRound className="h-4 w-4 shrink-0 text-amber-400" />,
+          badgeCount: pendingSyncCount > 0 ? pendingSyncCount : undefined,
+        },
+        {
+          to: '/admin/clients',
+          label: lang === 'es' ? 'Directorio de Clientes' : 'Clients Directory',
+          icon: <Users className="h-4 w-4 shrink-0 text-sky-400" />,
+        },
+        {
+          to: '/admin/plans',
+          label: lang === 'es' ? 'Planes de Membresía' : 'Membership Plans',
+          icon: <Layers className="h-4 w-4 shrink-0 text-emerald-400" />,
+        },
+        {
+          to: '/catalog',
+          label: lang === 'es' ? 'Gestión de Bots' : 'Bots Management',
+          icon: <Bot className="h-4 w-4 shrink-0 text-amber-300" />,
+        },
+      ],
+    },
+    {
+      groupTitle: lang === 'es' ? 'Telemetría & Comunidad' : 'Telemetry & Community',
+      items: [
+        {
+          to: '/admin/ninja-lab',
+          label: t.nav.ninjaLab,
+          icon: <Terminal className="h-4 w-4 shrink-0" />,
+        },
+        {
+          to: '/social',
+          label: lang === 'es' ? 'Moderación Muro Social' : 'Social Wall Moderation',
+          icon: <MessageSquareShare className="h-4 w-4 shrink-0" />,
+        },
+      ],
+    },
     {
       groupTitle: lang === 'es' ? 'Portal Público' : 'Public Portal',
       items: [
@@ -102,34 +174,43 @@ export const PlatformShellLayout: React.FC = () => {
         },
       ],
     },
+  ];
+
+  // Menú lateral exclusivo para el Dashboard de Clientes / Traders
+  const clientNavGroups: NavGroupConfig[] = [
     {
-      groupTitle: t.nav.groupAdmin,
-      adminOnly: true,
+      groupTitle: lang === 'es' ? 'Mi Panel de Cliente' : 'My Client Dashboard',
       items: [
         {
-          to: '/admin/subscriptions',
-          label: t.nav.controlSubscriptions,
-          icon: <Users className="h-4 w-4 shrink-0 text-amber-400" />,
-          badgeCount: pendingSyncCount > 0 ? pendingSyncCount : undefined,
-          adminOnly: true,
+          to: '/dashboard',
+          label: lang === 'es' ? 'Resumen de Mi Cuenta' : 'Account Overview',
+          icon: <LayoutDashboard className="h-4 w-4 shrink-0 text-emerald-400" />,
         },
         {
-          to: '/admin/plans',
-          label: lang === 'es' ? 'Planes de Membresía' : 'Membership Plans',
-          icon: <Layers className="h-4 w-4 shrink-0 text-emerald-400" />,
-          adminOnly: true,
+          to: '/catalog',
+          label: t.nav.botsCatalog,
+          icon: <Bot className="h-4 w-4 shrink-0 text-amber-400" />,
         },
         {
-          to: '/admin/ninja-lab',
-          label: t.nav.ninjaLab,
-          icon: <Terminal className="h-4 w-4 shrink-0" />,
-          adminOnly: true,
+          to: '/my-bots',
+          label: lang === 'es' ? 'Mis Bots (Descargas NT8)' : 'My Bots (NT8 Downloads)',
+          icon: <Download className="h-4 w-4 shrink-0 text-emerald-400" />,
+        },
+        {
+          to: '/my-subscriptions',
+          label: t.nav.myLicenses,
+          icon: <KeyRound className="h-4 w-4 shrink-0 text-sky-400" />,
         },
       ],
     },
     {
-      groupTitle: t.nav.groupSocial,
+      groupTitle: lang === 'es' ? 'Pagos & Comunidad' : 'Billing & Community',
       items: [
+        {
+          to: '/billing',
+          label: t.nav.billing,
+          icon: <CreditCard className="h-4 w-4 shrink-0" />,
+        },
         {
           to: '/social',
           label: t.nav.socialWall,
@@ -138,59 +219,30 @@ export const PlatformShellLayout: React.FC = () => {
       ],
     },
     {
-      groupTitle:
-        user.role === 'ADMIN'
-          ? lang === 'es'
-            ? 'Catálogo del Sistema'
-            : 'System Catalog'
-          : t.nav.groupTrader,
+      groupTitle: lang === 'es' ? 'Portal Público' : 'Public Portal',
       items: [
         {
-          to: '/catalog',
-          label: t.nav.botsCatalog,
-          icon: <Bot className="h-4 w-4 shrink-0" />,
-        },
-        {
-          to: '/my-bots',
-          label: lang === 'es' ? 'Mis Bots' : 'My Bots',
-          icon: <Bot className="h-4 w-4 shrink-0 text-emerald-400" />,
-          traderOnly: true,
-        },
-        {
-          to: '/my-subscriptions',
-          label: t.nav.myLicenses,
-          icon: <KeyRound className="h-4 w-4 shrink-0" />,
-          traderOnly: true,
-        },
-        {
-          to: '/billing',
-          label: t.nav.billing,
-          icon: <CreditCard className="h-4 w-4 shrink-0" />,
-          traderOnly: true,
-        },
-      ],
-    },
-    {
-      groupTitle: lang === 'es' ? 'Mi Cuenta' : 'My Account',
-      items: [
-        {
-          to: '/profile',
-          label:
-            user.role === 'ADMIN'
-              ? lang === 'es'
-                ? 'Perfil de Administrador'
-                : 'Admin Profile'
-              : t.nav.profile,
-          icon: <User className="h-4 w-4 shrink-0" />,
+          to: '/',
+          label: lang === 'es' ? 'Ver Landing Page' : 'View Landing Page',
+          icon: <Globe className="h-4 w-4 shrink-0 text-amber-400" />,
         },
       ],
     },
   ];
 
-  const isItemActive = (to: string) =>
-    to === '/catalog'
-      ? location.pathname === '/catalog'
-      : location.pathname.startsWith(to);
+  const navGroups: NavGroupConfig[] = isAdmin ? adminNavGroups : clientNavGroups;
+
+  const isItemActive = (to: string) => {
+    if (to === '/') return location.pathname === '/';
+    if (to === '/catalog') return location.pathname === '/catalog';
+    if (to === '/admin/clients') {
+      return (
+        location.pathname.startsWith('/admin/clients') ||
+        location.pathname.startsWith('/admin/clientes')
+      );
+    }
+    return location.pathname.startsWith(to);
+  };
 
   // Breadcrumb legible (Grupo › Módulo) en lugar de mostrar la URL técnica
   const activeCrumb = (() => {
@@ -232,8 +284,18 @@ export const PlatformShellLayout: React.FC = () => {
                 <div className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5 group-hover:text-amber-300 transition-colors">
                   Trading Life Academy
                 </div>
-                <div className="text-[10px] font-semibold tracking-wider text-amber-400 uppercase">
-                  Learn • Trade • Grow
+                <div
+                  className={`text-[10px] font-bold tracking-wider uppercase ${
+                    isAdmin ? 'text-amber-400' : 'text-emerald-400'
+                  }`}
+                >
+                  {isAdmin
+                    ? lang === 'es'
+                      ? 'Consola de Administración'
+                      : 'Admin Console'
+                    : lang === 'es'
+                    ? 'Portal del Cliente'
+                    : 'Client Portal'}
                 </div>
               </div>
             )}
@@ -262,7 +324,7 @@ export const PlatformShellLayout: React.FC = () => {
           )}
         </div>
 
-        <div className="space-y-5 px-3 py-4 overflow-y-auto max-h-[calc(100vh-170px)]">
+        <div className="space-y-5 px-3 py-4 overflow-y-auto max-h-[calc(100vh-80px)]">
           {navGroups.map((group) => {
             if (group.adminOnly && user.role !== 'ADMIN') return null;
             if (group.traderOnly && user.role === 'ADMIN') return null;
@@ -320,51 +382,6 @@ export const PlatformShellLayout: React.FC = () => {
           })}
         </div>
       </div>
-
-      <div className="border-t border-slate-800/80 p-3 space-y-2 bg-slate-950/60">
-        {(!isSidebarCollapsed || isMobile) && (
-          <div className="flex items-center justify-between rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px]">
-            <span className="text-slate-400">{t.common.activeRole}</span>
-            <span className="font-mono font-bold text-emerald-400">
-              {user.role}
-            </span>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between gap-2">
-          <Link
-            to="/profile"
-            className="flex items-center gap-2.5 overflow-hidden group cursor-pointer hover:opacity-90 transition-opacity flex-1 min-w-0"
-            title="Ver mi Perfil de Usuario"
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-yellow-600 text-xs font-bold text-slate-950 shadow-sm shadow-amber-500/20 group-hover:scale-105 transition-transform">
-              {user.fullName.slice(0, 2).toUpperCase()}
-            </div>
-            {(!isSidebarCollapsed || isMobile) && (
-              <div className="truncate">
-                <div className="truncate text-xs font-semibold text-white group-hover:text-amber-300 transition-colors">
-                  {user.fullName}
-                </div>
-                <div className="truncate text-[10px] text-slate-400">
-                  {user.email}
-                </div>
-              </div>
-            )}
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => {
-              logout();
-              navigate('/auth/login');
-            }}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/15 hover:text-rose-300 cursor-pointer"
-            title={t.common.logout}
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
     </div>
   );
 
@@ -378,6 +395,23 @@ export const PlatformShellLayout: React.FC = () => {
   if (!isAuthenticated && !isPubliclyBrowsableRoute) {
     const redirectTarget = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/auth/login?redirect=${redirectTarget}`} replace />;
+  }
+
+  // Separación estricta de Dashboards por Rol:
+  // 1) Un Cliente NO puede acceder a rutas de Administración (/admin/*)
+  if (isAuthenticated && !isAdmin && location.pathname.startsWith('/admin')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // 2) Un Administrador que visite rutas exclusivas de Cliente (/dashboard, /my-bots, /my-subscriptions, /billing) va a su Consola Admin
+  const isClientExclusiveRoute =
+    location.pathname === '/dashboard' ||
+    location.pathname.startsWith('/my-bots') ||
+    location.pathname.startsWith('/my-subscriptions') ||
+    location.pathname.startsWith('/billing');
+
+  if (isAuthenticated && isAdmin && isClientExclusiveRoute) {
+    return <Navigate to="/admin/subscriptions" replace />;
   }
 
   // Onboarding obligatorio: solo para clientes normales con perfil incompleto (los administradores no requieren contacto ni documentación)
@@ -418,9 +452,9 @@ export const PlatformShellLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 flex">
       <aside
-        className={`hidden lg:flex lg:flex-col lg:shrink-0 border-r border-slate-800/90 bg-slate-900/60 backdrop-blur-md transition-all duration-200 ${
+        className={`hidden lg:flex lg:flex-col lg:shrink-0 border-r border-slate-800/90 bg-slate-900/60 backdrop-blur-md transition-all duration-200 h-full ${
           isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
         }`}
       >
@@ -439,8 +473,29 @@ export const PlatformShellLayout: React.FC = () => {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col min-w-0">
-        <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md px-4 py-3 sm:px-6">
+      <div className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+        {isSimulatingClient && (
+          <div className="bg-gradient-to-r from-amber-500/20 via-sky-500/20 to-amber-500/20 border-b border-amber-500/40 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-amber-200">
+              <ShieldCheck className="h-4 w-4 text-amber-400 shrink-0" />
+              <span>
+                <strong>Modo Prueba de Cliente Activo:</strong> Estás viendo la plataforma como{' '}
+                <strong className="text-white">{user.fullName}</strong> ({user.email}).
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                returnToAdminFromSimulation();
+                navigate('/admin/clients');
+              }}
+              className="rounded-lg bg-amber-500 px-3 py-1 text-xs font-extrabold text-slate-950 hover:bg-amber-400 transition-colors cursor-pointer"
+            >
+              ← Volver a Consola de Administrador
+            </button>
+          </div>
+        )}
+        <header className="shrink-0 z-30 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
@@ -479,25 +534,183 @@ export const PlatformShellLayout: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <LanguageSwitcherButton />
-              <ThemeToggleButton />
+              {/* Menú Desplegable del Usuario: Solo el icono con las iniciales */}
+              <div ref={userMenuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 text-xs font-extrabold text-slate-950 shadow-md shadow-amber-500/20 hover:scale-105 transition-transform cursor-pointer"
+                  title={`${user.fullName} (${user.email})`}
+                >
+                  {(user.fullName || 'US').slice(0, 2).toUpperCase()}
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  logout();
-                }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 cursor-pointer transition-colors"
-                title="Cerrar sesión para ver el catálogo en modo público (sin menú lateral)"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                <span>{lang === 'es' ? 'Cerrar Sesión' : 'Sign Out'}</span>
-              </button>
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-slate-800 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-md z-50 space-y-2.5 animate-fade-in">
+                    {/* Tarjeta con Rol Activo, Iniciales, Nombre y Correo */}
+                    <div className="space-y-2 border-b border-slate-800/80 pb-2.5">
+                      <div className="flex items-center justify-between rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px]">
+                        <span className="text-slate-400">{t.common.activeRole}</span>
+                        <span className="font-mono font-bold text-emerald-400">
+                          {user.role}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 px-1">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-yellow-600 text-xs font-extrabold text-slate-950 shadow-sm shadow-amber-500/20">
+                          {(user.fullName || 'US').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="truncate min-w-0">
+                          <div className="truncate text-xs font-bold text-white">
+                            {user.fullName}
+                          </div>
+                          <div className="truncate text-[11px] text-slate-400">
+                            {user.email}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Opciones del Menú: Ver Perfil, Configuración y Cerrar Sesión */}
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          navigate('/profile');
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800/80 hover:text-amber-300 transition-colors cursor-pointer"
+                      >
+                        <User className="h-4 w-4 text-amber-400" />
+                        <span>{lang === 'es' ? 'Ver Perfil' : 'View Profile'}</span>
+                      </button>
+
+                      {/* Opción Configuración (Despliega Idioma y Tema Claro/Oscuro) */}
+                      <div className="rounded-xl border border-transparent">
+                        <button
+                          type="button"
+                          onClick={() => setIsConfigOpen((prev) => !prev)}
+                          className={`flex w-full items-center justify-between gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                            isConfigOpen
+                              ? 'bg-slate-800/90 text-sky-300'
+                              : 'text-slate-200 hover:bg-slate-800/80 hover:text-sky-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Settings className="h-4 w-4 text-sky-400" />
+                            <span>
+                              {lang === 'es' ? 'Configuración' : 'Settings'}
+                            </span>
+                          </div>
+                          <ChevronDown
+                            className={`h-3.5 w-3.5 text-slate-400 transition-transform ${
+                              isConfigOpen ? 'rotate-180 text-sky-400' : ''
+                            }`}
+                          />
+                        </button>
+
+                        {isConfigOpen && (
+                          <div className="mt-1.5 rounded-xl border border-slate-800 bg-slate-900/90 p-2.5 space-y-3">
+                            {/* Selector de Idioma */}
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                                <Globe className="h-3.5 w-3.5 text-emerald-400" />
+                                <span>{lang === 'es' ? 'Idioma' : 'Language'}</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (lang !== 'es') toggleLanguage();
+                                  }}
+                                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-all cursor-pointer ${
+                                    lang === 'es'
+                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                      : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                  }`}
+                                >
+                                  Español (ES)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (lang !== 'en') toggleLanguage();
+                                  }}
+                                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-all cursor-pointer ${
+                                    lang === 'en'
+                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                      : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                  }`}
+                                >
+                                  English (EN)
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Selector de Tema Claro / Oscuro */}
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
+                                {theme === 'dark' ? (
+                                  <Moon className="h-3.5 w-3.5 text-sky-400" />
+                                ) : (
+                                  <Sun className="h-3.5 w-3.5 text-amber-400" />
+                                )}
+                                <span>
+                                  {lang === 'es' ? 'Tema Visual' : 'Appearance'}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setTheme('dark')}
+                                  className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-all cursor-pointer ${
+                                    theme === 'dark'
+                                      ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                                      : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                  }`}
+                                >
+                                  <Moon className="h-3 w-3" />
+                                  <span>{lang === 'es' ? 'Oscuro' : 'Dark'}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setTheme('light')}
+                                  className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-all cursor-pointer ${
+                                    theme === 'light'
+                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                      : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                  }`}
+                                >
+                                  <Sun className="h-3 w-3" />
+                                  <span>{lang === 'es' ? 'Claro' : 'Light'}</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          logout();
+                          navigate('/auth/login');
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/15 hover:text-rose-200 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4 text-rose-400" />
+                        <span>{lang === 'es' ? 'Cerrar Sesión' : 'Sign Out'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full min-w-0">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 w-full min-w-0">
           <Outlet />
         </main>
       </div>

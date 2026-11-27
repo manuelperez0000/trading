@@ -31,11 +31,20 @@ import {
   useBotsQuery,
   useCreateBotMutation,
   useDeleteBotMutation,
-  useLinkBotToLicenseMutation,
   useUpdateBotMutation,
 } from '@features/bots-catalog/application/hooks/useBots';
 import type { TradingBot } from '@features/bots-catalog/domain/entities/TradingBot';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
+import {
+  useCreateSubscriptionMutation,
+  useSubscriptionsPolling,
+} from '@features/subscriptions/application/hooks/useSubscriptionsPolling';
+import {
+  getSubscriptionPlanLabel,
+  isSubscriptionAllowedToOperate,
+  isSubscriptionExpired,
+} from '@features/subscriptions/domain/entities/Subscription';
+import { useSubscriptionPlansQuery } from '@features/subscriptions/application/hooks/useSubscriptionPlans';
 import { toast } from '@shared/ui/toast/toastStore';
 
 export interface PurchasedBotItem {
@@ -80,61 +89,6 @@ const ALL_ACCESS_CATALOG_BOTS: Array<{
   },
 ];
 
-const INITIAL_PURCHASED_BOTS: PurchasedBotItem[] = [
-  {
-    id: 'pb-pulsar-01',
-    botId: 'bot-pulsar',
-    botName: 'Pulsar (El Más Eficiente)',
-    codeName: 'TLA_PULSAR_V2',
-    instrument: 'NQ (E-mini Nasdaq)',
-    billingCycle: 'MONTHLY',
-    riskProfile: 'LUCID',
-    licenseKey: 'NT8-QTM-9921-ALPHA',
-    machineId: 'WIN11-TRD-9F82A1C0',
-    status: 'ACTIVE',
-    purchasedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-  {
-    id: 'pb-nova-01',
-    botId: 'bot-nova',
-    botName: 'Nova (Momentum Breakout)',
-    codeName: 'NovaMomentumV3',
-    instrument: 'ES (E-mini S&P 500)',
-    billingCycle: 'MONTHLY',
-    riskProfile: 'MFFU',
-    licenseKey: 'NT8-QTM-9921-ALPHA',
-    machineId: 'WIN11-TRD-9F82A1C0',
-    status: 'ACTIVE',
-    purchasedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-  {
-    id: 'pb-proton-01',
-    botId: 'bot-proton',
-    botName: 'Proton (Mean Reversion)',
-    codeName: 'ProtonReversionV2',
-    instrument: 'MNQ (Micro E-mini Nasdaq)',
-    billingCycle: 'MONTHLY',
-    riskProfile: 'TRADEIFY',
-    licenseKey: 'NT8-QTM-9921-ALPHA',
-    machineId: 'WIN11-TRD-9F82A1C0',
-    status: 'ACTIVE',
-    purchasedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-];
-
-function getStoredPurchasedBots(): PurchasedBotItem[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_PURCHASED_BOTS);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY_PURCHASED_BOTS, JSON.stringify(INITIAL_PURCHASED_BOTS));
-      return INITIAL_PURCHASED_BOTS;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return INITIAL_PURCHASED_BOTS;
-  }
-}
-
 function saveStoredPurchasedBots(items: PurchasedBotItem[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_PURCHASED_BOTS, JSON.stringify(items));
@@ -156,36 +110,80 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
-  const linkMutation = useLinkBotToLicenseMutation();
+  const { data: dynamicPlans = [] } = useSubscriptionPlansQuery();
+  const { data: allCatalogBots = [] } = useBotsQuery();
+  const createSubscriptionMutation = useCreateSubscriptionMutation();
 
-  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL'>('MONTHLY');
+  const activePlans = dynamicPlans.filter((p) => p.isActive);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [riskProfile, setRiskProfile] = useState<'LUCID' | 'MFFU' | 'TRADEIFY' | 'LIVE'>('LUCID');
 
+  useEffect(() => {
+    if (activePlans.length > 0 && !selectedPlanId) {
+      const popular = activePlans.find((p) => p.isPopular) ?? activePlans[0];
+      setSelectedPlanId(popular.id);
+    }
+  }, [activePlans, selectedPlanId]);
+
   if (!bot) return null;
+
+  const selectedPlan =
+    activePlans.find((p) => p.id === selectedPlanId) ?? activePlans[0] ?? null;
+  const billingCycle: 'MONTHLY' | 'ANNUAL' =
+    selectedPlan?.billingCycle === 'ANNUAL' ? 'ANNUAL' : 'MONTHLY';
+  const computedPriceUsd = selectedPlan
+    ? selectedPlan.priceUsd
+    : billingCycle === 'MONTHLY'
+    ? 149
+    : 1190;
 
   const redirectUrl = `/catalog/${bot.id}?intent=buy`;
   const loginHref = `/auth/login?redirect=${encodeURIComponent(redirectUrl)}`;
   const registerHref = `/auth/register?redirect=${encodeURIComponent(redirectUrl)}`;
 
-  const computedPriceUsd = billingCycle === 'MONTHLY' ? 149 : 1190;
-
   const handleConfirmPurchase = () => {
-    linkMutation.mutate(
-      { botId: bot.id, licenseKey: 'NT8-QTM-9921-ALPHA' },
+    const generatedLicense = `NT8-TLA-${Math.random()
+      .toString(36)
+      .substring(2, 6)
+      .toUpperCase()}-ALL`;
+    const durationDays = selectedPlan
+      ? selectedPlan.durationDays
+      : billingCycle === 'ANNUAL'
+      ? 365
+      : 30;
+    const expiresAt = new Date(
+      Date.now() + durationDays * 86400000
+    ).toISOString();
+
+    createSubscriptionMutation.mutate(
       {
-        onSuccess: () => {
-          const current = getStoredPurchasedBots();
-          const targetBots = [...ALL_ACCESS_CATALOG_BOTS];
-          if (!targetBots.some((b) => b.botId === bot.id)) {
-            targetBots.push({
-              botId: bot.id,
-              botName: bot.name,
-              codeName: bot.codeName,
-              instrument: bot.primaryInstrument,
-            });
-          }
+        traderName: user.fullName,
+        email: user.email,
+        ninjaAccountName: 'Sim101',
+        licenseKey: generatedLicense,
+        planTier:
+          billingCycle === 'ANNUAL' ? 'MEMBERSHIP_ANNUAL' : 'MEMBERSHIP_MONTHLY',
+        subscriptionCycle: billingCycle,
+        remoteEnabled: true,
+        boundMachineId: user.defaultMachineId || 'WIN11-TRD-9F82A1C0',
+        activeStrategyName: 'ALL_CATALOG_BOTS',
+        instrument: 'ALL MARKETS',
+        expiresAt,
+      },
+      {
+        onSuccess: (createdSub) => {
           const nowIso = new Date().toISOString();
-          const activatedBots: PurchasedBotItem[] = targetBots.map((b) => ({
+          const catalogSource =
+            allCatalogBots.length > 0
+              ? allCatalogBots.map((b) => ({
+                  botId: b.id,
+                  botName: b.name,
+                  codeName: b.codeName,
+                  instrument: b.primaryInstrument,
+                }))
+              : ALL_ACCESS_CATALOG_BOTS;
+
+          const activatedBots: PurchasedBotItem[] = catalogSource.map((b) => ({
             id: `pb-${b.botId}-${Date.now()}`,
             botId: b.botId,
             botName: b.botName,
@@ -193,25 +191,22 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
             instrument: b.instrument,
             billingCycle,
             riskProfile,
-            licenseKey: 'NT8-QTM-9921-ALPHA',
-            machineId: 'WIN11-TRD-9F82A1C0',
+            licenseKey: createdSub.licenseKey,
+            machineId: createdSub.boundMachineId ?? 'WIN11-TRD-9F82A1C0',
             status: 'ACTIVE',
             purchasedAt: nowIso,
           }));
-          const existingOther = current.filter(
-            (c) => !targetBots.some((t) => t.botId === c.botId)
-          );
-          saveStoredPurchasedBots([...activatedBots, ...existingOther]);
+          saveStoredPurchasedBots(activatedBots);
           toast.success(
             '¡Membresía All-Access Activada!',
-            `Has desbloqueado el catálogo completo (Proton, Nova, Pulsar) con tu LicenseKey de NinjaTrader 8.`
+            `Tu licencia única (${createdSub.licenseKey}) ha desbloqueado todo el catálogo de bots.`
           );
           onSuccessActivated?.();
           onClose();
           navigate('/my-bots');
         },
         onError: () => {
-          toast.danger('Error al procesar la suscripción');
+          toast.danger('Error al procesar la membresía');
         },
       }
     );
@@ -260,27 +255,23 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
 
         {/* Body */}
         <div className="p-6 space-y-5">
-          {/* Resumen del Bot Seleccionado */}
+          {/* Resumen de Membresía All-Access (1 Licencia = Todos los Bots) */}
           <div className="rounded-xl border border-slate-800 bg-slate-950/90 p-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
-                <Bot className="h-6 w-6" />
+                <Sparkles className="h-6 w-6" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-white">{bot.name}</span>
-                  <Badge variant="emerald">{bot.primaryInstrument}</Badge>
+                  <span className="text-sm font-bold text-white">
+                    Membresía All-Access • Catálogo Completo
+                  </span>
+                  <Badge variant="emerald">Licencia Única</Badge>
                 </div>
-                <div className="text-xs font-mono text-slate-400 mt-0.5">
-                  {bot.codeName} • Win Rate {bot.winRatePercent}% • PF {bot.profitFactor}
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Incluye <strong>{bot.name}</strong> y todos los bots del catálogo sin pagar licencias individuales.
                 </div>
               </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="text-lg font-extrabold text-emerald-400">
-                {formatUsd(bot.monthlyPriceUsd)}
-              </div>
-              <div className="text-[11px] text-slate-400">por mes</div>
             </div>
           </div>
 
@@ -319,64 +310,50 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
             </>
           ) : (
             <>
-              {/* Selector de Ciclo de Facturación */}
+              {/* Selector de Plan de Membresía Dinámico */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                    1. Selecciona tu Membresía All-Access
+                    1. Selecciona tu Plan de Membresía (Desbloquea Todo el Catálogo)
                   </label>
                   <span className="text-[11px] font-semibold text-emerald-400">
-                    ★ Acceso al 100% de los bots
+                    ★ 1 Licencia para todos los bots
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {(
-                    [
-                      {
-                        id: 'MONTHLY' as const,
-                        title: 'Membresía Mensual',
-                        price: '$149 USD / mes',
-                        tag: 'Flexible • Cancela cuando quieras',
-                        sub: 'Desbloquea Proton, Nova y Pulsar',
-                      },
-                      {
-                        id: 'ANNUAL' as const,
-                        title: 'Membresía Anual',
-                        price: '$1,190 USD / año',
-                        tag: '2 MESES GRATIS (-33%)',
-                        sub: 'Equivale a $99/mes • Ahorras $598 USD',
-                      },
-                    ]
-                  ).map((plan) => (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      onClick={() => setBillingCycle(plan.id)}
-                      className={`rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
-                        billingCycle === plan.id
-                          ? 'border-emerald-500 bg-emerald-500/15 text-white shadow-lg shadow-emerald-500/10'
-                          : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                          {plan.tag}
-                        </span>
-                        {billingCycle === plan.id && (
-                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                        )}
-                      </div>
-                      <div className="text-sm font-bold text-white mt-1">
-                        {plan.title}
-                      </div>
-                      <div className="text-base font-mono font-extrabold text-emerald-400 mt-0.5">
-                        {plan.price}
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        {plan.sub}
-                      </div>
-                    </button>
-                  ))}
+                  {activePlans.map((plan) => {
+                    const isSelected = selectedPlan?.id === plan.id;
+                    return (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={`rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-emerald-500 bg-emerald-500/15 text-white shadow-lg shadow-emerald-500/10'
+                            : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                            {plan.badgeText || `${plan.durationDays} Días`}
+                          </span>
+                          {isSelected && (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                          )}
+                        </div>
+                        <div className="text-sm font-bold text-white mt-1">
+                          {plan.name}
+                        </div>
+                        <div className="text-base font-mono font-extrabold text-emerald-400 mt-0.5">
+                          {formatUsd(plan.priceUsd)} USD
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
+                          {plan.description}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -439,11 +416,11 @@ const PurchaseGateModal: React.FC<PurchaseGateModalProps> = ({
                 <Button
                   variant="primary"
                   size="lg"
-                  isLoading={linkMutation.isPending}
+                  isLoading={createSubscriptionMutation.isPending}
                   onClick={handleConfirmPurchase}
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  Confirmar y Desbloquear Todos los Bots
+                  Confirmar Membresía y Desbloquear Todos los Bots
                 </Button>
               </div>
             </>
@@ -471,7 +448,7 @@ const CreateBotModal: React.FC<CreateBotModalProps> = ({ isOpen, onClose }) => {
   >('ORDER_FLOW_SCALPING');
   const [primaryInstrument, setPrimaryInstrument] = useState('NQ 12-26');
   const [supportedInstruments, setSupportedInstruments] = useState('NQ, MNQ, ES');
-  const [monthlyPriceUsd, setMonthlyPriceUsd] = useState(149);
+  const monthlyPriceUsd = 0;
   const [winRatePercent, setWinRatePercent] = useState(72.5);
   const [profitFactor, setProfitFactor] = useState(2.45);
   const [maxDrawdownUsd, setMaxDrawdownUsd] = useState(950);
@@ -684,7 +661,7 @@ const CreateBotModal: React.FC<CreateBotModalProps> = ({ isOpen, onClose }) => {
               <Cpu className="h-3.5 w-3.5" />
               2. Mercados, Suscripción & Prop Firms
             </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">
                   Instrumento Principal *
@@ -709,21 +686,6 @@ const CreateBotModal: React.FC<CreateBotModalProps> = ({ isOpen, onClose }) => {
                   onChange={(e) => setSupportedInstruments(e.target.value)}
                   placeholder="NQ, MNQ, ES"
                   className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Precio Mensual (USD) *
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                  value={monthlyPriceUsd}
-                  onChange={(e) => setMonthlyPriceUsd(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-emerald-400 focus:border-amber-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -1453,13 +1415,25 @@ const DeleteBotModal: React.FC<DeleteBotModalProps> = ({
 
 export const BotsCatalogPage: React.FC = () => {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [botForEdit, setBotForEdit] = useState<TradingBot | null>(null);
   const [botForDelete, setBotForDelete] = useState<TradingBot | null>(null);
   const [botForPurchase, setBotForPurchase] = useState<TradingBot | null>(null);
   const { data: bots = [], isLoading } = useBotsQuery();
+  const { data: subscriptions = [] } = useSubscriptionsPolling();
   const isAdmin = isAuthenticated && user.role === 'ADMIN';
+
+  const mySubscription =
+    isAuthenticated && !isAdmin
+      ? subscriptions.find(
+          (s) => s.email.toLowerCase() === user.email.toLowerCase()
+        ) ??
+        subscriptions[0] ??
+        null
+      : null;
+  const hasActiveMembership = isSubscriptionAllowedToOperate(mySubscription);
 
   return (
     <div className="space-y-6">
@@ -1567,18 +1541,31 @@ export const BotsCatalogPage: React.FC = () => {
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/80 pt-4">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                    Membresía All-Access
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-extrabold text-white">
-                      $149
-                    </span>
-                    <span className="text-xs text-slate-400">/ mes (o $1,190/año)</span>
-                  </div>
-                  <div className="text-[10px] text-emerald-400 font-medium">
-                    ✓ Desbloquea todos los bots del catálogo
-                  </div>
+                  {hasActiveMembership && mySubscription ? (
+                    <>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                        ✓ Incluido en tu {getSubscriptionPlanLabel(mySubscription).label}
+                      </div>
+                      <div className="text-xs font-mono text-slate-300 mt-0.5">
+                        Licencia: <strong className="text-amber-300">{mySubscription.licenseKey}</strong>
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        Sin costo ni licencia adicional por bot
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                        Incluido en Membresía All-Access
+                      </div>
+                      <div className="text-xs font-bold text-white mt-0.5">
+                        Plan Mensual o Anual
+                      </div>
+                      <div className="text-[10px] text-emerald-400 font-medium">
+                        ✓ 1 sola membresía desbloquea todos los bots
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -1612,6 +1599,15 @@ export const BotsCatalogPage: React.FC = () => {
                         Eliminar
                       </Button>
                     </>
+                  ) : hasActiveMembership ? (
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={() => navigate('/my-bots')}
+                    >
+                      <Download className="h-4 w-4" />
+                      Descargar en Mis Bots
+                    </Button>
                   ) : (
                     <Button
                       variant="primary"
@@ -1619,7 +1615,7 @@ export const BotsCatalogPage: React.FC = () => {
                       onClick={() => setBotForPurchase(bot)}
                     >
                       <ShoppingCart className="h-4 w-4" />
-                      Suscribirme
+                      Activar Membresía
                     </Button>
                   )}
                 </div>
@@ -1669,7 +1665,17 @@ export const BotDetailPage: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const { data: bot, isLoading } = useBotDetailQuery(botId);
+  const { data: subscriptions = [] } = useSubscriptionsPolling();
   const isAdmin = isAuthenticated && user.role === 'ADMIN';
+  const mySubscription =
+    isAuthenticated && !isAdmin
+      ? subscriptions.find(
+          (s) => s.email.toLowerCase() === user.email.toLowerCase()
+        ) ??
+        subscriptions[0] ??
+        null
+      : null;
+  const hasActiveMembership = isSubscriptionAllowedToOperate(mySubscription);
 
   // Si el usuario vuelve del Login con ?intent=buy, abrimos el modal de compra automáticamente
   useEffect(() => {
@@ -1761,73 +1767,75 @@ export const BotDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-start lg:items-end gap-3 shrink-0 rounded-xl border border-slate-800 bg-slate-950 p-5">
-            <div className="text-xs font-bold uppercase tracking-wider text-amber-400">
-              Membresía All-Access
-            </div>
-            <div className="text-3xl font-extrabold text-emerald-400">
-              $149
-              <span className="text-xs font-normal text-slate-400"> USD / mes</span>
-            </div>
-            <div className="text-xs text-slate-400">
-              o $1,190 USD / año (Ahorra 2 meses gratis)
-            </div>
-            <div className="text-[11px] text-emerald-400 font-medium text-left lg:text-right max-w-[240px]">
-              ✓ Desbloquea Proton, Nova y Pulsar con perfiles para Lucid, MFFU, Tradeify y Cuentas Reales
-            </div>
-            {isAdmin ? (
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={() => setIsEditModalOpen(true)}
-                  className="gap-2 cursor-pointer shadow-md shadow-amber-500/20"
-                >
-                  <Sliders className="h-4 w-4" />
-                  Editar Bot (Admin)
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => setIsDeleteModalOpen(true)}
-                  className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border-rose-500/30 gap-2 cursor-pointer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Eliminar Bot
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={() => setIsPurchaseModalOpen(true)}
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  {isAuthenticated
-                    ? 'Obtener Membresía / Desbloquear Todo'
-                    : 'Suscribirme (Requiere Login)'}
-                </Button>
-                {isAuthenticated ? (
+          <div className="flex flex-col items-start lg:items-end gap-2.5 shrink-0 rounded-xl border border-slate-800 bg-slate-950 p-5">
+            {hasActiveMembership && mySubscription ? (
+              <>
+                <Badge variant="emerald">
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                  Incluido en tu {getSubscriptionPlanLabel(mySubscription).label}
+                </Badge>
+                <div className="text-xs text-slate-300 text-left lg:text-right max-w-[250px]">
+                  Este bot está desbloqueado con tu licencia única de membresía{' '}
+                  <code className="font-mono font-bold text-amber-300">
+                    {mySubscription.licenseKey}
+                  </code>
+                  . No requiere licencia individual.
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
                   <Button
-                    variant="secondary"
+                    variant="primary"
                     size="md"
                     onClick={() => navigate('/my-bots')}
                   >
-                    <Bot className="h-4 w-4" />
-                    Mis Bots
+                    <Download className="h-4 w-4" />
+                    Ir a Mis Bots y Descargar (.cs)
                   </Button>
-                ) : (
-                  <Link
-                    to={`/auth/login?redirect=${encodeURIComponent(`/catalog/${bot.id}?intent=buy`)}`}
-                  >
-                    <Button variant="secondary" size="md">
-                      <LogIn className="h-4 w-4" />
-                      Iniciar Sesión
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                  Membresía All-Access (Mensual o Anual)
+                </div>
+                <div className="text-[11px] text-emerald-400 font-medium text-left lg:text-right max-w-[250px]">
+                  ✓ Pagando tu membresía mensual o anual tienes acceso a todo el catálogo de bots con una sola licencia.
+                </div>
+                {isAdmin ? (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="gap-2 cursor-pointer shadow-md shadow-amber-500/20"
+                    >
+                      <Sliders className="h-4 w-4" />
+                      Editar Bot (Admin)
                     </Button>
-                  </Link>
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      onClick={() => setIsDeleteModalOpen(true)}
+                      className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border-rose-500/30 gap-2 cursor-pointer"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar Bot
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={() => setIsPurchaseModalOpen(true)}
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      {isAuthenticated
+                        ? 'Activar Membresía All-Access'
+                        : 'Suscribirme (Requiere Login)'}
+                    </Button>
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -1939,20 +1947,44 @@ export const BotDetailPage: React.FC = () => {
 export const MyBotsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [bots, setBots] = useState<PurchasedBotItem[]>([]);
+  const { data: catalogBots = [] } = useBotsQuery();
+  const { data: subscriptions = [] } = useSubscriptionsPolling();
 
-  useEffect(() => {
-    setBots(getStoredPurchasedBots());
-  }, []);
+  const mySubscription =
+    subscriptions.find(
+      (s) => s.email.toLowerCase() === user.email.toLowerCase()
+    ) ??
+    subscriptions[0] ??
+    null;
 
-  const handleDownloadStrategy = (botItem: PurchasedBotItem) => {
+  const isExpired = isSubscriptionExpired(mySubscription);
+  const hasActiveMembership = isSubscriptionAllowedToOperate(mySubscription);
+  const activeLicenseKey = mySubscription?.licenseKey ?? 'SIN-MEMBRESIA';
+  const activeMachineId =
+    mySubscription?.boundMachineId || user.defaultMachineId || 'WIN11-TRD-9F82A1C0';
+  const planLabel = mySubscription
+    ? getSubscriptionPlanLabel(mySubscription).label
+    : 'Sin Membresía Activa';
+
+  const handleDownloadStrategy = (botItem: TradingBot) => {
+    if (!hasActiveMembership) {
+      toast.danger(
+        'Descarga bloqueada',
+        isExpired
+          ? 'Tu suscripción está vencida y todos tus bots han sido desactivados.'
+          : 'Debes tener una membresía activa para descargar y ejecutar bots.'
+      );
+      return;
+    }
+
     const csContent = `// =====================================================================
-// Trading Life Academy - NinjaScript Strategy Export
-// Bot: ${botItem.botName} (${botItem.codeName})
-// Instrumento: ${botItem.instrument}
-// Perfil de Riesgo: ${botItem.riskProfile}
-// LicenseKey: ${botItem.licenseKey}
-// Machine ID: ${botItem.machineId}
+// Trading Life Academy - NinjaScript Strategy Export (Membresía All-Access)
+// Bot: ${botItem.name} (${botItem.codeName})
+// Instrumento: ${botItem.primaryInstrument}
+// Plan de Membresía: ${planLabel} (Acceso a todo el catálogo)
+// LicenseKey Única de Membresía: ${activeLicenseKey}
+// Computadora Única Autorizada (1-PC Machine ID Lock): ${activeMachineId}
+// Vencimiento de Suscripción: ${mySubscription?.expiresAt ?? 'N/A'}
 // Licenciatario: ${user.fullName} (${user.email})
 // =====================================================================
 
@@ -1970,18 +2002,22 @@ namespace NinjaTrader.NinjaScript.Strategies.TradingLifeAcademy
     public class ${botItem.codeName.replace(/[^a-zA-Z0-9]/g, '_')} : Strategy
     {
         [NinjaScriptProperty]
-        [Display(Name = "License Key", GroupName = "TLA Security", Order = 1)]
-        public string LicenseKey { get; set; } = "${botItem.licenseKey}";
+        [Display(Name = "Membership License Key", GroupName = "TLA Security (1-PC Lock)", Order = 1)]
+        public string LicenseKey { get; set; } = "${activeLicenseKey}";
 
         [NinjaScriptProperty]
-        [Display(Name = "Risk Profile", GroupName = "TLA Parameters", Order = 2)]
-        public string RiskProfile { get; set; } = "${botItem.riskProfile}";
+        [Display(Name = "Authorized Computer Machine ID (1 PC Only)", GroupName = "TLA Security (1-PC Lock)", Order = 2)]
+        public string AuthorizedMachineId { get; set; } = "${activeMachineId}";
+
+        [NinjaScriptProperty]
+        [Display(Name = "Subscription Expires At (UTC)", GroupName = "TLA Security (1-PC Lock)", Order = 3)]
+        public string ExpiresAtIso { get; set; } = "${mySubscription?.expiresAt ?? ''}";
 
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
             {
-                Description = "Algoritmo ${botItem.botName} provisto por Trading Life Academy.";
+                Description = "Algoritmo ${botItem.name} desbloqueado por tu Membresía All-Access de Trading Life Academy (Bloqueado a 1 PC).";
                 Name = "${botItem.codeName}";
                 Calculate = Calculate.OnBarClose;
                 EntriesPerDirection = 1;
@@ -1999,6 +2035,24 @@ namespace NinjaTrader.NinjaScript.Strategies.TradingLifeAcademy
                 StopTargetHandling = StopTargetHandling.PerEntryExecution;
                 BarsRequiredToTrade = 20;
             }
+            else if (State == State.DataLoaded)
+            {
+                // 1) Verificación de Computadora Única (1-PC Hardware Lock)
+                string currentPcId = NinjaTrader.Cbi.License.MachineId;
+                if (!string.IsNullOrEmpty(AuthorizedMachineId) && currentPcId != AuthorizedMachineId)
+                {
+                    Print("[TLA SECURITY] REVOKE_INVALID_HWID: Este bot solo puede ejecutarse en la computadora vinculada (" + AuthorizedMachineId + ").");
+                    CloseStrategy("TLA 1-PC Hardware Lock Violation");
+                }
+
+                // 2) Verificación de Vencimiento de Membresía (Desactiva todos los bots del usuario)
+                DateTime expiresUtc;
+                if (DateTime.TryParse(ExpiresAtIso, out expiresUtc) && DateTime.UtcNow > expiresUtc.ToUniversalTime())
+                {
+                    Print("[TLA SECURITY] REVOKE_EXPIRED: Tu suscripcion ha vencido. Todos los bots de tu cuenta han sido desactivados.");
+                    CloseStrategy("TLA Subscription Expired");
+                }
+            }
         }
     }
 }
@@ -2014,180 +2068,181 @@ namespace NinjaTrader.NinjaScript.Strategies.TradingLifeAcademy
     URL.revokeObjectURL(url);
 
     toast.success(
-      'Archivo NinjaScript generado',
-      `Descargando ${botItem.codeName}.cs para NinjaTrader 8.`
+      'Archivo NinjaScript (.cs) generado',
+      `Descargando ${botItem.codeName}.cs vinculado exclusivamente a la PC ${activeMachineId}.`
     );
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-5">
+      {/* Header Compacto */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800/80 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="amber">Trading Life Academy • Estudiante</Badge>
-            <Badge variant="emerald">NinjaTrader 8</Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+              <Bot className="h-6 w-6 text-emerald-400" />
+              Mis Bots (Catálogo Incluido en tu Membresía)
+            </h1>
+            <Badge
+              variant={
+                isExpired ? 'rose' : hasActiveMembership ? 'emerald' : 'amber'
+              }
+            >
+              {isExpired ? `${planLabel} • VENCIDA` : planLabel}
+            </Badge>
+            <Badge variant="sky">
+              <Cpu className="h-3 w-3 mr-1" />
+              1 PC Autorizada: {activeMachineId}
+            </Badge>
           </div>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <Bot className="h-7 w-7 text-emerald-400" />
-            Mis Bots Adquiridos
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Administra los algoritmos algorítmicos vinculados a tu cuenta y descarga tus archivos NinjaScript (.cs) compilables.
+          <p className="mt-1 text-xs text-slate-400">
+            Tus bots solo pueden configurarse en 1 computadora ({activeMachineId}). Si tu suscripción vence, todos los bots se desactivan automáticamente.
           </p>
         </div>
 
-        <Button
-          variant="secondary"
-          onClick={() => navigate('/catalog')}
-          className="self-start sm:self-auto gap-2"
-        >
-          <Plus className="h-4 w-4 text-amber-400" />
-          Explorar Más Bots
-        </Button>
-      </div>
-
-      {/* Banner de Membresía All-Access */}
-      <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-amber-950/20 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 shrink-0">
-            <Sparkles className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-white">Membresía All-Access Activa</h2>
-              <Badge variant="emerald">Catálogo Completo Desbloqueado</Badge>
-            </div>
-            <p className="text-xs text-slate-300 mt-0.5">
-              Tienes acceso sin restricciones a los 3 algoritmos de Trading Life Academy (Proton, Nova y Pulsar) con descargas directas NinjaScript y soporte para pruebas de fondeo.
-            </p>
-          </div>
-        </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="secondary" size="sm" onClick={() => navigate('/my-subscriptions')}>
-            Administrar Licencias NT8
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/my-subscriptions')}
+            className="text-xs"
+          >
+            Gestionar PC / Licencia ({activeLicenseKey})
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/catalog')}
+            className="text-xs gap-1.5"
+          >
+            <Plus className="h-3.5 w-3.5 text-amber-400" />
+            Ver Especificaciones en Catálogo
           </Button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard
-          title="Bots en mi Colección"
-          value={String(bots.length)}
-          subtitle="Algoritmos con licencia activa"
-          icon={<Bot className="h-5 w-5 text-emerald-400" />}
-          accent="emerald"
-        />
-        <StatCard
-          title="Terminal Vinculada"
-          value="WIN11-TRD-9F82A1C0"
-          subtitle="NinjaTrader 8.1.3.1 (64-bit)"
-          icon={<Cpu className="h-5 w-5 text-sky-400" />}
-          accent="sky"
-        />
-        <StatCard
-          title="LicenseKey Principal"
-          value="NT8-QTM-9921-ALPHA"
-          subtitle="Sincronización remota activa"
-          icon={<CheckCircle2 className="h-5 w-5 text-amber-400" />}
-          accent="amber"
-        />
-      </div>
-
-      {/* Grid de Bots Adquiridos */}
-      {bots.length === 0 ? (
-        <Card className="p-12 text-center border-slate-800 bg-slate-900/60 space-y-4">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
-            <Bot className="h-7 w-7" />
+      {/* Estado de Membresía Vencida o Suspendida: Desactiva todos los bots */}
+      {!hasActiveMembership ? (
+        <Card
+          className={`p-8 text-center space-y-4 ${
+            isExpired
+              ? 'border-rose-500/40 bg-rose-500/10'
+              : 'border-amber-500/30 bg-amber-500/5'
+          }`}
+        >
+          <div
+            className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border ${
+              isExpired
+                ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+            }`}
+          >
+            <Lock className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white">Aún no tienes bots adquiridos</h3>
-            <p className="mt-1 text-xs text-slate-400 max-w-md mx-auto">
-              Explora nuestro catálogo de algoritmos para futuros (Proton, Nova, Pulsar) y adquiere tu primera licencia.
+            <h3 className="text-base font-bold text-white">
+              {isExpired
+                ? 'Membresía Vencida — Todos tus bots han sido desactivados'
+                : mySubscription && !mySubscription.remoteEnabled
+                ? 'Membresía Desactivada — Todos tus bots están detenidos'
+                : 'Activa tu Membresía Mensual o Anual para desbloquear todos los bots'}
+            </h3>
+            <p className="mt-1 text-xs text-slate-300 max-w-lg mx-auto">
+              {isExpired
+                ? `Tu suscripción venció el ${new Date(
+                    mySubscription!.expiresAt
+                  ).toLocaleDateString()}. Todos los bots vinculados a tu licencia única (${activeLicenseKey}) en la computadora ${activeMachineId} han sido desactivados automáticamente.`
+                : mySubscription && !mySubscription.remoteEnabled
+                ? `Tu licencia única (${activeLicenseKey}) fue desactivada remotamente, por lo que ninguno de los ${catalogBots.length} bots puede operar en NinjaTrader 8.`
+                : `En Trading Life Academy no necesitas comprar licencias individuales por cada bot. Al activar tu membresía tendrás acceso inmediato a todo el catálogo (${catalogBots.length} bots) en tu computadora autorizada.`}
             </p>
           </div>
-          <Button variant="primary" onClick={() => navigate('/catalog')}>
-            Ir al Catálogo de Bots
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate('/catalog')}
+            >
+              {isExpired
+                ? 'Renovar Membresía y Reactivar Mis Bots'
+                : 'Ir al Catálogo y Activar Membresía'}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate('/my-subscriptions')}
+            >
+              Revisar Estado de Mi Licencia
+            </Button>
+          </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {bots.map((botItem) => (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {catalogBots.map((botItem) => (
             <Card
               key={botItem.id}
-              className="p-5 border-slate-800 bg-slate-900/80 hover:border-emerald-500/40 transition-all flex flex-col justify-between"
+              className="p-4 border-slate-800 bg-slate-900/80 hover:border-emerald-500/40 transition-all flex flex-col justify-between space-y-4"
             >
-              <div className="space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
-                      <Bot className="h-6 w-6" />
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
+                      <Bot className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-white">{botItem.botName}</h3>
-                      <span className="font-mono text-xs text-slate-400">{botItem.codeName}</span>
+                      <h3 className="text-sm font-bold text-white">{botItem.name}</h3>
+                      <span className="font-mono text-[11px] text-slate-400">
+                        {botItem.codeName} • {botItem.version}
+                      </span>
                     </div>
                   </div>
-                  <Badge variant="emerald">Activo en NT8</Badge>
+                  <Badge variant="emerald">Activo • 1 PC</Badge>
                 </div>
 
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between py-1 border-b border-slate-800">
-                    <span className="text-slate-400">Instrumento:</span>
-                    <span className="font-semibold text-slate-200">{botItem.instrument}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-800">
-                    <span className="text-slate-400">Prop Firm / Regla:</span>
-                    <Badge variant="amber">{botItem.riskProfile}</Badge>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-800">
-                    <span className="text-slate-400">Ciclo de Membresía:</span>
-                    <span className="text-slate-300 font-medium">
-                      {botItem.billingCycle === 'ANNUAL'
-                        ? 'Anual ($1,190/año)'
-                        : 'Mensual ($149/mes)'}
+                <p className="text-xs text-slate-400 line-clamp-2">
+                  {botItem.shortDescription}
+                </p>
+
+                <div className="space-y-1.5 text-xs rounded-xl border border-slate-800/80 bg-slate-950/60 p-3">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Mercados:</span>
+                    <span className="font-semibold text-slate-200">
+                      {botItem.supportedInstruments.join(', ')}
                     </span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-slate-800">
-                    <span className="text-slate-400">LicenseKey:</span>
-                    <span className="font-mono text-amber-300 font-semibold">{botItem.licenseKey}</span>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">PC Autorizada (1 PC):</span>
+                    <span className="font-mono text-sky-300 font-semibold">
+                      {activeMachineId}
+                    </span>
                   </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-slate-400">Machine ID:</span>
-                    <span className="font-mono text-slate-300">{botItem.machineId}</span>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Licencia Única:</span>
+                    <span className="font-mono text-amber-300 font-semibold">
+                      {activeLicenseKey}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-5 pt-4 border-t border-slate-800 space-y-2">
+              <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2">
                 <Button
                   variant="primary"
                   size="sm"
                   onClick={() => handleDownloadStrategy(botItem)}
-                  className="w-full gap-2 justify-center"
+                  className="flex-1 gap-1.5 justify-center text-xs"
                 >
-                  <Download className="h-4 w-4" />
-                  Descargar AddOn (.cs)
+                  <Download className="h-3.5 w-3.5" />
+                  Descargar (.cs • 1 PC)
                 </Button>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(`/catalog/${botItem.botId}`)}
-                    className="w-full text-xs"
-                  >
-                    Ver Parámetros
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => navigate('/my-subscriptions')}
-                    className="w-full text-xs"
-                  >
-                    Licencia NT8
-                  </Button>
-                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate(`/catalog/${botItem.id}`)}
+                  className="text-xs"
+                >
+                  Parámetros
+                </Button>
               </div>
             </Card>
           ))}

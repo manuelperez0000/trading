@@ -22,6 +22,10 @@ export const BackendUserDtoSchema = z.object({
   ).optional().default(() => new Date().toISOString()),
   estado: z.string().optional().default('activo'),
   role: z.string().optional(),
+  kycStatus: z.string().optional(),
+  kycNotes: z.string().optional().default(''),
+  kycRejectedItems: z.array(z.string()).optional().default([]),
+  kycReviewedAt: z.union([z.string(), z.date(), z.null()]).optional(),
 });
 
 export type BackendUserDto = z.infer<typeof BackendUserDtoSchema>;

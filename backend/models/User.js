@@ -4,7 +4,8 @@ const publicUserColumns = `
   id, name, email, direccion, telefono, whatsapp,
   url_documento_identidad, url_recibo_servicio,
   url_contrato_disclaimer, url_comprobante_aceptacion,
-  created_at, updated_at, estado
+  created_at, updated_at, estado,
+  kyc_status, kyc_notes, kyc_rejected_items, kyc_reviewed_at
 `;
 
 export async function initializeUserTable() {
@@ -25,7 +26,11 @@ export async function initializeUserTable() {
       reset_token_expires_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      estado VARCHAR(40) NOT NULL DEFAULT 'activo'
+      estado VARCHAR(40) NOT NULL DEFAULT 'en_revision',
+      kyc_status VARCHAR(40) NOT NULL DEFAULT 'incompleto',
+      kyc_notes TEXT NOT NULL DEFAULT '',
+      kyc_rejected_items TEXT NOT NULL DEFAULT '[]',
+      kyc_reviewed_at TIMESTAMPTZ
     )
   `);
   await pool.query(`
@@ -38,7 +43,11 @@ export async function initializeUserTable() {
       ADD COLUMN IF NOT EXISTS url_contrato_disclaimer TEXT NOT NULL DEFAULT '',
       ADD COLUMN IF NOT EXISTS url_comprobante_aceptacion TEXT NOT NULL DEFAULT '',
       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      ADD COLUMN IF NOT EXISTS estado VARCHAR(40) NOT NULL DEFAULT 'activo'
+      ADD COLUMN IF NOT EXISTS estado VARCHAR(40) NOT NULL DEFAULT 'activo',
+      ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(40) NOT NULL DEFAULT 'incompleto',
+      ADD COLUMN IF NOT EXISTS kyc_notes TEXT NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS kyc_rejected_items TEXT NOT NULL DEFAULT '[]',
+      ADD COLUMN IF NOT EXISTS kyc_reviewed_at TIMESTAMPTZ
   `);
 }
 
@@ -124,12 +133,49 @@ export async function updateUser(id, userData) {
     return findUserById(id);
   }
 
+  // Cuando el cliente actualiza y envía sus documentos, pasa a revisión del administrador
+  values.push("en_revision");
+  assignments.push(`kyc_status = $${values.length}`);
+
   const { rows } = await pool.query(
     `UPDATE users
      SET ${assignments.join(", ")}, updated_at = NOW()
      WHERE id = $1
      RETURNING ${publicUserColumns}`,
     values,
+  );
+  return rows[0] ?? null;
+}
+
+export async function updateUserKycReview(
+  id,
+  { kycStatus, kycNotes = "", kycRejectedItems = [], estado },
+) {
+  const nextEstado =
+    estado ||
+    (kycStatus === "VERIFICADO" || kycStatus === "verificado"
+      ? "verificado"
+      : kycStatus === "OBSERVADO" || kycStatus === "observado"
+      ? "observado"
+      : "en_revision");
+
+  const { rows } = await pool.query(
+    `UPDATE users
+     SET kyc_status = $2,
+         kyc_notes = $3,
+         kyc_rejected_items = $4,
+         estado = $5,
+         kyc_reviewed_at = NOW(),
+         updated_at = NOW()
+     WHERE id = $1
+     RETURNING ${publicUserColumns}`,
+    [
+      id,
+      String(kycStatus).toLowerCase(),
+      String(kycNotes),
+      JSON.stringify(Array.isArray(kycRejectedItems) ? kycRejectedItems : []),
+      nextEstado,
+    ],
   );
   return rows[0] ?? null;
 }
@@ -144,6 +190,12 @@ export async function listUsers() {
 }
 
 export function toPublicUser(user) {
+  let parsedRejectedItems = [];
+  try {
+    parsedRejectedItems = JSON.parse(user.kyc_rejected_items || "[]");
+  } catch {
+    parsedRejectedItems = [];
+  }
   return {
     id: String(user.id),
     nombreCompleto: user.name,
@@ -158,6 +210,10 @@ export function toPublicUser(user) {
     fechaCreacion: user.created_at,
     fechaActualizacion: user.updated_at,
     estado: user.estado,
+    kycStatus: user.kyc_status || "incompleto",
+    kycNotes: user.kyc_notes || "",
+    kycRejectedItems: Array.isArray(parsedRejectedItems) ? parsedRejectedItems : [],
+    kycReviewedAt: user.kyc_reviewed_at || null,
   };
 }
 

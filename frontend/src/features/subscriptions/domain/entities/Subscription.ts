@@ -169,8 +169,8 @@ export function evaluateNinjaHeartbeatDomainRule(params: {
     };
   }
 
-  // 3. Verificación de vencimiento de suscripción
-  const isExpired = new Date(subscription.expiresAt).getTime() < Date.now();
+  // 3. Verificación de vencimiento de suscripción (Al vencer se desactivan todos los bots del usuario)
+  const isExpired = isSubscriptionExpired(subscription);
   const allowedToTrade = subscription.remoteEnabled && !isExpired;
   const remoteCommand: RemoteNinjaCommand = allowedToTrade
     ? 'CONTINUE_TRADING'
@@ -181,6 +181,8 @@ export function evaluateNinjaHeartbeatDomainRule(params: {
 
   const updatedSubscription: Subscription = {
     ...subscription,
+    // Si la suscripción ya venció, apaga automáticamente el interruptor remoto para desactivar todos los bots del usuario
+    remoteEnabled: isExpired ? false : subscription.remoteEnabled,
     boundMachineId: effectiveMachineId,
     activeStrategyName: payload.strategyName || subscription.activeStrategyName,
     instrument: payload.instrument || subscription.instrument,
@@ -190,10 +192,10 @@ export function evaluateNinjaHeartbeatDomainRule(params: {
     syncState: nextSyncState,
     connectionStatus: allowedToTrade ? 'ONLINE_TRADING' : 'PAUSED_REMOTE',
     statusNote: allowedToTrade
-      ? 'Heartbeat OK — Estrategia autorizada en NinjaTrader 8'
+      ? `Heartbeat OK — 1 PC autorizada (${effectiveMachineId})`
       : isExpired
-      ? 'Suscripción expirada — Operativa deshabilitada remotamente'
-      : 'Apagado remoto confirmado por NinjaTrader (ACK recibido)',
+      ? 'Membresía vencida — Todos los bots del usuario fueron desactivados remotamente'
+      : 'Apagado remoto confirmado por NinjaTrader (Todos los bots del usuario detenidos)',
   };
 
   return {
@@ -222,6 +224,20 @@ export function evaluateNinjaHeartbeatDomainRule(params: {
         : `ACK de Apagado Remoto ejecutado en NinjaTrader (${updatedSubscription.activeStrategyName} detenida).`,
     },
   };
+}
+
+export function isSubscriptionExpired(
+  sub: Pick<Subscription, 'expiresAt'> | null | undefined
+): boolean {
+  if (!sub || !sub.expiresAt) return false;
+  return new Date(sub.expiresAt).getTime() < Date.now();
+}
+
+export function isSubscriptionAllowedToOperate(
+  sub: Subscription | null | undefined
+): boolean {
+  if (!sub) return false;
+  return sub.remoteEnabled && !isSubscriptionExpired(sub);
 }
 
 export function getSubscriptionPlanLabel(sub: Subscription): {
