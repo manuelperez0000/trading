@@ -139,36 +139,57 @@ export async function initializeSubscriptionPlanTable() {
     )
   `);
 
-  const { rows } = await pool.query(
-    `SELECT COUNT(*)::int AS count FROM subscription_plans`,
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_seed_history (
+      seed_key VARCHAR(100) PRIMARY KEY,
+      executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  const seedKey = "initial_subscription_plans_once_v1";
+  const { rows: seedRows } = await pool.query(
+    `SELECT seed_key FROM app_seed_history WHERE seed_key = $1 LIMIT 1`,
+    [seedKey],
   );
-  if ((rows[0]?.count ?? 0) === 0) {
-    for (const plan of DEFAULT_PLANS) {
-      await pool.query(
-        `INSERT INTO subscription_plans (
-           code, name, description, price_usd, currency,
-           billing_cycle, duration_days, badge_text, is_popular,
-           is_active, features, bot_access_type, allowed_bot_ids
-         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-         ON CONFLICT (code) DO NOTHING`,
-        [
-          plan.code,
-          plan.name,
-          plan.description,
-          plan.priceUsd,
-          plan.currency,
-          plan.billingCycle,
-          plan.durationDays,
-          plan.badgeText || "",
-          Boolean(plan.isPopular),
-          Boolean(plan.isActive),
-          JSON.stringify(plan.features || []),
-          plan.botAccessType || "ALL_ACCESS",
-          JSON.stringify(plan.allowedBotIds || []),
-        ],
-      );
+
+  // Solo sembrar una única vez en la historia si la tabla está vacía y nunca se ha ejecutado el seed
+  if (seedRows.length === 0) {
+    const { rows } = await pool.query(
+      `SELECT COUNT(*)::int AS count FROM subscription_plans`,
+    );
+    if ((rows[0]?.count ?? 0) === 0) {
+      for (const plan of DEFAULT_PLANS) {
+        await pool.query(
+          `INSERT INTO subscription_plans (
+             code, name, description, price_usd, currency,
+             billing_cycle, duration_days, badge_text, is_popular,
+             is_active, features, bot_access_type, allowed_bot_ids
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+           ON CONFLICT (code) DO NOTHING`,
+          [
+            plan.code,
+            plan.name,
+            plan.description,
+            plan.priceUsd,
+            plan.currency,
+            plan.billingCycle,
+            plan.durationDays,
+            plan.badgeText || "",
+            Boolean(plan.isPopular),
+            Boolean(plan.isActive),
+            JSON.stringify(plan.features || []),
+            plan.botAccessType || "ALL_ACCESS",
+            JSON.stringify(plan.allowedBotIds || []),
+          ],
+        );
+      }
     }
+
+    await pool.query(
+      `INSERT INTO app_seed_history (seed_key) VALUES ($1) ON CONFLICT (seed_key) DO NOTHING`,
+      [seedKey],
+    );
   }
 }
 
