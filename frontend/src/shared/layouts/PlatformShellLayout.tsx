@@ -419,7 +419,8 @@ export const PlatformShellLayout: React.FC = () => {
   const isPubliclyBrowsableRoute =
     location.pathname === '/catalog' ||
     location.pathname.startsWith('/catalog/') ||
-    location.pathname === '/social';
+    location.pathname === '/social' ||
+    location.pathname.startsWith('/social/');
 
   // Si el usuario NO está autenticado e intenta entrar a una ruta privada (Licencias, Facturación, Perfil, Admin), exigir Login
   if (!isAuthenticated && !isPubliclyBrowsableRoute) {

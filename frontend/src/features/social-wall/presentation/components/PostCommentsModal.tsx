@@ -279,9 +279,13 @@ export const PostCommentsModal: React.FC<PostCommentsModalProps> = ({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                          <span className="truncate text-xs font-bold text-slate-100">
+                          <Link
+                            to={`/social/user/${encodeURIComponent(comment.authorId)}`}
+                            onClick={onClose}
+                            className="cursor-pointer truncate text-xs font-bold text-slate-100 transition-colors hover:text-emerald-300"
+                          >
                             {comment.authorName}
-                          </span>
+                          </Link>
                           <span className="text-[11px] text-slate-500">
                             {getRelativeTime(comment.createdAtIso)}
                           </span>

@@ -6,6 +6,7 @@ import { sendPasswordResetEmail } from "../config/mailer.js";
 import {
   clearPasswordResetToken,
   createUser,
+  findSocialUserProfileById,
   findUserByEmail,
   findUserById,
   isUserAdmin,
@@ -17,7 +18,9 @@ import {
   updateUserCredentialsByAdmin,
   updateUserKycReview,
 } from "../models/User.js";
+import { listPostsByUserId } from "../models/Post.js";
 import authenticate from "../middleware/authenticate.js";
+import optionalAuthenticate from "../middleware/optionalAuthenticate.js";
 import requireAdmin from "../middleware/requireAdmin.js";
 import { setFollow } from "../models/Follow.js";
 import {
@@ -214,6 +217,40 @@ async function updateCurrentUserProfile(req, res, next) {
 
 router.put("/me", authenticate, updateCurrentUserProfile);
 router.patch("/me", authenticate, updateCurrentUserProfile);
+
+router.get("/:id/profile", optionalAuthenticate, async (req, res, next) => {
+  if (!isDatabaseId(req.params.id)) {
+    return responser.error({
+      res,
+      message: "El ID del usuario no es válido.",
+      status: 400,
+    });
+  }
+
+  try {
+    const currentUserId = req.user?.id ?? null;
+    const profile = await findSocialUserProfileById(
+      req.params.id,
+      currentUserId,
+    );
+    if (!profile) {
+      return responser.error({
+        res,
+        message: "No se encontró el usuario.",
+        status: 404,
+      });
+    }
+
+    const posts = await listPostsByUserId(req.params.id, currentUserId);
+    return responser.success({
+      res,
+      message: "Perfil social obtenido correctamente.",
+      body: { profile, posts },
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
 
 async function updateFollow(req, res, next, following) {
   if (!isDatabaseId(req.params.id)) {

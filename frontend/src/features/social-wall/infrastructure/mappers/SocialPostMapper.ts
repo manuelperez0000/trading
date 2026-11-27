@@ -1,12 +1,15 @@
 import type {
   SocialComment,
   SocialPost,
+  SocialUserProfile,
 } from '@features/social-wall/domain/entities/SocialPost';
 import {
   SocialCommentDtoSchema,
   SocialPostDtoSchema,
+  SocialUserProfileDtoSchema,
   type SocialCommentDto,
   type SocialPostDto,
+  type SocialUserProfileDto,
 } from '@features/social-wall/infrastructure/dto/SocialPostDto';
 
 export class SocialPostMapper {
@@ -17,6 +20,7 @@ export class SocialPostMapper {
       authorId: dto.user_id,
       authorName: dto.author_name,
       authorHandle: `@trader_${dto.user_id}`,
+      authorAvatarUrl: dto.avatar_url || null,
       createdAtIso: dto.created_at,
       text: dto.text,
       image: dto.image || null,
@@ -44,6 +48,26 @@ export class SocialCommentMapper {
       authorAvatarUrl: dto.avatar_url || null,
       content: dto.content,
       createdAtIso: dto.created_at,
+    };
+  }
+}
+
+export class SocialUserProfileMapper {
+  public static toDomain(raw: unknown): SocialUserProfile {
+    const dto: SocialUserProfileDto = SocialUserProfileDtoSchema.parse(raw);
+    const username = dto.username || dto.full_name || `Trader ${dto.id}`;
+    return {
+      id: dto.id,
+      username,
+      handle: `@trader_${dto.id}`,
+      avatarUrl: dto.avatar_url || null,
+      bio: dto.bio,
+      followersCount: dto.followers_count,
+      followingCount: dto.following_count,
+      postsCount: dto.posts_count,
+      createdAtIso: dto.created_at,
+      isFollowing: dto.is_following,
+      isMe: dto.is_me,
     };
   }
 }

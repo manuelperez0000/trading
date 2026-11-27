@@ -4,6 +4,7 @@ import pool from "../config/database.js";
 const migrationUrls = [
   new URL("../migrations/001_social_graph.sql", import.meta.url),
   new URL("../migrations/002_post_comments.sql", import.meta.url),
+  new URL("../migrations/003_user_profile.sql", import.meta.url),
 ];
 
 export async function initializeSocialTables() {

@@ -285,6 +285,31 @@ const openApiDocument = {
         },
       },
     },
+    "/users/{id}/profile": {
+      parameters: [idParameter],
+      get: {
+        tags: ["Usuarios"],
+        summary: "Consultar perfil social y publicaciones de un usuario",
+        operationId: "getSocialUserProfile",
+        security: [{ bearerAuth: [] }, {}],
+        responses: {
+          "200": response(
+            "Perfil social encontrado.",
+            {
+              type: "object",
+              required: ["profile", "posts"],
+              properties: {
+                profile: ref("SocialUserProfile"),
+                posts: { type: "array", items: ref("Post") },
+              },
+            },
+          ),
+          "400": badRequest,
+          "404": notFound,
+          "500": serverError,
+        },
+      },
+    },
     "/users/{id}/follow": {
       parameters: [idParameter],
       put: {
@@ -1062,6 +1087,33 @@ const openApiDocument = {
         properties: {
           token: { type: "string" },
           password: { type: "string", minLength: 8, maxLength: 72, description: "Entre 8 y 72 bytes UTF-8." },
+        },
+      },
+      SocialUserProfile: {
+        type: "object",
+        required: [
+          "id",
+          "username",
+          "bio",
+          "followers_count",
+          "following_count",
+          "posts_count",
+          "created_at",
+          "is_following",
+          "is_me",
+        ],
+        properties: {
+          id: { type: "string" },
+          username: { type: "string" },
+          full_name: { type: "string" },
+          avatar_url: { type: "string", nullable: true },
+          bio: { type: "string" },
+          followers_count: { type: "integer", minimum: 0 },
+          following_count: { type: "integer", minimum: 0 },
+          posts_count: { type: "integer", minimum: 0 },
+          created_at: { type: "string", format: "date-time" },
+          is_following: { type: "boolean" },
+          is_me: { type: "boolean" },
         },
       },
       Post: {

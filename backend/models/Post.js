@@ -3,9 +3,12 @@ import pool from "../config/database.js";
 const postFields =
   "id, user_id, title, post_text AS text, image_url AS image, status, created_at, likes_count, comments_count";
 const socialPostFields = `
-  p.id, p.user_id, p.title, p.post_text AS text, p.image_url AS image,
+  p.id, p.user_id, p.title, p.post_text AS text, p.post_text AS content,
+  p.image_url AS image, p.image_url AS image_url,
   p.status, p.created_at, p.likes_count, p.comments_count,
-  u.name AS author_name, u.followers_count, u.following_count,
+  u.name AS author_name, u.name AS username,
+  NULLIF(u.avatar_url, '') AS avatar_url,
+  u.followers_count, u.following_count,
   CASE WHEN $2::bigint IS NULL THEN FALSE
     ELSE EXISTS (
       SELECT 1 FROM likes l
@@ -56,6 +59,18 @@ export async function listPosts(status = null, currentUserId = null) {
      WHERE $1::boolean IS NULL OR p.status = $1
      ORDER BY p.created_at DESC, p.id DESC`,
     [status, currentUserId],
+  );
+  return rows;
+}
+
+export async function listPostsByUserId(userId, currentUserId = null) {
+  const { rows } = await pool.query(
+    `SELECT ${socialPostFields}
+     FROM posts p
+     JOIN users u ON u.id = p.user_id
+     WHERE p.user_id = $1
+     ORDER BY p.created_at DESC, p.id DESC`,
+    [userId, currentUserId],
   );
   return rows;
 }

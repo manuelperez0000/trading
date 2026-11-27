@@ -13,6 +13,7 @@ import { SubscriptionsAdminPage } from '@features/subscriptions/presentation/pag
 import { SubscriptionPlansAdminPage } from '@features/subscriptions/presentation/pages/SubscriptionPlansAdminPage';
 import { NinjaRemoteTesterPage } from '@features/subscriptions/presentation/pages/NinjaRemoteTesterPage';
 import { SocialWallPage } from '@features/social-wall/presentation/pages/SocialWallPage';
+import { SocialUserProfilePage } from '@features/social-wall/presentation/pages/SocialUserProfilePage';
 import {
   LoginPage,
   PasswordRecoveryPage,
@@ -135,6 +136,7 @@ const AppRoutes: React.FC = () => {
           }
         />
         <Route path="/social" element={<SocialWallPage />} />
+        <Route path="/social/user/:userId" element={<SocialUserProfilePage />} />
 
         {/* Módulos del Dashboard de Clientes: Resumen, Catálogo, Detalle, Licencias, Pagos y Perfil */}
         <Route path="/dashboard" element={<ClientDashboardPage />} />

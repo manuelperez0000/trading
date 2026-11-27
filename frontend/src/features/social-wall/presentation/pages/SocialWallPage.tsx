@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import {
-  ArrowUpRight,
   Heart,
   ImagePlus,
-  MessageCircle,
   Send,
   Users,
   X,
@@ -19,11 +17,9 @@ import {
   useToggleLikePostMutation,
 } from '@features/social-wall/application/hooks/useSocialWall';
 import type { SocialPost } from '@features/social-wall/domain/entities/SocialPost';
+import { PostCard } from '@features/social-wall/presentation/components/PostCard';
 import { PostCommentsModal } from '@features/social-wall/presentation/components/PostCommentsModal';
-import {
-  getInitials,
-  getRelativeTime,
-} from '@features/social-wall/presentation/utils/socialFormatters';
+import { getInitials } from '@features/social-wall/presentation/utils/socialFormatters';
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -101,6 +97,14 @@ export const SocialWallPage: React.FC = () => {
   const handleToggleQuickComment = (postId: string) => {
     setQuickCommentError(null);
     setOpenQuickCommentPostId((prev) => (prev === postId ? null : postId));
+  };
+
+  const handleQuickCommentDraftChange = (postId: string, value: string) => {
+    setQuickCommentDrafts((prev) => ({
+      ...prev,
+      [postId]: value,
+    }));
+    if (quickCommentError) setQuickCommentError(null);
   };
 
   const handleQuickCommentSubmit = (
@@ -309,222 +313,28 @@ export const SocialWallPage: React.FC = () => {
             </p>
           )}
 
-          {posts.map((post: SocialPost) => {
-            const isQuickCommentOpen = openQuickCommentPostId === post.id;
-            const draftValue = quickCommentDrafts[post.id] ?? '';
-
-            return (
-              <article
-                key={post.id}
-                className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg shadow-black/10"
-              >
-                <div className="flex items-center gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
-                  <div
-                    aria-label={`Foto de ${post.authorName}`}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-xs font-bold text-slate-950"
-                  >
-                    {getInitials(post.authorName)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <h3 className="truncate text-sm font-bold text-slate-100">
-                        {post.authorName}
-                      </h3>
-                      <span className="text-xs text-slate-500">
-                        {getRelativeTime(post.createdAtIso)}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 truncate text-xs text-slate-500">
-                      {post.authorHandle}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleLikeMutation.mutate(post.id)}
-                    disabled={!isAuthenticated || toggleLikeMutation.isPending}
-                    aria-label={
-                      post.likedByMe ? 'Quitar me gusta' : 'Dar me gusta'
-                    }
-                    aria-pressed={post.likedByMe}
-                    className={`rounded-full p-2.5 transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                      post.likedByMe
-                        ? 'bg-rose-500/10 text-rose-400'
-                        : 'text-slate-500 hover:bg-rose-500/10 hover:text-rose-400'
-                    }`}
-                  >
-                    <Heart
-                      className="h-5 w-5"
-                      fill={post.likedByMe ? 'currentColor' : 'none'}
-                    />
-                  </button>
-                </div>
-
-                {post.text && (
-                  <p className="whitespace-pre-wrap px-4 pb-4 pt-4 text-sm leading-6 text-slate-300 sm:px-5">
-                    {post.text}
-                  </p>
-                )}
-
-                {post.image && (
-                  <img
-                    src={post.image}
-                    alt={`Imagen compartida por ${post.authorName}`}
-                    className="max-h-[460px] w-full border-y border-slate-800 bg-slate-950 object-cover"
-                  />
-                )}
-
-                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
-                  <div className="flex flex-wrap items-center gap-4">
-                    <button
-                      type="button"
-                      onClick={() => toggleLikeMutation.mutate(post.id)}
-                      disabled={!isAuthenticated || toggleLikeMutation.isPending}
-                      aria-label={
-                        post.likedByMe ? 'Quitar me gusta' : 'Dar me gusta'
-                      }
-                      aria-pressed={post.likedByMe}
-                      className={`inline-flex cursor-pointer items-center gap-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                        post.likedByMe
-                          ? 'text-rose-400'
-                          : 'text-slate-400 hover:text-rose-400'
-                      }`}
-                    >
-                      <Heart
-                        className="h-4 w-4"
-                        fill={post.likedByMe ? 'currentColor' : 'none'}
-                      />
-                      <span>
-                        {post.likesCount.toLocaleString('es-ES')} me gusta
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleToggleQuickComment(post.id)}
-                      aria-expanded={isQuickCommentOpen}
-                      aria-label="Comentar publicación"
-                      className={`inline-flex cursor-pointer items-center gap-2 text-sm transition ${
-                        isQuickCommentOpen
-                          ? 'text-emerald-300'
-                          : 'text-slate-400 hover:text-emerald-300'
-                      }`}
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      <span>
-                        {post.commentsCount.toLocaleString('es-ES')}{' '}
-                        {post.commentsCount === 1 ? 'comentario' : 'comentarios'}
-                      </span>
-                    </button>
-                  </div>
-
-                  {(!isAuthenticated || post.authorId !== user.id) && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFollowMutation.mutate({
-                          userId: post.authorId,
-                          following: !post.isFollowing,
-                        })
-                      }
-                      disabled={!isAuthenticated || setFollowMutation.isPending}
-                      aria-pressed={post.isFollowing}
-                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                        post.isFollowing
-                          ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'
-                          : 'border-slate-700 text-slate-300 hover:border-emerald-400/40 hover:text-emerald-300'
-                      }`}
-                    >
-                      {post.isFollowing ? 'Siguiendo' : 'Seguir'}
-                      {!post.isFollowing && (
-                        <ArrowUpRight className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                {(post.commentsCount > 0 || isQuickCommentOpen) && (
-                  <div className="border-t border-slate-800/70 px-4 py-2.5 sm:px-5">
-                    <button
-                      type="button"
-                      onClick={() => setModalPostId(post.id)}
-                      className="cursor-pointer text-xs font-semibold text-slate-400 transition hover:text-emerald-300"
-                    >
-                      {post.commentsCount === 0
-                        ? 'Abrir vista de comentarios'
-                        : post.commentsCount === 1
-                          ? 'Ver 1 comentario'
-                          : `Ver los ${post.commentsCount.toLocaleString('es-ES')} comentarios`}
-                    </button>
-                  </div>
-                )}
-
-                {isQuickCommentOpen && (
-                  <div className="border-t border-slate-800/80 bg-slate-950/50 px-4 py-3 sm:px-5">
-                    {isAuthenticated ? (
-                      <form
-                        onSubmit={(event) =>
-                          handleQuickCommentSubmit(event, post.id)
-                        }
-                        className="space-y-2"
-                      >
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            autoFocus
-                            value={draftValue}
-                            onChange={(event) => {
-                              const value = event.target.value;
-                              setQuickCommentDrafts((prev) => ({
-                                ...prev,
-                                [post.id]: value,
-                              }));
-                              if (quickCommentError) setQuickCommentError(null);
-                            }}
-                            placeholder="Escribe un comentario rápido..."
-                            aria-label="Escribe un comentario rápido"
-                            maxLength={2000}
-                            disabled={createCommentMutation.isPending}
-                            className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none disabled:opacity-50"
-                          />
-                          <button
-                            type="submit"
-                            disabled={
-                              !draftValue.trim() ||
-                              createCommentMutation.isPending
-                            }
-                            aria-label="Enviar comentario rápido"
-                            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl bg-emerald-400 px-3.5 py-2 text-xs font-bold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            <span className="hidden sm:inline">
-                              {createCommentMutation.isPending
-                                ? 'Enviando…'
-                                : 'Enviar'}
-                            </span>
-                            <Send className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        {quickCommentError && (
-                          <p role="alert" className="text-xs text-rose-300">
-                            {quickCommentError}
-                          </p>
-                        )}
-                      </form>
-                    ) : (
-                      <p className="text-xs text-slate-400">
-                        <Link
-                          to="/auth/login"
-                          className="font-semibold text-emerald-300 hover:text-emerald-200"
-                        >
-                          Inicia sesión
-                        </Link>{' '}
-                        para comentar en esta publicación.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </article>
-            );
-          })}
+          {posts.map((post: SocialPost) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              isAuthenticated={isAuthenticated}
+              currentUserId={user.id}
+              isLikePending={toggleLikeMutation.isPending}
+              isFollowPending={setFollowMutation.isPending}
+              isQuickCommentOpen={openQuickCommentPostId === post.id}
+              quickCommentDraft={quickCommentDrafts[post.id] ?? ''}
+              quickCommentError={
+                openQuickCommentPostId === post.id ? quickCommentError : null
+              }
+              isCreateCommentPending={createCommentMutation.isPending}
+              onToggleLike={(postId) => toggleLikeMutation.mutate(postId)}
+              onToggleFollow={(params) => setFollowMutation.mutate(params)}
+              onToggleQuickComment={handleToggleQuickComment}
+              onQuickCommentDraftChange={handleQuickCommentDraftChange}
+              onQuickCommentSubmit={handleQuickCommentSubmit}
+              onOpenCommentsModal={(postId) => setModalPostId(postId)}
+            />
+          ))}
         </section>
       </main>
 
@@ -545,46 +355,66 @@ export const SocialWallPage: React.FC = () => {
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
-            {followedProfiles.map((profile) => (
-              <li key={profile.authorId} className="p-1">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-xs font-bold text-slate-950">
-                    {getInitials(profile.authorName)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-100">
-                      {profile.authorName}
-                    </p>
-                    <div className="mt-1 flex items-center gap-4 text-xs text-slate-400">
-                      <span
-                        className="inline-flex items-center gap-1"
-                        aria-label={`${profile.followersCount} seguidores`}
-                        title={`${profile.followersCount.toLocaleString('es-ES')} seguidores`}
+            {followedProfiles.map((profile) => {
+              const profilePath = `/social/user/${encodeURIComponent(profile.authorId)}`;
+              return (
+                <li key={profile.authorId} className="p-1">
+                  <div className="flex items-center gap-3">
+                    <Link
+                      to={profilePath}
+                      aria-label={`Ver perfil de ${profile.authorName}`}
+                      className="group/followed-avatar shrink-0 cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                    >
+                      {profile.authorAvatarUrl ? (
+                        <img
+                          src={profile.authorAvatarUrl}
+                          alt={`Foto de ${profile.authorName}`}
+                          className="h-10 w-10 rounded-full object-cover ring-2 ring-transparent transition group-hover/followed-avatar:scale-105 group-hover/followed-avatar:ring-emerald-400/60"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-xs font-bold text-slate-950 ring-2 ring-transparent transition group-hover/followed-avatar:scale-105 group-hover/followed-avatar:ring-emerald-400/60">
+                          {getInitials(profile.authorName)}
+                        </div>
+                      )}
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to={profilePath}
+                        className="block cursor-pointer truncate text-sm font-semibold text-slate-100 transition-colors hover:text-emerald-300"
                       >
-                        <Users className="h-3.5 w-3.5 text-emerald-300" />
-                        {profile.followersCount.toLocaleString('es-ES')}
-                      </span>
-                      <span
-                        className="inline-flex items-center gap-1"
-                        aria-label={`${profile.followingCount} seguidos`}
-                        title={`${profile.followingCount.toLocaleString('es-ES')} seguidos`}
-                      >
-                        <Users className="h-3.5 w-3.5 text-sky-300" />
-                        {profile.followingCount.toLocaleString('es-ES')}
-                      </span>
-                      <span
-                        className="inline-flex items-center gap-1 text-rose-300"
-                        aria-label={`${profile.totalLikes} me gusta`}
-                        title={`${profile.totalLikes.toLocaleString('es-ES')} me gusta`}
-                      >
-                        <Heart className="h-3.5 w-3.5 fill-current" />
-                        {profile.totalLikes.toLocaleString('es-ES')}
-                      </span>
+                        {profile.authorName}
+                      </Link>
+                      <div className="mt-1 flex items-center gap-4 text-xs text-slate-400">
+                        <span
+                          className="inline-flex items-center gap-1"
+                          aria-label={`${profile.followersCount} seguidores`}
+                          title={`${profile.followersCount.toLocaleString('es-ES')} seguidores`}
+                        >
+                          <Users className="h-3.5 w-3.5 text-emerald-300" />
+                          {profile.followersCount.toLocaleString('es-ES')}
+                        </span>
+                        <span
+                          className="inline-flex items-center gap-1"
+                          aria-label={`${profile.followingCount} seguidos`}
+                          title={`${profile.followingCount.toLocaleString('es-ES')} seguidos`}
+                        >
+                          <Users className="h-3.5 w-3.5 text-sky-300" />
+                          {profile.followingCount.toLocaleString('es-ES')}
+                        </span>
+                        <span
+                          className="inline-flex items-center gap-1 text-rose-300"
+                          aria-label={`${profile.totalLikes} me gusta`}
+                          title={`${profile.totalLikes.toLocaleString('es-ES')} me gusta`}
+                        >
+                          <Heart className="h-3.5 w-3.5 fill-current" />
+                          {profile.totalLikes.toLocaleString('es-ES')}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </aside>

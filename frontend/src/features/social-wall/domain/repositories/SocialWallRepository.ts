@@ -3,10 +3,12 @@ import type {
   CreateSocialPostInput,
   SocialComment,
   SocialPost,
+  SocialUserFeed,
 } from '@features/social-wall/domain/entities/SocialPost';
 
 export interface ISocialWallRepository {
   getPosts(): Promise<SocialPost[]>;
+  getUserProfileFeed(userId: string): Promise<SocialUserFeed>;
   createPost(input: CreateSocialPostInput): Promise<SocialPost>;
   toggleLike(postId: string): Promise<SocialPost>;
   setFollow(params: { userId: string; following: boolean }): Promise<void>;

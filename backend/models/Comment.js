@@ -9,7 +9,7 @@ const commentSelectFields = `
   c.created_at,
   u.name AS author_name,
   u.name AS username,
-  NULL::TEXT AS avatar_url
+  NULLIF(u.avatar_url, '') AS avatar_url
 `;
 
 export async function listCommentsByPostId(postId) {

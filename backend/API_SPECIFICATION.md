@@ -236,6 +236,9 @@ usuario autenticado. Cada respuesta conserva el sobre común de la API.
 ### `DELETE /api/v1/posts/:id/comments/:commentId`
 - Requiere autenticación. Permite al autor del comentario o al autor del post eliminarlo y decrementar `GREATEST(comments_count - 1, 0)` dentro de la misma transacción.
 
+### `GET /api/v1/users/:id/profile`
+- Devuelve `{ profile, posts }` con los datos públicos del perfil social (`id`, `username`, `avatar_url`, `bio`, `followers_count`, `following_count`, `posts_count`, `created_at`, `is_following`, `is_me`) y sus publicaciones ordenadas de más nueva a más antigua (`ORDER BY p.created_at DESC, p.id DESC`).
+
 ### `PUT /api/v1/users/:id/follow` y `DELETE /api/v1/users/:id/follow`
 - Requieren autenticación. Seguir y dejar de seguir son operaciones
   idempotentes, actualizan ambos contadores en la misma transacción y rechazan

@@ -3,6 +3,7 @@ export interface SocialPost {
   authorId: string;
   authorName: string;
   authorHandle: string;
+  authorAvatarUrl: string | null;
   createdAtIso: string;
   text: string;
   image: string | null;
@@ -33,6 +34,25 @@ export interface SocialComment {
 export interface CreateSocialCommentInput {
   postId: string;
   content: string;
+}
+
+export interface SocialUserProfile {
+  id: string;
+  username: string;
+  handle: string;
+  avatarUrl: string | null;
+  bio: string;
+  followersCount: number;
+  followingCount: number;
+  postsCount: number;
+  createdAtIso: string;
+  isFollowing: boolean;
+  isMe: boolean;
+}
+
+export interface SocialUserFeed {
+  profile: SocialUserProfile;
+  posts: SocialPost[];
 }
 
 export function validateCreateSocialPostDomainRule(

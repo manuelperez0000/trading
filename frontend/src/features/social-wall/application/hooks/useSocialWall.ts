@@ -1,22 +1,65 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { container } from '@app/di/container';
 import type {
   CreateSocialCommentInput,
   CreateSocialPostInput,
   SocialComment,
   SocialPost,
+  SocialUserFeed,
 } from '@features/social-wall/domain/entities/SocialPost';
 
 export const SOCIAL_POSTS_QUERY_KEY = ['social-wall', 'posts'] as const;
+export const SOCIAL_USER_PROFILES_ROOT_KEY = ['social-wall', 'users'] as const;
+
+export function getSocialUserProfileQueryKey(userId: string) {
+  return ['social-wall', 'users', userId, 'profile'] as const;
+}
 
 export function getSocialCommentsQueryKey(postId: string) {
   return ['social-wall', 'posts', postId, 'comments'] as const;
+}
+
+function syncUpdatedPostAcrossCaches(
+  queryClient: QueryClient,
+  updatedPost: SocialPost
+): void {
+  queryClient.setQueryData<SocialPost[]>(SOCIAL_POSTS_QUERY_KEY, (prev) =>
+    prev
+      ? prev.map((post) => (post.id === updatedPost.id ? updatedPost : post))
+      : prev
+  );
+  queryClient.setQueriesData<SocialUserFeed>(
+    { queryKey: SOCIAL_USER_PROFILES_ROOT_KEY },
+    (prev) =>
+      prev
+        ? {
+            ...prev,
+            posts: prev.posts.map((post) =>
+              post.id === updatedPost.id ? updatedPost : post
+            ),
+          }
+        : prev
+  );
 }
 
 export function useSocialPostsQuery() {
   return useQuery({
     queryKey: SOCIAL_POSTS_QUERY_KEY,
     queryFn: () => container.socialWallRepository.getPosts(),
+  });
+}
+
+export function useSocialUserProfileQuery(userId: string) {
+  return useQuery({
+    queryKey: getSocialUserProfileQueryKey(userId),
+    queryFn: () => container.socialWallRepository.getUserProfileFeed(userId),
+    enabled: Boolean(userId),
+    retry: false,
   });
 }
 
@@ -39,6 +82,9 @@ export function useCreateSocialPostMutation() {
       container.createSocialPostUseCase.execute(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: SOCIAL_USER_PROFILES_ROOT_KEY,
+      });
     },
   });
 }
@@ -50,14 +96,11 @@ export function useToggleLikePostMutation() {
     mutationFn: (postId: string) =>
       container.socialWallRepository.toggleLike(postId),
     onSuccess: (updatedPost) => {
-      queryClient.setQueryData<SocialPost[]>(SOCIAL_POSTS_QUERY_KEY, (prev) =>
-        prev
-          ? prev.map((post) =>
-              post.id === updatedPost.id ? updatedPost : post
-            )
-          : prev
-      );
+      syncUpdatedPostAcrossCaches(queryClient, updatedPost);
       queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: SOCIAL_USER_PROFILES_ROOT_KEY,
+      });
     },
   });
 }
@@ -69,13 +112,7 @@ export function useCreateCommentMutation() {
     mutationFn: (input: CreateSocialCommentInput) =>
       container.createSocialCommentUseCase.execute(input),
     onSuccess: (result, variables) => {
-      queryClient.setQueryData<SocialPost[]>(SOCIAL_POSTS_QUERY_KEY, (prev) =>
-        prev
-          ? prev.map((post) =>
-              post.id === result.post.id ? result.post : post
-            )
-          : prev
-      );
+      syncUpdatedPostAcrossCaches(queryClient, result.post);
       queryClient.setQueryData<SocialComment[]>(
         getSocialCommentsQueryKey(variables.postId),
         (prev) => {
@@ -88,6 +125,9 @@ export function useCreateCommentMutation() {
         queryKey: getSocialCommentsQueryKey(variables.postId),
       });
       queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: SOCIAL_USER_PROFILES_ROOT_KEY,
+      });
     },
   });
 }
@@ -99,13 +139,7 @@ export function useDeleteCommentMutation() {
     mutationFn: (params: { postId: string; commentId: string }) =>
       container.socialWallRepository.deleteComment(params),
     onSuccess: (result, variables) => {
-      queryClient.setQueryData<SocialPost[]>(SOCIAL_POSTS_QUERY_KEY, (prev) =>
-        prev
-          ? prev.map((post) =>
-              post.id === result.post.id ? result.post : post
-            )
-          : prev
-      );
+      syncUpdatedPostAcrossCaches(queryClient, result.post);
       queryClient.setQueryData<SocialComment[]>(
         getSocialCommentsQueryKey(variables.postId),
         (prev) =>
@@ -115,6 +149,9 @@ export function useDeleteCommentMutation() {
         queryKey: getSocialCommentsQueryKey(variables.postId),
       });
       queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: SOCIAL_USER_PROFILES_ROOT_KEY,
+      });
     },
   });
 }
@@ -125,8 +162,11 @@ export function useSetFollowMutation() {
   return useMutation({
     mutationFn: (params: { userId: string; following: boolean }) =>
       container.socialWallRepository.setFollow(params),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: getSocialUserProfileQueryKey(variables.userId),
+      });
     },
   });
 }

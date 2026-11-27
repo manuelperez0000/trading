@@ -1,0 +1,10 @@
+BEGIN;
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS avatar_url TEXT NOT NULL DEFAULT '';
+
+CREATE INDEX IF NOT EXISTS idx_posts_user_created
+  ON posts (user_id, created_at DESC);
+
+COMMIT;

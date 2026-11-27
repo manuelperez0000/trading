@@ -169,6 +169,38 @@ export async function findUserById(id) {
   return rows[0] ?? null;
 }
 
+export async function findSocialUserProfileById(userId, currentUserId = null) {
+  const { rows } = await pool.query(
+    `SELECT
+       u.id,
+       u.name AS username,
+       u.name AS full_name,
+       NULLIF(u.avatar_url, '') AS avatar_url,
+       COALESCE(u.bio, '') AS bio,
+       u.followers_count,
+       u.following_count,
+       u.created_at,
+       (
+         SELECT COUNT(*)::INT
+         FROM posts p
+         WHERE p.user_id = u.id
+       ) AS posts_count,
+       CASE WHEN $2::bigint IS NULL THEN FALSE
+         ELSE EXISTS (
+           SELECT 1 FROM follows f
+           WHERE f.follower_id = $2 AND f.following_id = u.id
+         )
+       END AS is_following,
+       CASE WHEN $2::bigint IS NULL THEN FALSE
+         ELSE (u.id = $2)
+       END AS is_me
+     FROM users u
+     WHERE u.id = $1`,
+    [userId, currentUserId],
+  );
+  return rows[0] ?? null;
+}
+
 const updatableUserColumns = {
   nombreCompleto: "name",
   direccion: "direccion",

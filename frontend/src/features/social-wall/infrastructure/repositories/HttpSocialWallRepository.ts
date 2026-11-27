@@ -5,15 +5,18 @@ import type {
   CreateSocialPostInput,
   SocialComment,
   SocialPost,
+  SocialUserFeed,
 } from '@features/social-wall/domain/entities/SocialPost';
 import type { ISocialWallRepository } from '@features/social-wall/domain/repositories/SocialWallRepository';
 import type {
   SocialCommentDto,
   SocialPostDto,
+  SocialUserProfileDto,
 } from '@features/social-wall/infrastructure/dto/SocialPostDto';
 import {
   SocialCommentMapper,
   SocialPostMapper,
+  SocialUserProfileMapper,
 } from '@features/social-wall/infrastructure/mappers/SocialPostMapper';
 
 interface ImageUploadResponse {
@@ -27,6 +30,22 @@ export class HttpSocialWallRepository implements ISocialWallRepository {
     return response.body.posts.map((post) =>
       SocialPostMapper.toDomain(post)
     );
+  }
+
+  public async getUserProfileFeed(userId: string): Promise<SocialUserFeed> {
+    const response = await httpClient.get<
+      ApiResponse<{
+        profile: SocialUserProfileDto;
+        posts: SocialPostDto[];
+      }>
+    >(`/users/${encodeURIComponent(userId)}/profile`);
+
+    return {
+      profile: SocialUserProfileMapper.toDomain(response.body.profile),
+      posts: response.body.posts.map((post) =>
+        SocialPostMapper.toDomain(post)
+      ),
+    };
   }
 
   public async createPost(input: CreateSocialPostInput): Promise<SocialPost> {
