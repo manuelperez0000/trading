@@ -9,7 +9,7 @@ export interface AppEnvironment {
 export const env: AppEnvironment = {
   apiBaseUrl:
     import.meta.env.VITE_API_BASE_URL ||
-    'https://www.tradinglifeacademy.com/api/v1',
+    'http://localhost:3000/api/v1',
   adminUserIds: String(import.meta.env.VITE_ADMIN_USER_IDS || '')
     .split(',')
     .map((id) => id.trim())

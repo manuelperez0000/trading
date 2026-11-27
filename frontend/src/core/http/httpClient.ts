@@ -12,6 +12,10 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
   timeoutMs?: number;
 }
 
+function isFormDataBody(value: unknown): value is FormData {
+  return typeof FormData !== 'undefined' && value instanceof FormData;
+}
+
 export class HttpClient {
   private readonly baseUrl: string;
 
@@ -25,13 +29,19 @@ export class HttpClient {
 
   public async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const controller = new AbortController();
+    const requestBody = options.body;
+    const isFormData = isFormDataBody(requestBody);
     const timeoutId = setTimeout(
       () => controller.abort(),
       options.timeoutMs ?? 8000
     );
 
     const headers = new Headers(options.headers);
-    headers.set('Content-Type', 'application/json');
+    if (isFormData) {
+      headers.delete('Content-Type');
+    } else {
+      headers.set('Content-Type', 'application/json');
+    }
     headers.set('X-Client-Platform', 'TradingLifeAcademy-WebAdmin');
 
     const token = this.getAuthToken();
@@ -40,10 +50,16 @@ export class HttpClient {
     }
 
     try {
+      let body: BodyInit | undefined;
+      if (requestBody !== undefined) {
+        body = isFormDataBody(requestBody)
+          ? requestBody
+          : JSON.stringify(requestBody);
+      }
       const response = await fetch(`${this.baseUrl}${path}`, {
         ...options,
         headers,
-        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+        body,
         signal: controller.signal,
       });
 
@@ -75,6 +91,10 @@ export class HttpClient {
   }
 
   public post<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return this.request<T>(path, { ...options, method: 'POST', body });
+  }
+
+  public postFormData<T>(path: string, body: FormData, options?: RequestOptions): Promise<T> {
     return this.request<T>(path, { ...options, method: 'POST', body });
   }
 

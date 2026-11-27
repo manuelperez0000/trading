@@ -192,34 +192,49 @@ Este endpoint es consumido directamente por el Add-On en C# de NinjaTrader 8 cad
 
 ---
 
-## 4. Red Social de Ganancias (`/social`)
+## 4. Muro social (`/posts`, `/users`)
 
-### `GET /api/v1/social/posts`
-- **Response `200 OK`:** Retorna la lista de publicaciones con sello de verificación por API, likes y comentarios.
-### `POST /api/v1/social/posts`
-- **Request Body:**
-  ```json
-  {
-    "authorName": "Carlos Trader",
-    "authorHandle": "@carlos_tla",
-    "instrument": "NQ 12-26",
-    "strategyUsed": "QuantumOrderFlowScalperV4",
-    "profitUsd": 1250,
-    "profitTicks": 84,
-    "tradesCount": 5,
-    "testimonialText": "Sesión impecable con el bot en apertura...",
-    "chartSummaryTag": "Sesión NY • +84 Ticks",
-    "verificationType": "API_VERIFIED_NT8"
-  }
-  ```
-### `POST /api/v1/social/posts/:id/like`
-- **Response `200 OK`:** Retorna el post con contador de likes actualizado.
-### `POST /api/v1/social/posts/:id/comments`
-- **Request Body:** `{ "postId": "...", "authorName": "...", "content": "Excelente resultado!" }`
-### `PATCH /api/v1/social/posts/:id/moderation`
-- **Request Body:** `{ "status": "APPROVED" | "PENDING_REVIEW" | "REJECTED" }`
-### `PATCH /api/v1/social/posts/:id/pin`
-- **Response `200 OK`:** Alterna fijado (`isPinned: true/false`).
+Las publicaciones, likes y follows se guardan en PostgreSQL. Las operaciones
+de escritura requieren `Authorization: Bearer <token>`; el feed es público y,
+cuando se envía un token válido, incluye el estado de like y seguimiento del
+usuario autenticado. Cada respuesta conserva el sobre común de la API.
+
+### `GET /api/v1/posts`
+- Lista publicaciones de más nuevas a más antiguas.
+- Cada post incluye `author_name`, `user_id`, `likes_count`, `liked_by_me`,
+  `followers_count`, `following_count` e `is_following`, además del texto,
+  imagen y fecha de creación.
+- Acepta `?status=true|false` y opcionalmente un Bearer token para el estado
+  personal de likes y follows.
+
+### `POST /api/v1/posts`
+- Requiere autenticación; el autor se toma del JWT, no del cuerpo.
+- Acepta texto, imagen o ambos. La imagen debe cargarse primero en
+  `POST /api/v1/images`; envía la URL devuelta como `image`.
+
+```json
+{
+  "text": "Mi publicación",
+  "image": "http://localhost:3000/api/v1/images/<id-sha256>"
+}
+```
+
+### `GET /api/v1/posts/:id` y `DELETE /api/v1/posts/:id`
+- Consulta una publicación; el borrado requiere autenticación y solo permite
+  eliminar al autor.
+
+### `POST /api/v1/posts/:id/like`
+- Requiere autenticación. Alterna el like de forma transaccional y responde
+  con el post actualizado y `liked`.
+
+### `PUT /api/v1/users/:id/follow` y `DELETE /api/v1/users/:id/follow`
+- Requieren autenticación. Seguir y dejar de seguir son operaciones
+  idempotentes, actualizan ambos contadores en la misma transacción y rechazan
+  el auto-seguimiento con `400`.
+
+Al iniciar el backend se ejecuta de forma idempotente la migración
+`migrations/001_social_graph.sql`. Añade los contadores sin recrear tablas y
+los reconcilia con los registros existentes.
 
 ---
 

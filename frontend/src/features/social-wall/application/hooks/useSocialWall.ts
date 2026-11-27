@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { container } from '@app/di/container';
-import type {
-  CreateSocialPostInput,
-  ModerationStatus,
-} from '@features/social-wall/domain/entities/SocialPost';
+import type { CreateSocialPostInput } from '@features/social-wall/domain/entities/SocialPost';
 
 export const SOCIAL_POSTS_QUERY_KEY = ['social-wall', 'posts'] as const;
 
@@ -38,39 +35,12 @@ export function useToggleLikePostMutation() {
   });
 }
 
-export function useAddCommentMutation() {
+export function useSetFollowMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (params: {
-      postId: string;
-      authorName: string;
-      content: string;
-    }) => container.socialWallRepository.addComment(params),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
-    },
-  });
-}
-
-export function useModeratePostMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (params: { postId: string; status: ModerationStatus }) =>
-      container.moderateSocialPostUseCase.execute(params),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
-    },
-  });
-}
-
-export function useTogglePinPostMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (postId: string) =>
-      container.socialWallRepository.togglePinPost(postId),
+    mutationFn: (params: { userId: string; following: boolean }) =>
+      container.socialWallRepository.setFollow(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
     },

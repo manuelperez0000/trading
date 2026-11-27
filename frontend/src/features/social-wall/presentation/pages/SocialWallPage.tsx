@@ -1,81 +1,30 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import type { ChangeEvent } from 'react';
 import {
   ArrowUpRight,
   Heart,
   ImagePlus,
   Send,
-  Sparkles,
-  TrendingUp,
   Users,
   X,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
+import {
+  useCreateSocialPostMutation,
+  useSetFollowMutation,
+  useSocialPostsQuery,
+  useToggleLikePostMutation,
+} from '@features/social-wall/application/hooks/useSocialWall';
+import type { SocialPost } from '@features/social-wall/domain/entities/SocialPost';
 
-interface SocialPost {
-  id: string;
-  author: string;
-  handle: string;
-  initials: string;
-  avatar: string;
-  createdAt: number;
-  content: string;
-  image?: string;
-  likes: number;
-  likedByMe: boolean;
-  followersCount: number;
-}
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
-const INITIAL_POSTS: SocialPost[] = [
-  {
-    id: 'post-1',
-    author: 'Sofía Ramírez',
-    handle: '@sofia.trades',
-    initials: 'SR',
-    avatar:
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80',
-    createdAt: Date.now() - 5 * 60 * 1000,
-    content:
-      'Hoy aprendí que la paciencia también es parte de la estrategia. Esperé mi entrada, respeté mi plan y cerré la sesión en positivo. ¡Un paso a la vez! 📈',
-    image:
-      'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=85',
-    likes: 24,
-    likedByMe: false,
-    followersCount: 1280,
-  },
-  {
-    id: 'post-2',
-    author: 'Andrés Molina',
-    handle: '@amolina_futures',
-    initials: 'AM',
-    avatar:
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80',
-    createdAt: Date.now() - 8 * 60 * 60 * 1000,
-    content:
-      'Primera semana siguiendo mi diario de trading todos los días. La diferencia en mi disciplina es enorme. ¿Qué hábito les ha ayudado más a mejorar?',
-    likes: 18,
-    likedByMe: false,
-    followersCount: 846,
-  },
-  {
-    id: 'post-3',
-    author: 'Valentina Cruz',
-    handle: '@vale.market',
-    initials: 'VC',
-    avatar:
-      'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=120&h=120&q=80',
-    createdAt: Date.now() - 3 * 24 * 60 * 60 * 1000,
-    content:
-      'Hace tres días tuve una sesión complicada y terminé antes de alcanzar mi límite diario. Proteger el capital también es ganar. Hoy vuelvo con la mente clara. 💪',
-    image:
-      'https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1200&q=85',
-    likes: 32,
-    likedByMe: false,
-    followersCount: 2150,
-  },
-];
-
-function getRelativeTime(timestamp: number): string {
-  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
+function getRelativeTime(date: string): string {
+  const elapsedMinutes = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(date).getTime()) / 60000)
+  );
 
   if (elapsedMinutes < 1) return 'ahora mismo';
   if (elapsedMinutes < 60) {
@@ -101,178 +50,184 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+function getErrorMessage(error: Error | null): string | null {
+  return error?.message ?? null;
+}
+
 export const SocialWallPage: React.FC = () => {
   const user = useAuthStore((state) => state.user);
-  const [posts, setPosts] = useState(INITIAL_POSTS);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const composerName = isAuthenticated ? user.fullName : 'Visitante';
+  const postsQuery = useSocialPostsQuery();
+  const createPostMutation = useCreateSocialPostMutation();
+  const toggleLikeMutation = useToggleLikePostMutation();
+  const setFollowMutation = useSetFollowMutation();
+  const posts = postsQuery.data ?? [];
+
   const [content, setContent] = useState('');
-  const [image, setImage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState('');
-  const [followedUsers, setFollowedUsers] = useState<string[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (!imagePreview) return undefined;
+    return () => URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
+
+  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
 
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setImageError('La imagen no puede superar los 5 MB.');
+      return;
+    }
+
     setImageError('');
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setImage(reader.result);
-      } else {
-        setImageError('No se pudo cargar la imagen. Inténtalo de nuevo.');
-      }
-    };
-    reader.onerror = () =>
-      setImageError('No se pudo leer la imagen. Inténtalo de nuevo.');
-    reader.readAsDataURL(file);
-    event.target.value = '';
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
   const handlePublish = () => {
-    const trimmedContent = content.trim();
-    if (!trimmedContent) return;
-
-    const authorName = user?.fullName || 'Trader';
-    const initials = getInitials(authorName);
-    const newPost: SocialPost = {
-      id: `post-${Date.now()}`,
-      author: authorName,
-      handle: user?.handle || '@trader',
-      initials,
-      avatar: '',
-      createdAt: Date.now(),
-      content: trimmedContent,
-      image: image ?? undefined,
-      likes: 0,
-      likedByMe: false,
-      followersCount: 0,
-    };
-
-    setPosts((currentPosts) => [newPost, ...currentPosts]);
-    setContent('');
-    setImage(null);
-    setImageError('');
-  };
-
-  const toggleLike = (postId: string) => {
-    setPosts((currentPosts) =>
-      currentPosts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              likedByMe: !post.likedByMe,
-              likes: post.likes + (post.likedByMe ? -1 : 1),
-            }
-          : post
-      )
-    );
-  };
-
-  const toggleFollow = (handle: string) => {
-    setFollowedUsers((currentUsers) =>
-      currentUsers.includes(handle)
-        ? currentUsers.filter((currentHandle) => currentHandle !== handle)
-        : [...currentUsers, handle]
-    );
-  };
-
-  const followedProfiles = followedUsers.flatMap((handle) => {
-    const profile = posts.find((post) => post.handle === handle);
-    if (!profile) return [];
-
-    return [
+    createPostMutation.mutate(
+      { text: content, image: imageFile ?? undefined },
       {
-        ...profile,
-        totalLikes: posts
-          .filter((post) => post.handle === handle)
-          .reduce((total, post) => total + post.likes, 0),
-      },
-    ];
-  });
+        onSuccess: () => {
+          setContent('');
+          setImageFile(null);
+          setImagePreview(null);
+          setImageError('');
+        },
+      }
+    );
+  };
+
+  const followedProfiles = posts
+    .filter(
+      (post, index, allPosts) =>
+        post.isFollowing &&
+        allPosts.findIndex((candidate) => candidate.authorId === post.authorId) ===
+          index
+    )
+    .map((profile) => ({
+      ...profile,
+      totalLikes: posts
+        .filter((post) => post.authorId === profile.authorId)
+        .reduce((total, post) => total + post.likesCount, 0),
+    }));
+
+  const actionError =
+    createPostMutation.error ??
+    toggleLikeMutation.error ??
+    setFollowMutation.error;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl items-start gap-6 pb-10">
       <main className="min-w-0 flex-1 space-y-8">
-     
-
-      <section
-        aria-label="Crear publicación"
-        className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg shadow-black/10 sm:p-5"
-      >
-        <div className="flex items-start gap-3 sm:gap-4">
-          <div
-            aria-label={`Foto de ${user?.fullName || 'Trader'}`}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-sm font-bold text-slate-950 ring-2 ring-amber-400/20"
-          >
-            {getInitials(user?.fullName || 'Trader')}
-          </div>
-          <div className="min-w-0 flex-1">
-            <textarea
-              aria-label="Cuéntanos tu experiencia"
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              placeholder="Cuéntanos tu experiencia"
-              rows={2}
-              className="min-h-20 w-full resize-y border-0 bg-transparent py-1 text-lg font-medium text-slate-100 shadow-none outline-none ring-0 placeholder:text-slate-500 focus:border-0 focus:bg-transparent focus:shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 sm:text-xl"
+        <section
+          aria-label="Crear publicación"
+          className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg shadow-black/10 sm:p-5"
+        >
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div
+              aria-label={`Foto de ${composerName}`}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-sm font-bold text-slate-950 ring-2 ring-amber-400/20"
+            >
+              {getInitials(composerName)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <textarea
+                aria-label="Cuéntanos tu experiencia"
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
+                placeholder="Cuéntanos tu experiencia"
+                rows={2}
+                maxLength={5000}
+                className="min-h-20 w-full resize-y border-0 bg-transparent py-1 text-lg font-medium text-slate-100 shadow-none outline-none ring-0 placeholder:text-slate-500 focus:border-0 focus:bg-transparent focus:shadow-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 sm:text-xl"
+              />
+              {imageError && (
+                <p role="alert" className="mt-2 text-xs text-rose-300">
+                  {imageError}
+                </p>
+              )}
+              {imagePreview && (
+                <div className="relative mt-3 inline-block">
+                  <img
+                    src={imagePreview}
+                    alt="Vista previa de la imagen para publicar"
+                    className="max-h-56 max-w-full rounded-xl border border-slate-700 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageFile(null);
+                      setImagePreview(null);
+                      setImageError('');
+                    }}
+                    aria-label="Quitar imagen"
+                    className="absolute -right-2 -top-2 rounded-full border border-slate-700 bg-slate-950 p-1.5 text-slate-300 transition hover:text-white"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              aria-label="Subir una foto"
+              title="Subir una foto"
+              disabled={!isAuthenticated || createPostMutation.isPending}
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-700 bg-slate-800 text-emerald-300 transition hover:border-emerald-400/50 hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ImagePlus className="h-5 w-5" />
+            </button>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              onChange={handleImageChange}
+              className="hidden"
             />
-            {imageError && (
-              <p role="alert" className="mt-2 text-xs text-rose-300">
-                {imageError}
-              </p>
-            )}
-            {image && (
-              <div className="relative mt-3 inline-block">
-                <img
-                  src={image}
-                  alt="Vista previa de la imagen para publicar"
-                  className="max-h-56 max-w-full rounded-xl border border-slate-700 object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImage(null);
-                    setImageError('');
-                  }}
-                  aria-label="Quitar imagen"
-                  className="absolute -right-2 -top-2 rounded-full border border-slate-700 bg-slate-950 p-1.5 text-slate-300 transition hover:text-white"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
           </div>
-          <button
-            type="button"
-            onClick={() => imageInputRef.current?.click()}
-            aria-label="Subir una foto"
-            title="Subir una foto"
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-slate-700 bg-slate-800 text-emerald-300 transition hover:border-emerald-400/50 hover:bg-emerald-400/10"
-          >
-            <ImagePlus className="h-5 w-5" />
-          </button>
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="hidden"
-          />
-        </div>
-        <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-4">
-          <span>
-          </span>
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={!content.trim()}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Publicar
-            <Send className="h-4 w-4" />
-          </button>
-        </div>
-      </section>
+          <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-4">
+            <span className="text-xs text-slate-500">
+              {isAuthenticated ? (
+                'Comparte texto, una foto o ambos.'
+              ) : (
+                <>
+                  <Link
+                    to="/auth/login"
+                    className="font-semibold text-emerald-300 hover:text-emerald-200"
+                  >
+                    Inicia sesión
+                  </Link>{' '}
+                  para publicar, dar me gusta y seguir perfiles.
+                </>
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={
+                !isAuthenticated ||
+                (!content.trim() && !imageFile) ||
+                createPostMutation.isPending
+              }
+              className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {createPostMutation.isPending ? 'Publicando…' : 'Publicar'}
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+          {getErrorMessage(createPostMutation.error) && (
+            <p role="alert" className="mt-3 text-sm text-rose-300">
+              {getErrorMessage(createPostMutation.error)}
+            </p>
+          )}
+        </section>
 
         <section
           aria-label="Publicaciones de la comunidad"
@@ -293,104 +248,137 @@ export const SocialWallPage: React.FC = () => {
             </span>
           </div>
 
-          {posts.map((post) => {
-            const isFollowing = followedUsers.includes(post.handle);
-
-            return (
-              <article
-                key={post.id}
-                className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg shadow-black/10"
+          {postsQuery.isPending && (
+            <p className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 text-center text-sm text-slate-400">
+              Cargando publicaciones…
+            </p>
+          )}
+          {postsQuery.isError && (
+            <div
+              role="alert"
+              className="rounded-2xl border border-rose-900/60 bg-slate-900/80 p-6 text-center"
+            >
+              <p className="text-sm text-rose-300">
+                {postsQuery.error.message}
+              </p>
+              <button
+                type="button"
+                onClick={() => void postsQuery.refetch()}
+                className="mt-3 text-sm font-semibold text-emerald-300 hover:text-emerald-200"
               >
-                <div className="flex items-center gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
-                  {post.avatar ? (
-                    <img
-                      src={post.avatar}
-                      alt={`Foto de ${post.author}`}
-                      className="h-11 w-11 shrink-0 rounded-full border border-slate-700 object-cover"
-                    />
-                  ) : (
-                    <div
-                      aria-label={`Foto de ${post.author}`}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-xs font-bold text-slate-950"
-                    >
-                      {post.initials}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <h3 className="truncate text-sm font-bold text-slate-100">
-                        {post.author}
-                      </h3>
-                      <span className="text-xs text-slate-500">
-                        {getRelativeTime(post.createdAt)}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 truncate text-xs text-slate-500">
-                      {post.handle}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleLike(post.id)}
-                    aria-label={
-                      post.likedByMe ? 'Quitar me gusta' : 'Dar me gusta'
-                    }
-                    aria-pressed={post.likedByMe}
-                    className={`rounded-full p-2.5 transition ${
-                      post.likedByMe
-                        ? 'bg-rose-500/10 text-rose-400'
-                        : 'text-slate-500 hover:bg-rose-500/10 hover:text-rose-400'
-                    }`}
-                  >
-                    <Heart
-                      className="h-5 w-5"
-                      fill={post.likedByMe ? 'currentColor' : 'none'}
-                    />
-                  </button>
+                Intentar de nuevo
+              </button>
+            </div>
+          )}
+          {actionError && (
+            <p role="alert" className="rounded-xl bg-rose-950/40 p-3 text-sm text-rose-300">
+              {actionError.message}
+            </p>
+          )}
+          {!postsQuery.isPending && !postsQuery.isError && posts.length === 0 && (
+            <p className="rounded-2xl border border-dashed border-slate-700 px-4 py-10 text-center text-sm text-slate-400">
+              Aún no hay publicaciones. ¡Comparte la primera!
+            </p>
+          )}
+
+          {posts.map((post: SocialPost) => (
+            <article
+              key={post.id}
+              className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg shadow-black/10"
+            >
+              <div className="flex items-center gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
+                <div
+                  aria-label={`Foto de ${post.authorName}`}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-xs font-bold text-slate-950"
+                >
+                  {getInitials(post.authorName)}
                 </div>
-
-                <p className="whitespace-pre-wrap px-4 pb-4 pt-4 text-sm leading-6 text-slate-300 sm:px-5">
-                  {post.content}
-                </p>
-
-                {post.image && (
-                  <img
-                    src={post.image}
-                    alt={`Imagen compartida por ${post.author}`}
-                    className="max-h-[460px] w-full border-y border-slate-800 bg-slate-950 object-cover"
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <h3 className="truncate text-sm font-bold text-slate-100">
+                      {post.authorName}
+                    </h3>
+                    <span className="text-xs text-slate-500">
+                      {getRelativeTime(post.createdAtIso)}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                    {post.authorHandle}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleLikeMutation.mutate(post.id)}
+                  disabled={!isAuthenticated || toggleLikeMutation.isPending}
+                  aria-label={
+                    post.likedByMe ? 'Quitar me gusta' : 'Dar me gusta'
+                  }
+                  aria-pressed={post.likedByMe}
+                  className={`rounded-full p-2.5 transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                    post.likedByMe
+                      ? 'bg-rose-500/10 text-rose-400'
+                      : 'text-slate-500 hover:bg-rose-500/10 hover:text-rose-400'
+                  }`}
+                >
+                  <Heart
+                    className="h-5 w-5"
+                    fill={post.likedByMe ? 'currentColor' : 'none'}
                   />
-                )}
+                </button>
+              </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
-                  <span
-                    className={`inline-flex items-center gap-2 text-sm ${
-                      post.likedByMe ? 'text-rose-400' : 'text-slate-400'
-                    }`}
-                  >
-                    <Heart
-                      className="h-4 w-4"
-                      fill={post.likedByMe ? 'currentColor' : 'none'}
-                    />
-                    <span>{post.likes} me gusta</span>
-                  </span>
+              {post.text && (
+                <p className="whitespace-pre-wrap px-4 pb-4 pt-4 text-sm leading-6 text-slate-300 sm:px-5">
+                  {post.text}
+                </p>
+              )}
+
+              {post.image && (
+                <img
+                  src={post.image}
+                  alt={`Imagen compartida por ${post.authorName}`}
+                  className="max-h-[460px] w-full border-y border-slate-800 bg-slate-950 object-cover"
+                />
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+                <span
+                  className={`inline-flex items-center gap-2 text-sm ${
+                    post.likedByMe ? 'text-rose-400' : 'text-slate-400'
+                  }`}
+                >
+                  <Heart
+                    className="h-4 w-4"
+                    fill={post.likedByMe ? 'currentColor' : 'none'}
+                  />
+                  <span>{post.likesCount.toLocaleString('es-ES')} me gusta</span>
+                </span>
+                {(!isAuthenticated || post.authorId !== user.id) && (
                   <button
                     type="button"
-                    onClick={() => toggleFollow(post.handle)}
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                      isFollowing
+                    onClick={() =>
+                      setFollowMutation.mutate({
+                        userId: post.authorId,
+                        following: !post.isFollowing,
+                      })
+                    }
+                    disabled={!isAuthenticated || setFollowMutation.isPending}
+                    aria-pressed={post.isFollowing}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                      post.isFollowing
                         ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'
                         : 'border-slate-700 text-slate-300 hover:border-emerald-400/40 hover:text-emerald-300'
                     }`}
                   >
-                    {isFollowing ? 'Siguiendo' : 'Seguir'}
-                    {!isFollowing && (
+                    {post.isFollowing ? 'Siguiendo' : 'Seguir'}
+                    {!post.isFollowing && (
                       <ArrowUpRight className="h-3.5 w-3.5" />
                     )}
                   </button>
-                </div>
-              </article>
-            );
-          })}
+                )}
+              </div>
+            </article>
+          ))}
         </section>
       </main>
 
@@ -400,62 +388,59 @@ export const SocialWallPage: React.FC = () => {
         aria-label="Personas que sigues"
         className="fixed right-0 top-14 z-20 h-[calc(100vh-3.5rem)] w-72 overflow-y-auto border-l border-slate-800 bg-slate-900/95 p-4 shadow-lg shadow-black/10"
       >
-          <h2 className="flex items-center gap-2 text-lg font-bold text-white">
-            <Heart className="h-5 w-5 fill-rose-400 text-rose-400" />
-            Siguiendo
-          </h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+          <Heart className="h-5 w-5 fill-rose-400 text-rose-400" />
+          Siguiendo
+        </h2>
 
-          {followedProfiles.length === 0 ? (
-            <p className="mt-4 rounded-xl border border-dashed border-slate-700 px-3 py-8 text-center text-sm leading-6 text-slate-400">
-              Aún no sigues a nadie.
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {followedProfiles.map((profile) => (
-                <li
-                  key={profile.handle}
-                  className="p-1"
-                >
-                  <div className="flex items-center gap-3">
-                    {profile.avatar ? (
-                      <img
-                        src={profile.avatar}
-                        alt={`Foto de ${profile.author}`}
-                        className="h-10 w-10 shrink-0 rounded-full border border-slate-700 object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-xs font-bold text-slate-950">
-                        {profile.initials}
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-100">
-                        {profile.author}
-                      </p>
-                      <div className="mt-1 flex items-center gap-4 text-xs text-slate-400">
-                        <span
-                          className="inline-flex items-center gap-1"
-                          aria-label={`${profile.followersCount} seguidores`}
-                          title={`${profile.followersCount.toLocaleString('es-ES')} seguidores`}
-                        >
-                          <Users className="h-3.5 w-3.5 text-emerald-300" />
-                          {profile.followersCount.toLocaleString('es-ES')}
-                        </span>
-                        <span
-                          className="inline-flex items-center gap-1 text-rose-300"
-                          aria-label={`${profile.totalLikes} me gusta`}
-                          title={`${profile.totalLikes.toLocaleString('es-ES')} me gusta`}
-                        >
-                          <Heart className="h-3.5 w-3.5 fill-current" />
-                          {profile.totalLikes.toLocaleString('es-ES')}
-                        </span>
-                      </div>
+        {followedProfiles.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-dashed border-slate-700 px-3 py-8 text-center text-sm leading-6 text-slate-400">
+            Aún no sigues a nadie.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {followedProfiles.map((profile) => (
+              <li key={profile.authorId} className="p-1">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-600 text-xs font-bold text-slate-950">
+                    {getInitials(profile.authorName)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-100">
+                      {profile.authorName}
+                    </p>
+                    <div className="mt-1 flex items-center gap-4 text-xs text-slate-400">
+                      <span
+                        className="inline-flex items-center gap-1"
+                        aria-label={`${profile.followersCount} seguidores`}
+                        title={`${profile.followersCount.toLocaleString('es-ES')} seguidores`}
+                      >
+                        <Users className="h-3.5 w-3.5 text-emerald-300" />
+                        {profile.followersCount.toLocaleString('es-ES')}
+                      </span>
+                      <span
+                        className="inline-flex items-center gap-1"
+                        aria-label={`${profile.followingCount} seguidos`}
+                        title={`${profile.followingCount.toLocaleString('es-ES')} seguidos`}
+                      >
+                        <Users className="h-3.5 w-3.5 text-sky-300" />
+                        {profile.followingCount.toLocaleString('es-ES')}
+                      </span>
+                      <span
+                        className="inline-flex items-center gap-1 text-rose-300"
+                        aria-label={`${profile.totalLikes} me gusta`}
+                        title={`${profile.totalLikes.toLocaleString('es-ES')} me gusta`}
+                      >
+                        <Heart className="h-3.5 w-3.5 fill-current" />
+                        {profile.totalLikes.toLocaleString('es-ES')}
+                      </span>
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </aside>
     </div>
   );

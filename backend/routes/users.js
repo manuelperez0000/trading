@@ -17,8 +17,10 @@ import {
 } from "../models/User.js";
 import authenticate from "../middleware/authenticate.js";
 import requireAdmin from "../middleware/requireAdmin.js";
+import { setFollow } from "../models/Follow.js";
 import {
   hashResetToken,
+  isDatabaseId,
   isValidEmail,
   isValidPassword,
   passwordResetUrl,
@@ -200,6 +202,54 @@ async function updateCurrentUserProfile(req, res, next) {
 
 router.put("/me", authenticate, updateCurrentUserProfile);
 router.patch("/me", authenticate, updateCurrentUserProfile);
+
+async function updateFollow(req, res, next, following) {
+  if (!isDatabaseId(req.params.id)) {
+    return responser.error({
+      res,
+      message: "El ID del usuario no es válido.",
+      status: 400,
+    });
+  }
+
+  try {
+    const result = await setFollow({
+      followerId: req.user.id,
+      followingId: req.params.id,
+      following,
+    });
+    if (!result) {
+      return responser.error({
+        res,
+        message: "No se encontró el usuario.",
+        status: 404,
+      });
+    }
+    if (result.selfFollow) {
+      return responser.error({
+        res,
+        message: "No puedes seguirte a ti mismo.",
+        status: 400,
+      });
+    }
+    return responser.success({
+      res,
+      message: following
+        ? "Usuario seguido correctamente."
+        : "Dejaste de seguir al usuario.",
+      body: { follow: result },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+router.put("/:id/follow", authenticate, (req, res, next) =>
+  updateFollow(req, res, next, true),
+);
+router.delete("/:id/follow", authenticate, (req, res, next) =>
+  updateFollow(req, res, next, false),
+);
 
 router.patch(
   "/:id/kyc-review",

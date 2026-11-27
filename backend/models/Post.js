@@ -1,7 +1,24 @@
 import pool from "../config/database.js";
 
 const postFields =
-  "id, user_id, title, post_text AS text, image_url AS image, status, created_at";
+  "id, user_id, title, post_text AS text, image_url AS image, status, created_at, likes_count";
+const socialPostFields = `
+  p.id, p.user_id, p.title, p.post_text AS text, p.image_url AS image,
+  p.status, p.created_at, p.likes_count,
+  u.name AS author_name, u.followers_count, u.following_count,
+  CASE WHEN $2::bigint IS NULL THEN FALSE
+    ELSE EXISTS (
+      SELECT 1 FROM likes l
+      WHERE l.post_id = p.id AND l.user_id = $2
+    )
+  END AS liked_by_me,
+  CASE WHEN $2::bigint IS NULL THEN FALSE
+    ELSE EXISTS (
+      SELECT 1 FROM follows f
+      WHERE f.follower_id = $2 AND f.following_id = p.user_id
+    )
+  END AS is_following
+`;
 
 export async function initializePostTable() {
   await pool.query(`
@@ -31,23 +48,25 @@ export async function createPost({ userId, title, text, image }) {
   return rows[0];
 }
 
-export async function listPosts(status = null) {
+export async function listPosts(status = null, currentUserId = null) {
   const { rows } = await pool.query(
-    `SELECT ${postFields}
-     FROM posts
-     WHERE $1::boolean IS NULL OR status = $1
-     ORDER BY created_at DESC, id DESC`,
-    [status],
+    `SELECT ${socialPostFields}
+     FROM posts p
+     JOIN users u ON u.id = p.user_id
+     WHERE $1::boolean IS NULL OR p.status = $1
+     ORDER BY p.created_at DESC, p.id DESC`,
+    [status, currentUserId],
   );
   return rows;
 }
 
-export async function findPostById(id) {
+export async function findPostById(id, currentUserId = null) {
   const { rows } = await pool.query(
-    `SELECT ${postFields}
-     FROM posts
-     WHERE id = $1`,
-    [id],
+    `SELECT ${socialPostFields}
+     FROM posts p
+     JOIN users u ON u.id = p.user_id
+     WHERE p.id = $1`,
+    [id, currentUserId],
   );
   return rows[0] ?? null;
 }
