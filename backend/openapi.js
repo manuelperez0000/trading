@@ -285,6 +285,45 @@ const openApiDocument = {
         },
       },
     },
+    "/users/{id}/follow": {
+      parameters: [idParameter],
+      put: {
+        tags: ["Usuarios"],
+        summary: "Seguir usuario",
+        description:
+          "Requiere Bearer. Operación idempotente; actualiza ambos contadores en una transacción y no permite auto-seguimiento.",
+        operationId: "followUser",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": response(
+            "Usuario seguido.",
+            { type: "object", properties: { follow: { type: "object" } } },
+            { body: { follow: { isFollowing: true, targetFollowersCount: 1, currentUserFollowingCount: 1 } }, message: "Usuario seguido correctamente.", status: 200 },
+          ),
+          "400": badRequest,
+          "401": unauthorized,
+          "404": notFound,
+          "500": serverError,
+        },
+      },
+      delete: {
+        tags: ["Usuarios"],
+        summary: "Dejar de seguir usuario",
+        operationId: "unfollowUser",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": response(
+            "Seguimiento eliminado.",
+            { type: "object", properties: { follow: { type: "object" } } },
+            { body: { follow: { isFollowing: false, targetFollowersCount: 0, currentUserFollowingCount: 0 } }, message: "Dejaste de seguir al usuario.", status: 200 },
+          ),
+          "400": badRequest,
+          "401": unauthorized,
+          "404": notFound,
+          "500": serverError,
+        },
+      },
+    },
     "/users/recover-password": {
       post: {
         tags: ["Usuarios"],
@@ -335,6 +374,7 @@ const openApiDocument = {
         tags: ["Publicaciones"],
         summary: "Listar publicaciones",
         operationId: "listPosts",
+        security: [{ bearerAuth: [] }, {}],
         parameters: [
           {
             name: "status",
@@ -357,10 +397,11 @@ const openApiDocument = {
       post: {
         tags: ["Publicaciones"],
         summary: "Crear publicación",
-        description: "Este endpoint no requiere autenticación actualmente.",
+        description:
+          "Requiere autenticación. El usuario autor se obtiene del JWT. Se requiere texto o una URL de imagen.",
         operationId: "createPost",
+        security: [{ bearerAuth: [] }],
         requestBody: jsonRequest("CreatePostRequest", {
-          title: "Mi primera publicación",
           text: "Descripción de la publicación",
           image: "https://example.com/imagen.jpg",
         }),
@@ -378,6 +419,12 @@ const openApiDocument = {
                   image: "https://example.com/imagen.jpg",
                   status: false,
                   created_at: "2026-11-18T20:00:00.000Z",
+                  likes_count: 0,
+                  author_name: "Ana Pérez",
+                  followers_count: 0,
+                  following_count: 0,
+                  liked_by_me: false,
+                  is_following: false,
                 },
               },
               message: "Publicación creada correctamente.",
@@ -385,7 +432,34 @@ const openApiDocument = {
             },
           ),
           "400": badRequest,
+          "401": unauthorized,
           "413": requestTooLarge,
+          "500": serverError,
+        },
+      },
+    },
+    "/posts/{id}/like": {
+      parameters: [idParameter],
+      post: {
+        tags: ["Publicaciones"],
+        summary: "Alternar me gusta",
+        description:
+          "Requiere Bearer. Inserta o elimina el like y ajusta likes_count en una transacción.",
+        operationId: "togglePostLike",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": response(
+            "Estado del like actualizado.",
+            {
+              type: "object",
+              required: ["liked", "post"],
+              properties: { liked: { type: "boolean" }, post: ref("Post") },
+            },
+            { body: { liked: true, post: { id: "1", user_id: "12", title: "Mi publicación", text: "Descripción", image: "", status: false, created_at: "2026-11-18T20:00:00.000Z", likes_count: 1, author_name: "Ana Pérez", followers_count: 0, following_count: 0, liked_by_me: true, is_following: false } }, message: "Me gusta agregado correctamente.", status: 200 },
+          ),
+          "400": badRequest,
+          "401": unauthorized,
+          "404": notFound,
           "500": serverError,
         },
       },
@@ -396,11 +470,12 @@ const openApiDocument = {
         tags: ["Publicaciones"],
         summary: "Consultar publicación",
         operationId: "getPost",
+        security: [{ bearerAuth: [] }, {}],
         responses: {
           "200": response(
             "Publicación encontrada.",
             postBody,
-            { body: { post: { id: "1", user_id: "123", title: "Mi primera publicación", text: "Descripción", image: "https://example.com/imagen.jpg", status: false, created_at: "2026-11-18T20:00:00.000Z" } }, message: "Publicación encontrada.", status: 200 },
+            { body: { post: { id: "1", user_id: "12", title: "Mi primera publicación", text: "Descripción", image: "https://example.com/imagen.jpg", status: false, created_at: "2026-11-18T20:00:00.000Z", likes_count: 0, author_name: "Ana Pérez", followers_count: 0, following_count: 0, liked_by_me: false, is_following: false } }, message: "Publicación encontrada.", status: 200 },
           ),
           "400": badRequest,
           "404": notFound,
@@ -417,7 +492,7 @@ const openApiDocument = {
           "200": response(
             "Publicación eliminada.",
             postBody,
-            { body: { post: { id: "1", user_id: "12", title: "Mi publicación", text: "Descripción", image: "https://example.com/imagen.jpg", status: false, created_at: "2026-11-18T20:00:00.000Z" } }, message: "Publicación eliminada correctamente.", status: 200 },
+            { body: { post: { id: "1", user_id: "12", title: "Mi publicación", text: "Descripción", image: "https://example.com/imagen.jpg", status: false, created_at: "2026-11-18T20:00:00.000Z", likes_count: 0 } }, message: "Publicación eliminada correctamente.", status: 200 },
           ),
           "400": badRequest,
           "401": unauthorized,
@@ -703,23 +778,29 @@ const openApiDocument = {
       },
       Post: {
         type: "object",
-        required: ["id", "user_id", "title", "text", "image", "status", "created_at"],
+        required: ["id", "user_id", "title", "text", "image", "status", "created_at", "likes_count"],
         properties: {
           id: { type: "string" },
           user_id: { type: "string" },
           title: { type: "string", maxLength: 200 },
           text: { type: "string" },
-          image: { type: "string", format: "uri" },
+          image: { type: "string", description: "URL HTTP(S) o cadena vacía." },
           status: { type: "boolean" },
           created_at: { type: "string", format: "date-time" },
+          likes_count: { type: "integer", minimum: 0 },
+          author_name: { type: "string" },
+          followers_count: { type: "integer", minimum: 0 },
+          following_count: { type: "integer", minimum: 0 },
+          liked_by_me: { type: "boolean" },
+          is_following: { type: "boolean" },
         },
       },
       CreatePostRequest: {
         type: "object",
-        required: ["title", "text", "image"],
+        anyOf: [{ required: ["text"] }, { required: ["image"] }],
         properties: {
-          title: { type: "string", minLength: 1, maxLength: 200 },
-          text: { type: "string", minLength: 1 },
+          title: { type: "string", maxLength: 200 },
+          text: { type: "string", maxLength: 5000 },
           image: { type: "string", format: "uri", description: "URL HTTP o HTTPS." },
         },
       },

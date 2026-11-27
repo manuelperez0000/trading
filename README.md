@@ -135,12 +135,13 @@ El token es JWT con vigencia de 10 días. Credenciales incorrectas responden
 
 ## Manejo de imágenes
 
-Las rutas de imágenes son públicas y usan el prefijo `http://localhost:3000/api/v1`.
-No requieren token de autenticación. Para subir o reemplazar una imagen, envía
-una solicitud `multipart/form-data` con el archivo en el campo `image`. Se
-aceptan imágenes PNG, JPEG, GIF o WEBP de hasta 5 MB. No establezcas
-manualmente el encabezado `Content-Type` al usar `curl -F`; `curl` debe incluir
-el `boundary` del formulario.
+Las rutas de imágenes usan el prefijo `http://localhost:3000/api/v1`. Consultar
+una imagen es público; subir, reemplazar o eliminar requiere
+`Authorization: Bearer <token>`. Para cargar una imagen, envía una solicitud
+`multipart/form-data` con el archivo en el campo `image`. Se aceptan imágenes
+PNG, JPEG, GIF o WEBP de hasta 5 MB. No establezcas manualmente el encabezado
+`Content-Type` al usar `curl -F`; `curl` debe incluir el `boundary` del
+formulario.
 
 El servidor guarda los archivos en `backend/images`. El `id` es el hash SHA-256
 del contenido en hexadecimal minúsculo y `name` contiene ese hash y la
@@ -152,7 +153,7 @@ vez devuelve el mismo `id` y `name`, sin crear otra copia.
 `POST /images` — responde `201 Created`.
 
 ```bash
-curl.exe -X POST http://localhost:3000/api/v1/images -F "image=@.\imagen.png"
+curl.exe -X POST http://localhost:3000/api/v1/images -H "Authorization: Bearer <token>" -F "image=@.\imagen.png"
 ```
 
 Respuesta:
@@ -176,7 +177,7 @@ archivo anterior. La respuesta `200 OK` contiene el `id` y `name` nuevos.
 Sustituye `ID_DE_LA_IMAGEN` en los ejemplos por el `id` devuelto al subirla.
 
 ```bash
-curl.exe -X PUT http://localhost:3000/api/v1/images/ID_DE_LA_IMAGEN -F "image=@.\imagen-nueva.webp"
+curl.exe -X PUT http://localhost:3000/api/v1/images/ID_DE_LA_IMAGEN -H "Authorization: Bearer <token>" -F "image=@.\imagen-nueva.webp"
 ```
 
 ```json
@@ -196,7 +197,7 @@ curl.exe -X PUT http://localhost:3000/api/v1/images/ID_DE_LA_IMAGEN -F "image=@.
 ID y nombre eliminados.
 
 ```bash
-curl.exe -X DELETE http://localhost:3000/api/v1/images/ID_DE_LA_IMAGEN
+curl.exe -X DELETE http://localhost:3000/api/v1/images/ID_DE_LA_IMAGEN -H "Authorization: Bearer <token>"
 ```
 
 ```json
@@ -209,6 +210,11 @@ curl.exe -X DELETE http://localhost:3000/api/v1/images/ID_DE_LA_IMAGEN
   "status": 200
 }
 ```
+
+### Consultar una imagen
+
+`GET /images/:identifier` es público y devuelve el archivo de imagen. El
+identificador puede ser el hash o el nombre devuelto por la carga.
 
 ### Errores de imágenes
 
@@ -231,8 +237,7 @@ Las respuestas de error usan el formato común, por ejemplo:
 }
 ```
 
-Actualmente estas rutas permiten subir, reemplazar y eliminar imágenes; no
-existe un endpoint `GET` para consultar o descargar el archivo.
+Estas rutas permiten subir, reemplazar, eliminar y consultar las imágenes.
 
 ### Consultar el usuario autenticado
 
@@ -283,31 +288,33 @@ vencido responde `400 Bad Request` con el mismo formato.
 
 ### Crear publicación
 
-`POST /posts` — público.
+`POST /posts` — requiere token Bearer. El autor se obtiene del JWT.
 
 ```json
 {
-  "title": "Mi primera publicación",
   "text": "Descripción de la publicación",
-  "image": "https://example.com/imagen.jpg"
+  "image": "http://localhost:3000/api/v1/images/<id-sha256>"
 }
 ```
 
-`title` es obligatorio y admite hasta 200 caracteres; `text` no puede estar
-vacío y `image` debe ser una URL HTTP o HTTPS. Responde `201 Created` con
-`{ "body": { "post": { "id", "user_id", "title", "text", "image", "status", "created_at" } }, "message": "...", "status": 201 }`.
-`status` es booleano y comienza en `false`.
+Debe incluir texto (máximo 5000 caracteres), imagen o ambos. Las imágenes se
+cargan primero por `POST /images`; `image` debe ser una URL HTTP o HTTPS.
+`title` es opcional, con un máximo de 200 caracteres. Responde `201 Created`
+con los datos de la publicación y los contadores de interacción.
 
 ### Listar publicaciones
 
 `GET /posts` responde `200 OK` con `{ "body": { "posts": [...] }, "message": "...", "status": 200 }`, ordenadas de más
 recientes a más antiguas. Se puede filtrar el estatus con `?status=true` o
-`?status=false`; sin filtro se devuelven todas.
+`?status=false`. Cada publicación incluye información del autor, `likes_count`,
+`followers_count`, `following_count`, `liked_by_me` e `is_following`. Para
+obtener el estado personal de likes y follows, envía un Bearer token válido.
 
 ### Consultar publicación
 
 `GET /posts/:id` responde `200 OK` con `{ "body": { "post": <publicación> }, "message": "...", "status": 200 }`
-o `404` con el formato común si no existe.
+o `404` con el formato común si no existe. Acepta un Bearer token opcional para
+devolver el estado personal de likes y follows.
 
 ### Eliminar publicación
 
@@ -315,6 +322,23 @@ o `404` con el formato común si no existe.
 eliminarla. Responde `200 OK` con `{ "body": { "post": <publicación eliminada> }, "message": "...", "status": 200 }`;
 si no existe o no pertenece al usuario autenticado, responde `404` con el
 formato común.
+
+### Likes
+
+`POST /posts/:id/like` — requiere token Bearer. Alterna el like de forma
+transaccional y responde con `{ "body": { "liked": true, "post": <publicación> } }`.
+El contador del post se actualiza en la misma transacción.
+
+### Seguidores
+
+`PUT /users/:id/follow` y `DELETE /users/:id/follow` — requieren token Bearer.
+Seguir y dejar de seguir son operaciones idempotentes que actualizan los
+contadores de ambos usuarios en una transacción. No se permite auto-seguirse
+(responde `400`).
+
+La migración idempotente `migrations/001_social_graph.sql` agrega los
+contadores, tablas e índices necesarios y reconcilia los contadores con los
+registros existentes al iniciar el backend.
 
 ## Bots
 
