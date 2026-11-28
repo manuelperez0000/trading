@@ -2,6 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import errorManager from "./errorManager.js";
 import openApiDocument from "./openapi.js";
@@ -23,6 +24,13 @@ app.use(
 );
 app.use(express.static(frontendDirectory));
 app.use("/api/v1", rootRouter);
+
+// Fallback SPA: debe ir ANTES de errorManager
+// (Si usas Express 5, cambia '*' por '/{*splat}')
+app.get("/{*splat}", (req, res) => {
+  res.sendFile(path.join(frontendDirectory, "index.html"));
+});
+
 app.use(errorManager);
 
 export default app;
