@@ -11,7 +11,6 @@ import {
 import { Badge } from '@shared/ui/Badge';
 import { Button } from '@shared/ui/Button';
 import { useListUsersQuery } from '@features/auth/application/hooks/useUsersQuery';
-import type { User as UserEntity } from '@features/auth/domain/entities/User';
 import type {
   Subscription,
   SubscriptionCycle,

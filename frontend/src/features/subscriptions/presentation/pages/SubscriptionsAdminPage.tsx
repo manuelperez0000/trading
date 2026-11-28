@@ -27,7 +27,6 @@ import { ConfirmDialog } from '@shared/ui/ConfirmDialog';
 import { toast } from '@shared/ui/toast/toastStore';
 import { useI18n } from '@core/i18n/useLanguageStore';
 import { formatRelativeTime, formatUsd } from '@shared/utils/formatters';
-import { container } from '@app/di/container';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
 import { useListUsersQuery } from '@features/auth/application/hooks/useUsersQuery';
 import {

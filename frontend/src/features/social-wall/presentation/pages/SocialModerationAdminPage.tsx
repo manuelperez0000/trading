@@ -18,10 +18,7 @@ import { toast } from '@shared/ui/toast/toastStore';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
 import type { SocialPost } from '@features/social-wall/domain/entities/SocialPost';
 import {
-  useCreateCommentMutation,
-  useDeleteCommentMutation,
   useDeletePostMutation,
-  usePostCommentsQuery,
   useSocialPostsQuery,
   useUpdatePostStatusMutation,
 } from '@features/social-wall/application/hooks/useSocialWall';
@@ -41,8 +38,6 @@ export const SocialModerationAdminPage: React.FC = () => {
   const postsQuery = useSocialPostsQuery();
   const updateStatusMutation = useUpdatePostStatusMutation();
   const deletePostMutation = useDeletePostMutation();
-  const createCommentMutation = useCreateCommentMutation();
-  const deleteCommentMutation = useDeleteCommentMutation();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [modalPostId, setModalPostId] = useState<string | null>(null);
@@ -60,11 +55,6 @@ export const SocialModerationAdminPage: React.FC = () => {
   const modalPost = useMemo(
     () => posts.find((post) => post.id === modalPostId) ?? null,
     [posts, modalPostId]
-  );
-
-  const modalCommentsQuery = usePostCommentsQuery(
-    modalPostId,
-    Boolean(modalPostId)
   );
 
   if (!isStrictAdmin) {
@@ -346,28 +336,9 @@ export const SocialModerationAdminPage: React.FC = () => {
       {/* Modal de Comentarios */}
       <PostCommentsModal
         post={modalPost}
-        comments={modalCommentsQuery.data ?? []}
-        isLoadingComments={modalCommentsQuery.isLoading}
-        commentsError={
-          modalCommentsQuery.error instanceof Error
-            ? modalCommentsQuery.error.message
-            : null
-        }
         isAuthenticated={isAuthenticated}
         currentUserId={user.id}
-        isSubmittingComment={createCommentMutation.isPending}
-        isDeletingCommentId={
-          deleteCommentMutation.isPending
-            ? (deleteCommentMutation.variables?.commentId ?? null)
-            : null
-        }
         onClose={() => setModalPostId(null)}
-        onSubmitComment={async (postId, content) => {
-          await createCommentMutation.mutateAsync({ postId, content });
-        }}
-        onDeleteComment={async (postId, commentId) => {
-          await deleteCommentMutation.mutateAsync({ postId, commentId });
-        }}
       />
 
       {/* Confirmación de eliminación */}
