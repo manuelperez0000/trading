@@ -14,6 +14,7 @@ import { SubscriptionPlansAdminPage } from '@features/subscriptions/presentation
 import { NinjaRemoteTesterPage } from '@features/subscriptions/presentation/pages/NinjaRemoteTesterPage';
 import { SocialWallPage } from '@features/social-wall/presentation/pages/SocialWallPage';
 import { SocialUserProfilePage } from '@features/social-wall/presentation/pages/SocialUserProfilePage';
+import { SocialModerationAdminPage } from '@features/social-wall/presentation/pages/SocialModerationAdminPage';
 import {
   LoginPage,
   PasswordRecoveryPage,
@@ -129,6 +130,7 @@ const AppRoutes: React.FC = () => {
           }
         />
         <Route path="/admin/plans" element={<SubscriptionPlansAdminPage />} />
+        <Route path="/admin/social" element={<SocialModerationAdminPage />} />
         <Route
           path="/admin/ninja-lab"
           element={

@@ -5,28 +5,28 @@ import { z } from 'zod';
  */
 export const BackendUserDtoSchema = z.object({
   id: z.union([z.string(), z.number()]).transform(String),
-  nombreCompleto: z.string(),
-  direccion: z.string().optional().default(''),
-  telefono: z.string().optional().default(''),
-  whatsapp: z.string().optional().default(''),
-  correoElectronico: z.string().email(),
-  urlDocumentoIdentidad: z.string().optional().default(''),
-  urlReciboServicio: z.string().optional().default(''),
-  urlContratoDisclaimer: z.string().optional().default(''),
-  urlComprobanteAceptacion: z.string().optional().default(''),
-  fechaCreacion: z.union([z.string(), z.date()]).transform((val) =>
-    val instanceof Date ? val.toISOString() : String(val)
+  nombreCompleto: z.string().nullish().transform((v) => v ?? ''),
+  direccion: z.string().nullish().transform((v) => v ?? ''),
+  telefono: z.string().nullish().transform((v) => v ?? ''),
+  whatsapp: z.string().nullish().transform((v) => v ?? ''),
+  correoElectronico: z.string(),
+  urlDocumentoIdentidad: z.string().nullish().transform((v) => v ?? ''),
+  urlReciboServicio: z.string().nullish().transform((v) => v ?? ''),
+  urlContratoDisclaimer: z.string().nullish().transform((v) => v ?? ''),
+  urlComprobanteAceptacion: z.string().nullish().transform((v) => v ?? ''),
+  fechaCreacion: z.union([z.string(), z.date(), z.null()]).transform((val) =>
+    val instanceof Date ? val.toISOString() : val ? String(val) : new Date().toISOString()
   ).optional().default(() => new Date().toISOString()),
-  fechaActualizacion: z.union([z.string(), z.date()]).transform((val) =>
-    val instanceof Date ? val.toISOString() : String(val)
+  fechaActualizacion: z.union([z.string(), z.date(), z.null()]).transform((val) =>
+    val instanceof Date ? val.toISOString() : val ? String(val) : new Date().toISOString()
   ).optional().default(() => new Date().toISOString()),
-  estado: z.string().optional().default('activo'),
-  role: z.string().optional(),
-  kycStatus: z.string().optional(),
-  kycNotes: z.string().optional().default(''),
-  kycRejectedItems: z.array(z.string()).optional().default([]),
+  estado: z.string().nullish().transform((v) => v ?? 'activo'),
+  role: z.string().nullish().transform((v) => v ?? undefined),
+  kycStatus: z.string().nullish().transform((v) => v ?? undefined),
+  kycNotes: z.string().nullish().transform((v) => v ?? ''),
+  kycRejectedItems: z.array(z.string()).nullish().transform((v) => v ?? []),
   kycReviewedAt: z.union([z.string(), z.date(), z.null()]).optional(),
-  plainPassword: z.string().optional(),
+  plainPassword: z.string().nullish().transform((v) => v ?? undefined),
 });
 
 export type BackendUserDto = z.infer<typeof BackendUserDtoSchema>;

@@ -1,13 +1,16 @@
 import { Router } from "express";
 import authenticate from "../middleware/authenticate.js";
 import optionalAuthenticate from "../middleware/optionalAuthenticate.js";
+import requireAdmin from "../middleware/requireAdmin.js";
 import responser from "../utils/responser.js";
 import {
   createPost,
   deletePost,
   findPostById,
   listPosts,
+  updatePostStatus,
 } from "../models/Post.js";
+import { isUserAdmin } from "../models/User.js";
 import {
   createComment,
   deleteComment,
@@ -313,6 +316,49 @@ router.delete(
   },
 );
 
+router.patch("/:id/status", authenticate, requireAdmin, async (req, res, next) => {
+  if (!isDatabaseId(req.params.id)) {
+    return responser.error({
+      res,
+      message: "El ID de la publicación no es válido.",
+      status: 400,
+    });
+  }
+
+  const { status } = req.body ?? {};
+  if (typeof status !== "boolean") {
+    return responser.error({
+      res,
+      message: "El campo status debe ser booleano (true o false).",
+      status: 400,
+    });
+  }
+
+  try {
+    const updated = await updatePostStatus({
+      id: req.params.id,
+      status,
+    });
+    if (!updated) {
+      return responser.error({
+        res,
+        message: "No se encontró la publicación.",
+        status: 404,
+      });
+    }
+    const post = await findPostById(req.params.id, req.user.id);
+    return responser.success({
+      res,
+      message: status
+        ? "Publicación activada correctamente."
+        : "Publicación desactivada correctamente.",
+      body: { post },
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.delete("/:id", authenticate, async (req, res, next) => {
   if (!isDatabaseId(req.params.id)) {
     return responser.error({
@@ -326,6 +372,7 @@ router.delete("/:id", authenticate, async (req, res, next) => {
     const post = await deletePost({
       id: req.params.id,
       userId: req.user.id,
+      isAdmin: isUserAdmin(req.user),
     });
     if (!post) {
       return responser.error({

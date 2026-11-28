@@ -158,7 +158,7 @@ export const PlatformShellLayout: React.FC = () => {
           icon: <Terminal className="h-4 w-4 shrink-0" />,
         },
         {
-          to: '/social',
+          to: '/admin/social',
           label: lang === 'es' ? 'Moderación Muro Social' : 'Social Wall Moderation',
           icon: <MessageSquareShare className="h-4 w-4 shrink-0" />,
         },

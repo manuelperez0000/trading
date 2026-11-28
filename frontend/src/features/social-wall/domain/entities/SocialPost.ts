@@ -13,6 +13,7 @@ export interface SocialPost {
   followersCount: number;
   followingCount: number;
   isFollowing: boolean;
+  status: boolean;
 }
 
 export interface CreateSocialPostInput {

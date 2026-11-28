@@ -24,12 +24,29 @@ interface ImageUploadResponse {
 }
 
 export class HttpSocialWallRepository implements ISocialWallRepository {
-  public async getPosts(): Promise<SocialPost[]> {
-    const response =
-      await httpClient.get<ApiResponse<{ posts: SocialPostDto[] }>>('/posts');
+  public async getPosts(status?: boolean): Promise<SocialPost[]> {
+    const query =
+      typeof status === 'boolean' ? `?status=${String(status)}` : '';
+    const response = await httpClient.get<ApiResponse<{ posts: SocialPostDto[] }>>(
+      `/posts${query}`
+    );
     return response.body.posts.map((post) =>
       SocialPostMapper.toDomain(post)
     );
+  }
+
+  public async updatePostStatus(
+    postId: string,
+    status: boolean
+  ): Promise<SocialPost> {
+    const response = await httpClient.patch<
+      ApiResponse<{ post: SocialPostDto }>
+    >(`/posts/${encodeURIComponent(postId)}/status`, { status });
+    return SocialPostMapper.toDomain(response.body.post);
+  }
+
+  public async deletePost(postId: string): Promise<void> {
+    await httpClient.delete(`/posts/${encodeURIComponent(postId)}`);
   }
 
   public async getUserProfileFeed(userId: string): Promise<SocialUserFeed> {

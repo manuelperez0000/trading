@@ -7,9 +7,11 @@ import type {
 } from '@features/social-wall/domain/entities/SocialPost';
 
 export interface ISocialWallRepository {
-  getPosts(): Promise<SocialPost[]>;
+  getPosts(status?: boolean): Promise<SocialPost[]>;
   getUserProfileFeed(userId: string): Promise<SocialUserFeed>;
   createPost(input: CreateSocialPostInput): Promise<SocialPost>;
+  updatePostStatus(postId: string, status: boolean): Promise<SocialPost>;
+  deletePost(postId: string): Promise<void>;
   toggleLike(postId: string): Promise<SocialPost>;
   setFollow(params: { userId: string; following: boolean }): Promise<void>;
   getComments(postId: string): Promise<SocialComment[]>;

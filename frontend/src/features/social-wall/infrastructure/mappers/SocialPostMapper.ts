@@ -30,6 +30,7 @@ export class SocialPostMapper {
       followersCount: dto.followers_count,
       followingCount: dto.following_count,
       isFollowing: dto.is_following,
+      status: dto.status,
     };
   }
 }

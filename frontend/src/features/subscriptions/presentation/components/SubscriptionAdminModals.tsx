@@ -10,11 +10,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '@shared/ui/Badge';
 import { Button } from '@shared/ui/Button';
-import { container } from '@app/di/container';
-import {
-  getStoredTestClients,
-  type User as UserEntity,
-} from '@features/auth/domain/entities/User';
+import { useListUsersQuery } from '@features/auth/application/hooks/useUsersQuery';
+import type { User as UserEntity } from '@features/auth/domain/entities/User';
 import type {
   Subscription,
   SubscriptionCycle,
@@ -50,7 +47,7 @@ export const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = (
   const { data: dynamicPlans = [] } = useSubscriptionPlansQuery();
   const availablePlans = dynamicPlans.filter((p: SubscriptionPlan) => p.isActive);
 
-  const [registeredUsers, setRegisteredUsers] = useState<UserEntity[]>([]);
+  const { data: registeredUsers = [] } = useListUsersQuery(open);
   const [selectedUserId, setSelectedUserId] = useState<string>('manual');
   const [traderName, setTraderName] = useState('');
   const [email, setEmail] = useState('');
@@ -63,17 +60,6 @@ export const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = (
 
   useEffect(() => {
     if (open) {
-      const localClients = getStoredTestClients();
-      container.listUsersUseCase
-        .execute()
-        .then((users) => {
-          const existingEmails = new Set(users.map((u) => u.email.toLowerCase()));
-          const extras = localClients.filter(
-            (c) => !existingEmails.has(c.email.toLowerCase())
-          );
-          setRegisteredUsers([...extras, ...users]);
-        })
-        .catch(() => setRegisteredUsers(localClients));
       setLicenseKey(generateRandomLicenseKey());
       setExpiresAtDate(calculateExpirationIso('MONTHLY'));
     }

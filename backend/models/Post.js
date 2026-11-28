@@ -43,8 +43,8 @@ export async function initializePostTable() {
 
 export async function createPost({ userId, title, text, image }) {
   const { rows } = await pool.query(
-    `INSERT INTO posts (user_id, title, post_text, image_url)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO posts (user_id, title, post_text, image_url, status)
+     VALUES ($1, $2, $3, $4, TRUE)
      RETURNING ${postFields}`,
     [userId, title, text, image],
   );
@@ -86,12 +86,30 @@ export async function findPostById(id, currentUserId = null) {
   return rows[0] ?? null;
 }
 
-export async function deletePost({ id, userId }) {
+export async function deletePost({ id, userId, isAdmin = false }) {
+  const { rows } = isAdmin
+    ? await pool.query(
+        `DELETE FROM posts
+         WHERE id = $1
+         RETURNING ${postFields}`,
+        [id],
+      )
+    : await pool.query(
+        `DELETE FROM posts
+         WHERE id = $1 AND user_id = $2
+         RETURNING ${postFields}`,
+        [id, userId],
+      );
+  return rows[0] ?? null;
+}
+
+export async function updatePostStatus({ id, status }) {
   const { rows } = await pool.query(
-    `DELETE FROM posts
-     WHERE id = $1 AND user_id = $2
+    `UPDATE posts
+     SET status = $2
+     WHERE id = $1
      RETURNING ${postFields}`,
-    [id, userId],
+    [id, Boolean(status)],
   );
   return rows[0] ?? null;
 }

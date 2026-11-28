@@ -28,10 +28,12 @@ function syncUpdatedPostAcrossCaches(
   queryClient: QueryClient,
   updatedPost: SocialPost
 ): void {
-  queryClient.setQueryData<SocialPost[]>(SOCIAL_POSTS_QUERY_KEY, (prev) =>
-    prev
-      ? prev.map((post) => (post.id === updatedPost.id ? updatedPost : post))
-      : prev
+  queryClient.setQueriesData<SocialPost[]>(
+    { queryKey: SOCIAL_POSTS_QUERY_KEY },
+    (prev) =>
+      prev
+        ? prev.map((post) => (post.id === updatedPost.id ? updatedPost : post))
+        : prev
   );
   queryClient.setQueriesData<SocialUserFeed>(
     { queryKey: SOCIAL_USER_PROFILES_ROOT_KEY },
@@ -47,10 +49,13 @@ function syncUpdatedPostAcrossCaches(
   );
 }
 
-export function useSocialPostsQuery() {
+export function useSocialPostsQuery(status?: boolean) {
   return useQuery({
-    queryKey: SOCIAL_POSTS_QUERY_KEY,
-    queryFn: () => container.socialWallRepository.getPosts(),
+    queryKey:
+      typeof status === 'boolean'
+        ? [...SOCIAL_POSTS_QUERY_KEY, status]
+        : SOCIAL_POSTS_QUERY_KEY,
+    queryFn: () => container.socialWallRepository.getPosts(status),
   });
 }
 
@@ -166,6 +171,36 @@ export function useSetFollowMutation() {
       queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
       queryClient.invalidateQueries({
         queryKey: getSocialUserProfileQueryKey(variables.userId),
+      });
+    },
+  });
+}
+
+export function useUpdatePostStatusMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ postId, status }: { postId: string; status: boolean }) =>
+      container.socialWallRepository.updatePostStatus(postId, status),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
+      void queryClient.invalidateQueries({
+        queryKey: SOCIAL_USER_PROFILES_ROOT_KEY,
+      });
+    },
+  });
+}
+
+export function useDeletePostMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (postId: string) =>
+      container.socialWallRepository.deletePost(postId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_QUERY_KEY });
+      void queryClient.invalidateQueries({
+        queryKey: SOCIAL_USER_PROFILES_ROOT_KEY,
       });
     },
   });

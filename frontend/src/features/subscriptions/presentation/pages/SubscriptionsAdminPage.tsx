@@ -16,7 +16,6 @@ import {
   ShieldAlert,
   Terminal,
   Trash2,
-  UserPlus,
   Users,
   Zap,
 } from 'lucide-react';
@@ -30,10 +29,9 @@ import { useI18n } from '@core/i18n/useLanguageStore';
 import { formatRelativeTime, formatUsd } from '@shared/utils/formatters';
 import { container } from '@app/di/container';
 import { useAuthStore } from '@features/auth/application/useAuthStore';
+import { useListUsersQuery } from '@features/auth/application/hooks/useUsersQuery';
 import {
-  createNewTestClient,
   getEffectiveKycReviewDetails,
-  getStoredTestClients,
   type KycVerificationStatus,
   type User as UserEntity,
 } from '@features/auth/domain/entities/User';
@@ -107,10 +105,13 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
   const [activeMainTab, setActiveMainTab] = useState<'SUBSCRIPTIONS' | 'USERS'>(
     () => (isClientsRoute ? 'USERS' : 'SUBSCRIPTIONS')
   );
-  const [registeredUsers, setRegisteredUsers] = useState<UserEntity[]>(() =>
-    getStoredTestClients()
-  );
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const {
+    data: registeredUsers = [],
+    isLoading: isLoadingUsers,
+    isError: isUsersError,
+    error: usersError,
+    refetch: refetchUsers,
+  } = useListUsersQuery();
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [clientKycFilter, setClientKycFilter] = useState<
     'ALL' | KycVerificationStatus
@@ -121,66 +122,10 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
     null
   );
   const [kycRefreshTick, setKycRefreshTick] = useState(0);
-  const [isNewTestClientOpen, setIsNewTestClientOpen] = useState(false);
-  const [newClientName, setNewClientName] = useState('');
-  const [newClientEmail, setNewClientEmail] = useState('');
-  const [newClientWhatsApp, setNewClientWhatsApp] = useState('+57 315-999-8877');
-  const [newClientAddress, setNewClientAddress] = useState(
-    'Av. Principal 840, Torre Norte, Piso 4'
-  );
-  const [newClientPresetStatus, setNewClientPresetStatus] =
-    useState<KycVerificationStatus>('EN_REVISION');
 
   useEffect(() => {
     setActiveMainTab(isClientsRoute ? 'USERS' : 'SUBSCRIPTIONS');
   }, [isClientsRoute]);
-
-  useEffect(() => {
-    setIsLoadingUsers(true);
-    const localTestClients = getStoredTestClients();
-    container.listUsersUseCase
-      .execute()
-      .then((users) => {
-        if (users.length > 0) {
-          const existingEmails = new Set(users.map((u) => u.email.toLowerCase()));
-          const extras = localTestClients.filter(
-            (d) => !existingEmails.has(d.email.toLowerCase())
-          );
-          setRegisteredUsers([...extras, ...users]);
-        } else {
-          setRegisteredUsers(localTestClients);
-        }
-      })
-      .catch(() => setRegisteredUsers(localTestClients))
-      .finally(() => setIsLoadingUsers(false));
-  }, []);
-
-  const handleCreateQuickTestClient = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newClientName.trim() || !newClientEmail.trim()) {
-      toast.danger('Completa el nombre y correo del cliente de prueba');
-      return;
-    }
-    const created = createNewTestClient({
-      fullName: newClientName,
-      email: newClientEmail,
-      whatsapp: newClientWhatsApp,
-      direccion: newClientAddress,
-      presetStatus: newClientPresetStatus,
-    });
-    setRegisteredUsers((prev) => [
-      created,
-      ...prev.filter((u) => u.email.toLowerCase() !== created.email.toLowerCase()),
-    ]);
-    setNewClientName('');
-    setNewClientEmail('');
-    setIsNewTestClientOpen(false);
-    setKycRefreshTick((x) => x + 1);
-    toast.success(
-      'Cliente de prueba creado',
-      `${created.fullName} (${created.kycStatus}) ya está disponible en el directorio.`
-    );
-  };
 
   const handleSimulateClientView = (client: UserEntity) => {
     impersonateTestClient(client);
@@ -196,32 +141,8 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
     }
   };
 
-  const handleKycReviewSaved = (
-    clientId: string,
-    updated: {
-      kycStatus: KycVerificationStatus;
-      kycNotes: string;
-      kycRejectedItems: string[];
-    }
-  ) => {
-    setRegisteredUsers((prev) =>
-      prev.map((u) =>
-        u.id === clientId
-          ? {
-            ...u,
-            kycStatus: updated.kycStatus,
-            kycNotes: updated.kycNotes,
-            kycRejectedItems: updated.kycRejectedItems,
-            estado:
-              updated.kycStatus === 'VERIFICADO'
-                ? 'verificado'
-                : updated.kycStatus === 'OBSERVADO'
-                  ? 'observado'
-                  : 'en_revision',
-          }
-          : u
-      )
-    );
+  const handleKycReviewSaved = () => {
+    void refetchUsers();
     setKycRefreshTick((t) => t + 1);
   };
 
@@ -633,12 +554,12 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                 <Button
                   variant="secondary"
                   size="xs"
-                  onClick={() => setIsNewTestClientOpen((prev) => !prev)}
-                  className="border-amber-500/40 text-amber-300"
-                  tooltip="Generar rápidamente un cliente de prueba con documentos KYC precargados"
+                  onClick={() => void refetchUsers()}
+                  isLoading={isLoadingUsers}
+                  tooltip="Actualizar listado de clientes desde la base de datos"
                 >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  + Cliente Prueba
+                  <RefreshCcw className="h-3.5 w-3.5" />
+                  Actualizar
                 </Button>
                 <Button
                   variant="primary"
@@ -651,76 +572,6 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                 </Button>
               </div>
             </div>
-
-            {isNewTestClientOpen && (
-              <form
-                onSubmit={handleCreateQuickTestClient}
-                className="rounded-xl border border-amber-500/40 bg-slate-950/90 p-4 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                    Generador Rápido de Clientes de Prueba (Con Expediente KYC)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsNewTestClientOpen(false)}
-                    className="text-xs text-slate-400 hover:text-white cursor-pointer"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                  <input
-                    type="text"
-                    value={newClientName}
-                    onChange={(e) => setNewClientName(e.target.value)}
-                    placeholder="Nombre completo *"
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
-                    required
-                  />
-                  <input
-                    type="email"
-                    value={newClientEmail}
-                    onChange={(e) => setNewClientEmail(e.target.value)}
-                    placeholder="correo@ejemplo.com *"
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
-                    required
-                  />
-                  <input
-                    type="text"
-                    value={newClientWhatsApp}
-                    onChange={(e) => setNewClientWhatsApp(e.target.value)}
-                    placeholder="WhatsApp (+57...)"
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={newClientAddress}
-                    onChange={(e) => setNewClientAddress(e.target.value)}
-                    placeholder="Dirección física"
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
-                  />
-                  <select
-                    value={newClientPresetStatus}
-                    onChange={(e) =>
-                      setNewClientPresetStatus(
-                        e.target.value as KycVerificationStatus
-                      )
-                    }
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
-                  >
-                    <option value="EN_REVISION">Estado: En Revisión (3 Docs)</option>
-                    <option value="OBSERVADO">Estado: Con Observaciones (ID Borroso)</option>
-                    <option value="VERIFICADO">Estado: Verificado (Aprobado)</option>
-                    <option value="INCOMPLETO">Estado: Incompleto (Sin Docs)</option>
-                  </select>
-                  <Button type="submit" variant="primary" size="sm" className="justify-center">
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Agregar Cliente
-                  </Button>
-                </div>
-              </form>
-            )}
 
             {/* Buscador y Filtros Rápidos del Directorio de Clientes */}
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-t border-slate-800/80 pt-4">
@@ -799,7 +650,26 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
                   {isLoadingUsers ? (
                     <tr>
                       <td colSpan={5} className="py-8 text-center text-slate-400">
-                        Cargando directorio de clientes...
+                        Cargando directorio de clientes desde la base de datos...
+                      </td>
+                    </tr>
+                  ) : isUsersError ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-rose-400 space-y-2">
+                        <div>No se pudo cargar el listado de clientes registrados.</div>
+                        {usersError instanceof Error && usersError.message && (
+                          <div className="text-xs text-slate-400 font-mono">
+                            {usersError.message}
+                          </div>
+                        )}
+                        <Button
+                          variant="secondary"
+                          size="xs"
+                          onClick={() => void refetchUsers()}
+                        >
+                          <RefreshCcw className="h-3 w-3" />
+                          Reintentar
+                        </Button>
                       </td>
                     </tr>
                   ) : filteredDirectoryUsers.length === 0 ? (
@@ -1601,12 +1471,8 @@ export const SubscriptionsAdminPage: React.FC<SubscriptionsAdminPageProps> = ({
             setIsCredentialsModalOpen(false);
             setCredentialsFocusedUser(null);
           }}
-          onPasswordUpdated={(userId, newPassword) => {
-            setRegisteredUsers((prev) =>
-              prev.map((u) =>
-                u.id === userId ? { ...u, plainPassword: newPassword } : u
-              )
-            );
+          onPasswordUpdated={() => {
+            void refetchUsers();
           }}
         />
       )}

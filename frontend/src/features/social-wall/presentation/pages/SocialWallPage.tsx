@@ -31,7 +31,7 @@ export const SocialWallPage: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const composerName = isAuthenticated ? user.fullName : 'Visitante';
-  const postsQuery = useSocialPostsQuery();
+  const postsQuery = useSocialPostsQuery(true);
   const createPostMutation = useCreateSocialPostMutation();
   const toggleLikeMutation = useToggleLikePostMutation();
   const createCommentMutation = useCreateCommentMutation();
